@@ -1,0 +1,130 @@
+<!-- templates/flota/indicadores_dashboard.html (Versión con todos los gráficos) -->
+{% extends "flota/base.html" %}
+
+{% block title %}Dashboard de Indicadores{% endblock %}
+
+{% block content %}
+    <h1>Dashboard de Indicadores de Flota</h1>
+
+    <!-- Filtro de Fechas -->
+    <div class="card">
+        <form method="get">
+            <div class="form-grid">
+                <p>
+                    <label for="start_date">Fecha de Inicio:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
+                </p>
+                <p>
+                    <label for="end_date">Fecha de Fin:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
+                </p>
+            </div>
+            <br>
+            <button type="submit" class="btn-submit">Filtrar</button>
+        </form>
+    </div>
+
+    <!-- Contenedores para los Nuevos Gráficos de Donut -->
+    <div class="charts-container-small">
+        <div class="card">
+            <h2>Tareas Preventivas / Correctivas</h2>
+            <canvas id="tipoOtChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Avance Tareas Preventivas</h2>
+            <canvas id="avancePreventivasChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Avance Tareas Correctivas</h2>
+            <canvas id="avanceCorrectivasChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Contenedores para los Gráficos KPI Mensuales -->
+    <div class="charts-container">
+        <div class="card">
+            <h2>Disponibilidad Mensual (%)</h2>
+            <canvas id="disponibilidadChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Confiabilidad Mensual (%)</h2>
+            <canvas id="confiabilidadChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Utilización Mensual (%)</h2>
+            <canvas id="utilizacionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Incluimos la librería Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Script JSON para los datos -->
+    <script id="chart-data" type="application/json">
+    {
+        "labelsMes": {{ labels_mes|safe }},
+        "disponibilidadData": {{ disponibilidad_data|safe }},
+        "confiabilidadData": {{ confiabilidad_data|safe }},
+        "utilizacionData": {{ utilizacion_data|safe }},
+        "totalPreventivas": {{ total_preventivas }},
+        "totalCorrectivas": {{ total_correctivas }},
+        "preventivasOk": {{ preventivas_finalizadas }},
+        "preventivasPendientes": {{ preventivas_pendientes }},
+        "correctivasOk": {{ correctivas_finalizadas }},
+        "correctivasPendientes": {{ correctivas_pendientes }}
+    }
+    </script>
+
+    <script>
+        const chartData = JSON.parse(document.getElementById('chart-data').textContent);
+
+        // Función para crear un gráfico de barras (sin cambios)
+        function createBarChart(canvasId, chartLabel, labels, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'bar', data: { labels: labels, datasets: [{ label: chartLabel, data: data, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
+                options: { scales: { y: { beginAtZero: true, max: 100 } }, maintainAspectRatio: false }
+            });
+        }
+        
+        // Función para crear un gráfico de donut (NUEVA)
+        function createDoughnutChart(canvasId, labels, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#3498db', '#e67e22', '#2ecc71', '#f1c40f'],
+                    }]
+                },
+                options: { maintainAspectRatio: false, responsive: true }
+            });
+        }
+
+        // Creación de los gráficos de barras
+        createBarChart('disponibilidadChart', 'Disponibilidad %', chartData.labelsMes, chartData.disponibilidadData);
+        createBarChart('confiabilidadChart', 'Confiabilidad %', chartData.labelsMes, chartData.confiabilidadData);
+        createBarChart('utilizacionChart', 'Utilización %', chartData.labelsMes, chartData.utilizacionData);
+        
+        // Creación de los nuevos gráficos de donut
+        if (chartData.totalPreventivas > 0 || chartData.totalCorrectivas > 0) {
+            createDoughnutChart('tipoOtChart', ['Preventivas', 'Correctivas'], [chartData.totalPreventivas, chartData.totalCorrectivas]);
+        }
+        if (chartData.preventivasOk > 0 || chartData.preventivasPendientes > 0) {
+            createDoughnutChart('avancePreventivasChart', ['Finalizadas', 'Pendientes'], [chartData.preventivasOk, chartData.preventivasPendientes]);
+        }
+        if (chartData.correctivasOk > 0 || chartData.correctivasPendientes > 0) {
+            createDoughnutChart('avanceCorrectivasChart', ['Finalizadas', 'Pendientes'], [chartData.correctivasOk, chartData.correctivasPendientes]);
+        }
+    </script>
+    <style>
+        .charts-container, .charts-container-small { display: grid; gap: 20px; margin-top: 20px; }
+        .charts-container { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .charts-container-small { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        .card canvas { height: 300px !important; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .form-grid p { margin: 0; }
+    </style>
+{% endblock %}

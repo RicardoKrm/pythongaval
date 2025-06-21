@@ -1,0 +1,93 @@
+<!-- templates/flota/dashboard.html (Versión Final Completa) -->
+
+
+{% extends "flota/base.html" %}
+
+
+{% block title %}Dashboard de Flota{% endblock %}
+
+
+{% block content %}
+
+    <h1>Pizarra de Mantenimiento Preventivo</h1>
+
+   
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>N° Interno</th>
+
+                <th>Patente</th>
+
+                <th>Modelo</th>
+
+                <th>KM Actual</th>
+
+                <th>Próxima Pauta</th>
+
+                <th>KM Próx. Mantenimiento</th>
+
+                <th>KM Faltantes</th>
+
+                <th>Estado</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for item in data_flota %}
+
+                <tr class="estado-{{ item.estado }}">
+
+                    <td>{{ item.vehiculo.numero_interno }}</td>
+
+                    <td>{{ item.vehiculo.patente|default:"N/A" }}</td>
+
+                    <td>{{ item.vehiculo.modelo }}</td>
+
+                    <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }} KM</td>
+
+                    <td>{{ item.proxima_pauta_obj.nombre|default:"N/A" }}</td>
+
+                    <td>{{ item.proximo_km|floatformat:"0" }} KM</td>
+
+                    <td>{{ item.kms_faltantes|floatformat:"0" }} KM</td>
+
+                    <td>{{ item.estado }}</td>
+
+                </tr>
+
+            {% empty %}
+
+                <tr>
+
+                    <td colspan="8" style="text-align: center; padding: 20px;">No hay vehículos registrados para esta empresa.</td>
+
+                </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+
+    <style>
+
+        /* Estilos específicos para los estados de la tabla */
+
+        .estado-NORMAL { color: #68d391; }
+
+        .estado-PROXIMO { background-color: #4a5568; color: #f6e05e; }
+
+        .estado-VENCIDO { background-color: #c53030; color: white; font-weight: bold; }
+
+    </style>
+
+{% endblock %} 

@@ -1,0 +1,64 @@
+<!-- templates/flota/orden_trabajo_list.html -->
+{% extends "flota/base.html" %}
+
+{% block title %}Órdenes de Trabajo{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <h2>Crear Nueva Orden de Trabajo</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-submit">Guardar OT</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2>Listado de Órdenes de Trabajo</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Folio</th>
+                    <th>Vehículo</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Fecha Creación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ot in ordenes %}
+                <tr>
+                    <td>{{ ot.folio|default:"N/A" }}</td>
+                    <td>{{ ot.vehiculo.numero_interno }}</td>
+                    <td>{{ ot.get_tipo_display }}</td>
+                    <td>{{ ot.get_estado_display }}</td>
+                    <td>{{ ot.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <!-- ENLACE CORREGIDO -->
+                        <a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-action">Ver Detalle</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 20px;">No hay órdenes de trabajo registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <style>
+        .btn-action {
+            background-color: #2b6cb0;
+            color: white;
+            padding: 5px 10px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .btn-action:hover {
+            background-color: #2c5282;
+        }
+    </style>
+{% endblock %}

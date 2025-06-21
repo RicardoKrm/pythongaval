@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>OT {{ ot.folio|default:ot.pk }}</title>
+    <style>
+        @page { size: letter; margin: 1.5cm; }
+        body { font-family: 'Helvetica', sans-serif; font-size: 11pt; }
+        h1, h2, h3 { font-weight: bold; color: #333; }
+        h1 { font-size: 24pt; text-align: center; margin-bottom: 0; }
+        h2 { font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 25px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside: avoid; }
+        th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+        thead { background-color: #eee; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .info-grid div { padding-bottom: 5px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .company-name { font-size: 16pt; font-weight: bold; }
+        ul { padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">{{ request.tenant.nombre }}</div>
+        <h1>Orden de Trabajo #{{ ot.folio|default:ot.pk }}</h1>
+    </div>
+
+    <h2>Datos Generales</h2>
+    <div class="info-grid">
+        <div><strong>Vehículo:</strong> {{ ot.vehiculo }}</div>
+        <div><strong>Tipo:</strong> {{ ot.get_tipo_display }}</div>
+        <div><strong>Patente:</strong> {{ ot.vehiculo.patente }}</div>
+        <div><strong>Estado:</strong> {{ ot.get_estado_display }}</div>
+        <div><strong>KM Apertura:</strong> {{ ot.kilometraje_apertura }} KM</div>
+        <div><strong>Fecha Creación:</strong> {{ ot.fecha_creacion|date:"d/m/Y" }}</div>
+    </div>
+    <strong>Observación:</strong> {{ ot.observacion_inicial|default:"N/A" }}
+
+    <h2>Tareas a Realizar</h2>
+    <ul>
+        {% for tarea in ot.tareas_realizadas.all %}
+            <li>{{ tarea.descripcion }}</li>
+        {% empty %}
+            <li>Sin tareas asignadas.</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Insumos Utilizados</h2>
+    <table>
+        <thead>
+            <tr><th>Insumo</th><th>Cantidad</th></tr>
+        </thead>
+        <tbody>
+            {% for detalle in ot.detalleinsumoot_set.all %}
+            <tr><td>{{ detalle.insumo.nombre }}</td><td>{{ detalle.cantidad }}</td></tr>
+            {% empty %}
+            <tr><td colspan="2">Sin insumos registrados.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

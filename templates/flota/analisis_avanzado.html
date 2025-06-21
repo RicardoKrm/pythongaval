@@ -1,0 +1,89 @@
+<!-- templates/flota/analisis_avanzado.html -->
+{% extends "flota/base.html" %}
+
+{% block title %}Análisis Avanzado{% endblock %}
+
+{% block content %}
+    <h1>Análisis de Costos y Tendencias</h1>
+
+    <!-- Sección de Análisis de Costos (TCO) -->
+    <div class="card">
+        <h2>Análisis de Costos por Proveedor (TCO)</h2>
+        <p>Este análisis considera únicamente las Órdenes de Trabajo finalizadas, con KM de cierre y un proveedor asignado.</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Proveedor</th>
+                    <th>Costo Total ($)</th>
+                    <th>KM Recorridos en OTs</th>
+                    <th>Costo por KM ($/KM)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in tco_data %}
+                <tr>
+                    <td>{{ item.proveedor__nombre }}</td>
+                    <td>${{ item.costo_sum|floatformat:0 }}</td>
+                    <td>{{ item.km_recorrido_sum|floatformat:0 }} KM</td>
+                    <td>${{ item.costo_por_km|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" style="text-align: center; padding: 20px;">No hay datos de costos suficientes para el análisis. Asegúrese de que las OTs tengan proveedor, costos y KM de cierre.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Sección de Gráficos de Tendencias -->
+    <div class="charts-container-full">
+        <div class="card">
+            <h2>Tendencia de OTs Creadas (Mensual)</h2>
+            <div class="chart-container">
+                <canvas id="tendenciaTotalChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h2>Tendencia de OTs Finalizadas (Mensual)</h2>
+            <div class="chart-container">
+                <canvas id="tendenciaOkChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script JSON y Chart.js -->
+    <script id="chart-data" type="application/json">
+    {
+        "labels": {{ labels_tendencia|safe }},
+        "preventivasTotal": {{ preventivas_total_data|safe }},
+        "correctivasTotal": {{ correctivas_total_data|safe }},
+        "preventivasOk": {{ preventivas_ok_data|safe }},
+        "correctivasOk": {{ correctivas_ok_data|safe }}
+    }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const chartData = JSON.parse(document.getElementById('chart-data').textContent);
+        
+        function createLineChart(canvasId, labels, dataset1_label, dataset1_data, dataset2_label, dataset2_data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: dataset1_label, data: dataset1_data, borderColor: '#3498db', backgroundColor: 'rgba(52, 152, 219, 0.1)', fill: true, tension: 0.1 },
+                        { label: dataset2_label, data: dataset2_data, borderColor: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.1)', fill: true, tension: 0.1 }
+                    ]
+                },
+                options: { maintainAspectRatio: false, responsive: true }
+            });
+        }
+
+        createLineChart('tendenciaTotalChart', chartData.labels, 'Preventivas Creadas', chartData.preventivasTotal, 'Correctivas Creadas', chartData.correctivasTotal);
+        createLineChart('tendenciaOkChart', chartData.labels, 'Preventivas Finalizadas', chartData.preventivasOk, 'Correctivas Finalizadas', chartData.correctivasOk);
+    </script>
+    <style>
+        .charts-container-full { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 20px; }
+        .chart-container { position: relative; height: 350px; }
+    </style>
+{% endblock %}
