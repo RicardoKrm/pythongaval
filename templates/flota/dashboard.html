@@ -25,32 +25,35 @@
         <tbody>
             {% for item in data_flota %}
                 <tr class="estado-{{ item.estado }}">
-                    <td>{{ item.vehiculo.numero_interno }}</td>
+                    <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
                     <td>{{ item.vehiculo.patente|default:"N/A" }}</td>
                     <td>{{ item.vehiculo.modelo }}</td>
                     <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
                     <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
-                    <td>{{ item.proxima_pauta_obj.nombre|default:"N/A" }}</td>
-                    <td>{{ item.proximo_km|floatformat:"0"|default:"N/A" }}</td>
-                    <td>{{ item.kms_faltantes|floatformat:"0"|default:"N/A" }}</td>
+                    <td>{{ item.proxima_pauta_obj.nombre|default:"--" }}</td>
+                    <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
+                    <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td>
                     <td>{{ item.km_prom_dia|floatformat:"0" }}</td>
                     <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
-                    <td><span class="status-pill">{{ item.estado }}</span></td>
+                    <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
                     <td class="actions-cell">
-                        <!-- Botón que abre el menú desplegable -->
                         <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">
                             ⋮ <!-- Tres puntos verticales -->
                         </button>
-                        <!-- El menú desplegable -->
                         <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
+                            <!-- Acción 1: Actualizar KM (se mantiene igual) -->
                             <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
-                            <a href="#">Ver Historial</a>
-                            <a href="#">Crear OT Correctiva</a>
+                            
+                            <!-- Acción 2: Ver Historial (URL CORREGIDA) -->
+                            <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}">Ver Historial</a>
+                            
+                            <!-- Acción 3: Crear OT Correctiva (URL CORREGIDA) -->
+                            <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}">Crear OT Correctiva</a>
                         </div>
                     </td>
                 </tr>
             {% empty %}
-                <tr><td colspan="12">No hay vehículos registrados para esta empresa.</td></tr>
+                <tr><td colspan="12" style="text-align: center; padding: 20px;">No hay vehículos registrados para esta empresa.</td></tr>
             {% endfor %}
         </tbody>
     </table>

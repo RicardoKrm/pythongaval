@@ -1,0 +1,46 @@
+<!-- templates/flota/historial_vehiculo.html -->
+{% extends "flota/base.html" %}
+
+{% block title %}Historial de {{ vehiculo.numero_interno }}{% endblock %}
+
+{% block content %}
+    <div style="margin-bottom: 1em;">
+        <a href="{% url 'dashboard' %}" class="btn-back">← Volver a la Pizarra</a>
+    </div>
+
+    <h1>Historial de Mantenimiento: Vehículo N° {{ vehiculo.numero_interno }}</h1>
+    
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>Folio</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Fecha Creación</th>
+                    <th>Observación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ot in ordenes %}
+                <tr>
+                    <td>{{ ot.folio|default:"N/A" }}</td>
+                    <td>{{ ot.get_tipo_display }}</td>
+                    <td><span class="status-pill status-{{ ot.estado|lower }}">{{ ot.get_estado_display }}</span></td>
+                    <td>{{ ot.fecha_creacion|date:"d M, Y" }}</td>
+                    <td>{{ ot.observacion_inicial|truncatewords:10 }}</td>
+                    <td><a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-action">Ver Detalle</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 20px;">Este vehículo no tiene órdenes de trabajo registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Reutilizamos los estilos de las píldoras de estado -->
+
+{% endblock %}

@@ -130,32 +130,30 @@ def dashboard_flota(request):
 
 @login_required
 
-@user_passes_test(es_supervisor_o_admin)
 
 def orden_trabajo_list(request):
 
     connection.set_tenant(request.tenant)
 
+    # Si la URL incluye un 'vehiculo_id', lo usamos para inicializar el formulario
+    initial_data = {}
+    vehiculo_id = request.GET.get('vehiculo_id')
+    if vehiculo_id:
+        initial_data['vehiculo'] = vehiculo_id
+        initial_data['tipo'] = 'CORRECTIVA' # Pre-seleccionamos el tipo también
+
     if request.method == 'POST':
-
         form = OrdenDeTrabajoForm(request.POST)
-
         if form.is_valid():
-
             ot = form.save()
-
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
-
-            return redirect('flota:ot_list')
-
+            return redirect('ot_list')
     else:
-
-        form = OrdenDeTrabajoForm()
+        # Pasamos los datos iniciales al formulario
+        form = OrdenDeTrabajoForm(initial=initial_data)
 
     ordenes = OrdenDeTrabajo.objects.all().order_by('-fecha_creacion')
-
     context = {'ordenes': ordenes, 'form': form}
-
     return render(request, 'flota/orden_trabajo_list.html', context)
 
 
@@ -256,7 +254,7 @@ def bitacora_diaria_list(request):
 
             messages.success(request, f"Registro de bitácora para el vehículo {form.cleaned_data['vehiculo'].numero_interno} en la fecha {form.cleaned_data['fecha']} guardado.")
 
-            return redirect('flota:bitacora_list')
+            return redirect('bitacora_list')
 
     else:
 
@@ -558,3 +556,20 @@ def actualizar_km_vehiculo(request, pk):
 
     # Siempre redirigimos de vuelta al dashboard después de la acción
     return redirect('dashboard')
+
+# flota/views.py
+# ...
+
+@login_required
+def historial_vehiculo(request, pk):
+    connection.set_tenant(request.tenant)
+    vehiculo = get_object_or_404(Vehiculo, pk=pk)
+    
+    # Buscamos todas las OTs para este vehículo, de la más reciente a la más antigua
+    ordenes = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo).order_by('-fecha_creacion')
+    
+    context = {
+        'vehiculo': vehiculo,
+        'ordenes': ordenes,
+    }
+    return render(request, 'flota/historial_vehiculo.html', context)

@@ -19,4 +19,7 @@ urlpatterns = [
     path('analisis-fallas/', flota_views.analisis_fallas, name='analisis_fallas'),
     path('analisis-avanzado/', flota_views.analisis_avanzado, name='analisis_avanzado'),
     path('carga-masiva/', flota_views.carga_masiva, name='carga_masiva'),
+    path('vehiculo/<int:pk>/historial/', flota_views.historial_vehiculo, name='historial_vehiculo'),
+    path('vehiculo/<int:pk>/actualizar-km/', flota_views.actualizar_km_vehiculo, name='actualizar_km'),
+    
 ]
