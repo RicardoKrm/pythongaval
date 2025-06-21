@@ -1,93 +1,162 @@
-<!-- templates/flota/dashboard.html (Versión Final Completa) -->
-
-
+<!-- templates/flota/dashboard.html (Versión Final Combinada) -->
 {% extends "flota/base.html" %}
 
-
-{% block title %}Dashboard de Flota{% endblock %}
-
+{% block title %}Pizarra de Mantenimiento{% endblock %}
 
 {% block content %}
-
     <h1>Pizarra de Mantenimiento Preventivo</h1>
-
-   
-
     <table>
-
         <thead>
-
             <tr>
-
-                <th>N° Interno</th>
-
-                <th>Patente</th>
-
+                <th>N° Int.</th>
+                <th>PPU</th>
                 <th>Modelo</th>
-
                 <th>KM Actual</th>
-
-                <th>Próxima Pauta</th>
-
-                <th>KM Próx. Mantenimiento</th>
-
+                <th>Última Act.</th>
+                <th>Próx. Pauta</th>
+                <th>KM Próx. Manten.</th>
                 <th>KM Faltantes</th>
-
+                <th>KM Prom/Día</th>
+                <th>Fecha Próx. Manten.</th>
                 <th>Estado</th>
-
+                <th style="text-align: center;">Acciones</th>
             </tr>
-
         </thead>
-
         <tbody>
-
             {% for item in data_flota %}
-
                 <tr class="estado-{{ item.estado }}">
-
                     <td>{{ item.vehiculo.numero_interno }}</td>
-
                     <td>{{ item.vehiculo.patente|default:"N/A" }}</td>
-
                     <td>{{ item.vehiculo.modelo }}</td>
-
-                    <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }} KM</td>
-
+                    <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
+                    <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
                     <td>{{ item.proxima_pauta_obj.nombre|default:"N/A" }}</td>
-
-                    <td>{{ item.proximo_km|floatformat:"0" }} KM</td>
-
-                    <td>{{ item.kms_faltantes|floatformat:"0" }} KM</td>
-
-                    <td>{{ item.estado }}</td>
-
+                    <td>{{ item.proximo_km|floatformat:"0"|default:"N/A" }}</td>
+                    <td>{{ item.kms_faltantes|floatformat:"0"|default:"N/A" }}</td>
+                    <td>{{ item.km_prom_dia|floatformat:"0" }}</td>
+                    <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
+                    <td><span class="status-pill">{{ item.estado }}</span></td>
+                    <td class="actions-cell">
+                        <!-- Botón que abre el menú desplegable -->
+                        <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">
+                            ⋮ <!-- Tres puntos verticales -->
+                        </button>
+                        <!-- El menú desplegable -->
+                        <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
+                            <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
+                            <a href="#">Ver Historial</a>
+                            <a href="#">Crear OT Correctiva</a>
+                        </div>
+                    </td>
                 </tr>
-
             {% empty %}
-
-                <tr>
-
-                    <td colspan="8" style="text-align: center; padding: 20px;">No hay vehículos registrados para esta empresa.</td>
-
-                </tr>
-
+                <tr><td colspan="12">No hay vehículos registrados para esta empresa.</td></tr>
             {% endfor %}
-
         </tbody>
-
     </table>
 
+    <!-- HTML del Modal para Actualizar KM (sin cambios) -->
+    <div id="kmModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">×</span>
+            <h2>Actualizar Kilometraje</h2>
+            <p>Vehículo N°: <strong id="modalVehiculoNumero"></strong></p>
+            <form id="kmForm" method="post">
+                {% csrf_token %}
+                <label for="kilometraje_actual">Nuevo Kilometraje:</label>
+                <input type="number" name="kilometraje_actual" id="modalKmInput" class="form-control" required>
+                <button type="submit" class="btn-submit">Guardar</button>
+            </form>
+        </div>
+    </div>
 
+    <!-- JavaScript para manejar el Modal y los Menús Desplegables -->
+    <script>
+        const modal = document.getElementById('kmModal');
+        const form = document.getElementById('kmForm');
+        const vehiculoNumeroSpan = document.getElementById('modalVehiculoNumero');
+        const kmInput = document.getElementById('modalKmInput');
+
+        function openModal(vehiculoId, vehiculoNumero, kmActual) {
+            event.stopPropagation();
+            closeAllMenus();
+            form.action = `/vehiculo/${vehiculoId}/actualizar-km/`;
+            vehiculoNumeroSpan.textContent = vehiculoNumero;
+            kmInput.value = kmActual;
+            kmInput.placeholder = `KM actual: ${kmActual}`;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        function toggleMenu(event, menuId) {
+            event.stopPropagation();
+            const currentMenu = document.getElementById(menuId);
+            const isShown = currentMenu.classList.contains('show');
+            closeAllMenus();
+            if (!isShown) {
+                currentMenu.classList.add('show');
+            }
+        }
+
+        function closeAllMenus() {
+            document.querySelectorAll('.action-menu').forEach(menu => menu.classList.remove('show'));
+        }
+        
+        window.onclick = function(event) {
+            closeAllMenus();
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+    
+    <!-- Estilos CSS -->
     <style>
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: #2d3748; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; position: relative; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: white; }
+        
+        .status-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+            min-width: 80px;
+            text-align: center;
+        }
+        tr.estado-NORMAL .status-pill { background-color: #38a169; }
+        tr.estado-PROXIMO .status-pill { background-color: #dd6b20; }
+        tr.estado-VENCIDO .status-pill { background-color: #c53030; }
 
-        /* Estilos específicos para los estados de la tabla */
-
-        .estado-NORMAL { color: #68d391; }
-
-        .estado-PROXIMO { background-color: #4a5568; color: #f6e05e; }
-
-        .estado-VENCIDO { background-color: #c53030; color: white; font-weight: bold; }
-
+        .actions-cell { position: relative; text-align: center; }
+        .action-menu-btn { background: none; border: none; color: #a0aec0; font-size: 1.5em; cursor: pointer; padding: 0 10px; border-radius: 4px; }
+        .action-menu-btn:hover { background-color: #4a5568; color: white; }
+        .action-menu {
+            display: none;
+            position: absolute;
+            right: 20px;
+            top: 40px;
+            background-color: #4a5568;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .action-menu a {
+            color: #e2e8f0;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+        }
+        .action-menu a:hover { background-color: #2d3748; }
+        .action-menu.show { display: block; }
     </style>
-
-{% endblock %} 
+{% endblock %}

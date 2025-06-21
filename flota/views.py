@@ -54,50 +54,76 @@ def es_supervisor_o_admin(user):
 # --- Vistas del Dashboard y Flota ---
 
 
+# flota/views.py
+# (Asegúrate de tener importados 'datetime', 'timedelta' y 'random' al principio)
+from datetime import datetime, timedelta
+import random
+
+# ...
+
 @login_required
-
 def dashboard_flota(request):
-
     connection.set_tenant(request.tenant)
-
     vehiculos = Vehiculo.objects.all().order_by('numero_interno')
-
+    
     data_flota = []
-
     for vehiculo in vehiculos:
-
+        # --- CÁLCULO DE KM PROMEDIO DIARIO ---
+        # Para una demo, usaremos un valor aleatorio.
+        # En una versión real, esto se calcularía con registros históricos de la bitácora.
+        km_prom_dia = random.randint(150, 450)
+        # -------------------------------------
+        
         km_actual = vehiculo.kilometraje_actual
-
-        proxima_pauta_agg = PautaMantenimiento.objects.filter(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta__gt=km_actual).aggregate(proximo_km=Min('kilometraje_pauta'))
-
+        proxima_pauta_agg = PautaMantenimiento.objects.filter(
+            modelo_vehiculo=vehiculo.modelo,
+            kilometraje_pauta__gt=km_actual
+        ).aggregate(proximo_km=Min('kilometraje_pauta'))
         proximo_km_pauta = proxima_pauta_agg.get('proximo_km')
-
-        estado, kms_faltantes, pauta_obj = "NORMAL", None, None
+        
+        estado = "NORMAL"
+        kms_faltantes = None
+        pauta_obj = None
+        fecha_prox_mant = None # Inicializamos la variable
 
         if proximo_km_pauta:
-
             try:
-
-                pauta_obj = PautaMantenimiento.objects.get(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta=proximo_km_pauta)
-
+                pauta_obj = PautaMantenimiento.objects.get(
+                    modelo_vehiculo=vehiculo.modelo, 
+                    kilometraje_pauta=proximo_km_pauta
+                )
                 tolerancia = 1000
-
                 advertencia = 5000
-
                 kms_faltantes = proximo_km_pauta - km_actual
+                
+                if kms_faltantes <= tolerancia:
+                    estado = "VENCIDO"
+                elif kms_faltantes <= advertencia:
+                    estado = "PROXIMO"
 
-                if kms_faltantes <= tolerancia: estado = "VENCIDO"
-
-                elif kms_faltantes <= advertencia: estado = "PROXIMO"
+                # --- CÁLCULO DE FECHA DE PRONÓSTICO ---
+                if km_prom_dia > 0 and kms_faltantes > 0:
+                    dias_para_pauta = kms_faltantes / km_prom_dia
+                    fecha_prox_mant = datetime.now().date() + timedelta(days=dias_para_pauta)
+                # ---------------------------------------
 
             except PautaMantenimiento.DoesNotExist:
-
                 pauta_obj = None
 
-        data_flota.append({'vehiculo': vehiculo, 'proxima_pauta_obj': pauta_obj, 'proximo_km': proximo_km_pauta if proximo_km_pauta else "N/A", 'kms_faltantes': kms_faltantes if kms_faltantes is not None else "N/A", 'estado': estado})
+        data_flota.append({
+            'vehiculo': vehiculo,
+            'proxima_pauta_obj': pauta_obj,
+            'proximo_km': proximo_km_pauta,
+            'kms_faltantes': kms_faltantes,
+            'estado': estado,
+            'km_prom_dia': km_prom_dia,         # <-- Dato nuevo
+            'fecha_prox_mant': fecha_prox_mant, # <-- Dato nuevo
+        })
 
-    context = {'data_flota': data_flota, 'tenant_name': request.tenant.nombre}
-
+    context = {
+        'data_flota': data_flota,
+        'tenant_name': request.tenant.nombre,
+    }
     return render(request, 'flota/dashboard.html', context)
 
 
