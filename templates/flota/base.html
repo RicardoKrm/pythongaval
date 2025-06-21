@@ -4,7 +4,33 @@
     <meta charset="UTF-8">
     <title>{% block title %}TMS GAVAL{% endblock %} - {{ request.tenant.nombre }}</title>
     <style>
-        /* ... (todos tus estilos se mantienen igual) ... */
+        body { font-family: system-ui, sans-serif; margin: 0; background-color: #1a202c; color: #cbd5e0; }
+        nav { background-color: #2d3748; padding: 1em 2em; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links a { color: white; text-decoration: none; margin-right: 1.5em; font-weight: 500; }
+        .nav-links a:hover { text-decoration: underline; }
+        .user-menu { display: flex; align-items: center; gap: 1em; }
+        .user-menu span { color: #a0aec0; }
+        .user-menu a { color: white; text-decoration: none; }
+        .btn-logout { background-color: #c53030; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: inherit; font-weight: 500; }
+        .btn-logout:hover { background-color: #9b2c2c; }
+        .container { padding: 2em; }
+        .messages-container { padding: 0 2em; }
+        .alert { padding: 15px; margin: 1em 0; border-radius: 4px; color: white; }
+        .alert-success { background-color: #2f855a; }
+        .alert-error { background-color: #c53030; }
+        .alert-warning { background-color: #dd6b20; }
+        .alert-info { background-color: #3182ce; }
+        h1, h2 { color: #e2e8f0; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; font-size: 0.9em; }
+        th, td { padding: 12px; border: 1px solid #2d3748; text-align: left; }
+        thead { background-color: #2d3748; color: #a0aec0; }
+        form { background-color: #2d3748; padding: 20px; border-radius: 8px; }
+        form p { margin-bottom: 15px; }
+        form label { display: block; margin-bottom: 5px; color: #a0aec0; }
+        form input, form select, form textarea { width: 100%; padding: 10px; background-color: #1a202c; border: 1px solid #4a5568; color: white; border-radius: 4px; box-sizing: border-box; }
+        .btn-submit { background-color: #38a169; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-submit:hover { background-color: #2f855a; }
+        .card { background-color: #2d3748; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -16,14 +42,14 @@
             <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
             <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
             <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
-            {% if user.is_staff or user.is_superuser %}
+            {% if user.is_staff %}
                 <a href="{% url 'carga_masiva' %}">Carga Masiva</a>
             {% endif %}
         </div>
         <div class="user-menu">
             {% if user.is_authenticated %}
                 <span>Bienvenido, {{ user.username }}</span>
-                <a href="#">Mi Perfil</a> <!-- ENLACE CORREGIDO -->
+                <a href="#">Mi Perfil</a>
                 <form action="{% url 'logout' %}" method="post" style="display: inline; margin: 0; padding: 0;">
                     {% csrf_token %}
                     <button type="submit" class="btn-logout">Cerrar Sesión</button>

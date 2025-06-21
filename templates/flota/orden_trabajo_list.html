@@ -1,4 +1,3 @@
-<!-- templates/flota/orden_trabajo_list.html -->
 {% extends "flota/base.html" %}
 
 {% block title %}Órdenes de Trabajo{% endblock %}
@@ -35,7 +34,6 @@
                     <td>{{ ot.get_estado_display }}</td>
                     <td>{{ ot.fecha_creacion|date:"d/m/Y H:i" }}</td>
                     <td>
-                        <!-- ENLACE CORREGIDO -->
                         <a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-action">Ver Detalle</a>
                     </td>
                 </tr>

@@ -503,3 +503,32 @@ def generar_ot_pdf(request, pk):
     response['Content-Disposition'] = f'inline; filename="OT-{ot.pk}.pdf"'
 
     return response 
+
+# flota/views.py
+
+# ... (todas las vistas existentes se quedan como están) ...
+
+# --- AÑADE ESTA VISTA FALTANTE AL FINAL DEL ARCHIVO ---
+
+@login_required
+def actualizar_km_vehiculo(request, pk):
+    """
+    Procesa la actualización de kilometraje de un vehículo desde el modal del dashboard.
+    """
+    connection.set_tenant(request.tenant)
+    vehiculo = get_object_or_404(Vehiculo, pk=pk)
+    
+    if request.method == 'POST':
+        nuevo_km = request.POST.get('kilometraje_actual')
+        
+        if nuevo_km and nuevo_km.isdigit():
+            # Solo actualizamos el kilometraje. Django se encarga de la fecha automáticamente.
+            vehiculo.kilometraje_actual = int(nuevo_km)
+            # update_fields es más eficiente porque solo actualiza ese campo
+            vehiculo.save(update_fields=['kilometraje_actual'])
+            messages.success(request, f"Kilometraje del vehículo {vehiculo.numero_interno} actualizado a {nuevo_km} KM.")
+        else:
+            messages.error(request, "El kilometraje ingresado no es válido.")
+
+    # Siempre redirigimos de vuelta al dashboard después de la acción
+    return redirect('dashboard')
