@@ -415,34 +415,58 @@ def indicadores_dashboard(request):
 
 
 
+
+
 @login_required
-
 def analisis_fallas(request):
-
     connection.set_tenant(request.tenant)
 
-    fallas = OrdenDeTrabajo.objects.filter(tipo='CORRECTIVA', tipo_falla__isnull=False).values('tipo_falla__descripcion').annotate(frecuencia=Count('id')).order_by('-frecuencia')
+    # --- NUEVA LÓGICA DE FILTRO DE FECHAS ---
+    # Por defecto, mostramos los últimos 30 días
+    end_date_str = request.GET.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+    start_date_str = request.GET.get('start_date', (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'))
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        # Si las fechas son inválidas, volvemos a los valores por defecto
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=30)
+    # ----------------------------------------
 
-    total_fallas = sum(item['frecuencia'] for item in fallas)
-
-    frecuencia_acumulada, data_pareto = 0, []
-
+    # Aplicamos el filtro de fecha a la consulta principal
+    fallas = OrdenDeTrabajo.objects.filter(
+        tipo='CORRECTIVA',
+        tipo_falla__isnull=False,
+        tfs_minutos__gt=0,
+        fecha_creacion__date__range=[start_date, end_date] # <-- FILTRO APLICADO
+    ).values(
+        'tipo_falla__descripcion', 'tipo_falla__causa', 'tipo_falla__criticidad'
+    ).annotate(
+        tfs_total_falla=Sum('tfs_minutos')
+    ).order_by('-tfs_total_falla')
+    
+    # ... (El resto de la lógica de cálculo del Pareto se mantiene igual) ...
+    tfs_gran_total = sum(item['tfs_total_falla'] for item in fallas)
+    frec_acumulada = 0
+    data_pareto = []
     for item in fallas:
+        frec_relativa = (item['tfs_total_falla'] / tfs_gran_total) * 100 if tfs_gran_total > 0 else 0
+        frec_acumulada += frec_relativa
+        item['frecuencia_relativa'] = round(frec_relativa, 2)
+        item['frecuencia_acumulada'] = round(frec_acumulada, 2)
+        data_pareto.append(item)
 
-        frecuencia_relativa = (item['frecuencia'] / total_fallas) * 100 if total_fallas > 0 else 0
-
-        frecuencia_acumulada += frecuencia_relativa
-
-        data_pareto.append({'descripcion': item['tipo_falla__descripcion'], 'frecuencia': item['frecuencia'], 'frecuencia_relativa': round(frecuencia_relativa, 2), 'frecuencia_acumulada': round(frecuencia_acumulada, 2)})
-
-    labels = [item['descripcion'] for item in data_pareto]
-
-    frecuencia_data = [item['frecuencia'] for item in data_pareto]
-
-    acumulada_data = [item['frecuencia_acumulada'] for item in data_pareto]
-
-    context = {'data_pareto_tabla': data_pareto, 'labels': json.dumps(labels), 'frecuencia_data': json.dumps(frecuencia_data), 'acumulada_data': json.dumps(acumulada_data)}
-
+    context = {
+        'data_pareto_tabla': data_pareto,
+        'labels': json.dumps([item['tipo_falla__descripcion'] for item in data_pareto]),
+        'frecuencia_data': json.dumps([item['frecuencia_relativa'] for item in data_pareto]),
+        'acumulada_data': json.dumps([item['frecuencia_acumulada'] for item in data_pareto]),
+        # Pasamos las fechas al template para que los campos del filtro recuerden su valor
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
+    }
     return render(request, 'flota/analisis_fallas.html', context)
 
 

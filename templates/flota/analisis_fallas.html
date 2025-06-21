@@ -1,121 +1,149 @@
-<!-- templates/flota/analisis_fallas.html -->
+<!-- templates/flota/analisis_fallas.html (Versión Mejorada) -->
 {% extends "flota/base.html" %}
 
-{% block title %}Análisis de Fallas (Pareto){% endblock %}
-
 {% block content %}
-    <h1>Análisis de Fallas (Diagrama de Pareto)</h1>
+    <div class="header-container">
+        <h1>Análisis de Pareto por Tiempo Fuera de Servicio</h1>
+        <div class="card">
+        <form method="get" class="filter-form">
+            <div class="form-group">
+                <label for="start_date">Desde:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="end_date">Hasta:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
+            </div>
+            <button type="submit" class="btn-submit">Filtrar</button>
+        </form>
+    </div>
+    </div>
+
+    <!-- CUADRO DE DIÁLOGO EXPLICATIVO -->
+    <div class="card explanation-card">
+        <h2>¿Cómo leer este gráfico?</h2>
+        <p>
+            Este Diagrama de Pareto te ayuda a identificar las "pocas fallas vitales" que causan la mayoría de los problemas.
+        </p>
+        <ul>
+            <li>Las <strong>barras azules</strong> representan el impacto individual de cada tipo de falla (cuánto tiempo de detención causa cada una en porcentaje). Están ordenadas de mayor a menor.</li>
+            <li>La <strong>línea naranja</strong> muestra el impacto acumulado.</li>
+            <li>El <strong>objetivo es enfocarse en las fallas que están a la izquierda de la línea del 80%</strong>. Solucionando estas pocas causas, resolverás aproximadamente el 80% del tiempo total de detención de la flota.</li>
+        </ul>
+    </div>
 
     <div class="card">
-        <h2>Gráfico de Pareto</h2>
-        <p>Identifica las fallas más frecuentes que componen aproximadamente el 80% del total de los eventos.</p>
+        <h2>Diagrama de Pareto</h2>
         <div class="chart-container">
             <canvas id="paretoChart"></canvas>
         </div>
     </div>
 
     <div class="card">
-        <h2>Tabla de Frecuencia de Fallas</h2>
+        <h2>Detalle de Fallas por Impacto (TFS)</h2>
         <table>
+            <!-- La tabla se mantiene igual que antes -->
             <thead>
                 <tr>
+                    <th>Criticidad</th>
+                    <th>Causa</th>
                     <th>Descripción de la Falla</th>
-                    <th>Frecuencia (Cantidad)</th>
-                    <th>Frecuencia Relativa (%)</th>
-                    <th>Frecuencia Acumulada (%)</th>
+                    <th>TFS Total (min)</th>
+                    <th>Impacto Relativo (%)</th>
+                    <th>Impacto Acumulado (%)</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in data_pareto_tabla %}
                 <tr>
-                    <td>{{ item.descripcion }}</td>
-                    <td>{{ item.frecuencia }}</td>
+                    <td>{{ item.tipo_falla__criticidad }}</td>
+                    <td>{{ item.tipo_falla__causa }}</td>
+                    <td>{{ item.tipo_falla__descripcion }}</td>
+                    <td><strong>{{ item.tfs_total_falla }}</strong></td>
                     <td>{{ item.frecuencia_relativa }}%</td>
                     <td>{{ item.frecuencia_acumulada }}%</td>
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="4">No hay órdenes de trabajo correctivas con tipos de falla asignados.</td>
-                </tr>
+                <tr><td colspan="6" style="text-align: center; padding: 20px;">No hay datos de OTs correctivas con TFS registrado para analizar.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 
-    <!-- Script JSON para los datos del gráfico -->
-    <script id="chart-data" type="application/json">
+    <!-- Script JSON para los datos (sin cambios) -->
+    <script id="pareto-data" type="application/json">
     {
         "labels": {{ labels|safe }},
         "frecuenciaData": {{ frecuencia_data|safe }},
         "acumuladaData": {{ acumulada_data|safe }}
     }
     </script>
-
-    <!-- Librería y código para el gráfico -->
+    
+    <!-- Librería y código para el gráfico (CON MEJORAS) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const dataElement = document.getElementById('chart-data');
+        const dataElement = document.getElementById('pareto-data');
         const chartData = JSON.parse(dataElement.textContent);
 
         const ctx = document.getElementById('paretoChart').getContext('2d');
         new Chart(ctx, {
-            type: 'bar', // Tipo de gráfico principal
+            type: 'bar',
             data: {
                 labels: chartData.labels,
                 datasets: [
                     {
-                        label: 'Frecuencia de Falla',
+                        label: 'Impacto Relativo por Falla (%)',
                         data: chartData.frecuenciaData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        yAxisID: 'y', // Asocia este dataset al eje Y izquierdo
+                        backgroundColor: '#3b82f6', // Un azul más vivo
+                        borderColor: '#1d4ed8',
+                        yAxisID: 'y',
                     },
                     {
                         label: 'Porcentaje Acumulado',
                         data: chartData.acumuladaData,
-                        type: 'line', // Este dataset se dibuja como una línea
-                        borderColor: '#ef4444',
-                        backgroundColor: '#ef4444',
-                        tension: 0.1,
-                        yAxisID: 'y1', // Asocia este dataset al eje Y derecho
+                        type: 'line',
+                        borderColor: '#f97316', // Un naranja más intenso
+                        backgroundColor: 'rgba(249, 115, 22, 0.2)',
+                        borderWidth: 3, // Línea más gruesa
+                        pointBackgroundColor: '#f97316',
+                        pointRadius: 4,
+                        yAxisID: 'y1',
+                        fill: true,
                     }
                 ]
             },
             options: {
-                scales: {
-                    y: { // Eje Y izquierdo (Frecuencia)
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Cantidad de Eventos'
-                        }
-                    },
-                    y1: { // Eje Y derecho (Porcentaje)
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        min: 0,
-                        max: 100,
-                        title: {
-                            display: true,
-                            text: 'Porcentaje Acumulado (%)'
-                        },
-                        grid: {
-                            drawOnChartArea: false, // No dibujar la grilla para este eje
-                        },
-                    }
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: { mode: 'index', intersect: false },
+                    legend: { labels: { color: '#e2e8f0', font: { size: 14 } } }
                 },
-                maintainAspectRatio: false
+                scales: {
+                    x: {
+                        ticks: { color: '#a0aec0' } // Etiquetas del eje X más claras
+                    },
+                    y: { 
+                        type: 'linear', display: true, position: 'left',
+                        title: { display: true, text: 'Impacto Individual (%)', color: '#e2e8f0', font: {size: 14} },
+                        ticks: { color: '#a0aec0' }
+                    },
+                    y1: { 
+                        type: 'linear', display: true, position: 'right', min: 0, max: 100, 
+                        title: { display: true, text: 'Impacto Acumulado (%)', color: '#e2e8f0', font: {size: 14} },
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#a0aec0', callback: value => value + '%' } // Añade el símbolo %
+                    }
+                }
             }
         });
     </script>
-    <style>
-        .chart-container {
-            position: relative;
-            height: 400px;
-        }
+    <style> 
+        .chart-container { position: relative; height: 450px; } 
+        .explanation-card { background-color: #1e293b; border-left: 4px solid #3b82f6; }
+        .explanation-card ul { padding-left: 20px; }
+        .explanation-card li { margin-bottom: 0.5em; }
+        .filter-form { display: flex; align-items: flex-end; gap: 20px; background: none; padding: 0; }
+        .form-group { display: flex; flex-direction: column; }
     </style>
 {% endblock %}
