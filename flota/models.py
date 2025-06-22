@@ -1,8 +1,11 @@
 # flota/models.py
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import Group
+
+# --- Catálogos Fundamentales ---
 
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=150, unique=True)
@@ -10,13 +13,17 @@ class Proveedor(models.Model):
     direccion = models.CharField(max_length=255, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
-    def __str__(self): return self.nombre
+
+    def __str__(self):
+        return self.nombre
 
 class ModeloVehiculo(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     marca = models.CharField(max_length=50)
     tipo = models.CharField(max_length=50, help_text="Ej: Bus, Camión, Camioneta")
-    def __str__(self): return f"{self.marca} {self.nombre}"
+
+    def __str__(self):
+        return f"{self.marca} {self.nombre}"
 
 class Vehiculo(models.Model):
     numero_interno = models.CharField(max_length=50, unique=True)
@@ -26,6 +33,9 @@ class Vehiculo(models.Model):
     chasis = models.CharField(max_length=100, blank=True, null=True)
     motor = models.CharField(max_length=100, blank=True, null=True)
     fecha_actualizacion_km = models.DateTimeField(auto_now=True)
+    # --- NUEVO CAMPO ---
+    aplicacion = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Faena, Carretera, Interurbano")
+
     def __str__(self):
         patente_str = self.patente or "S/P"
         return f"{self.numero_interno} - {self.modelo.marca} {self.modelo.nombre} ({patente_str})"
@@ -34,13 +44,17 @@ class Tarea(models.Model):
     descripcion = models.CharField(max_length=255, unique=True)
     horas_hombre = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
     costo_base = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    def __str__(self): return self.descripcion
+
+    def __str__(self):
+        return self.descripcion
 
 class Insumo(models.Model):
     nombre = models.CharField(max_length=150, unique=True)
     categoria = models.CharField(max_length=100, default="General")
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    def __str__(self): return self.nombre
+
+    def __str__(self):
+        return self.nombre
 
 class Personal(models.Model):
     ROL_CHOICES = [('ADMINISTRADOR', 'Administrador'), ('SUPERVISOR', 'Supervisor'), ('MECANICO', 'Mecánico'), ('ASISTENTE', 'Asistente')]
@@ -48,7 +62,10 @@ class Personal(models.Model):
     nombre = models.CharField(max_length=150)
     rut = models.CharField(max_length=20, unique=True)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, default='MECANICO')
-    def __str__(self): return f"{self.nombre} ({self.get_rol_display()})"
+
+    def __str__(self):
+        return f"{self.nombre} ({self.get_rol_display()})"
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         if self.user:
@@ -66,7 +83,9 @@ class TipoFalla(models.Model):
     descripcion = models.CharField(max_length=255, unique=True)
     criticidad = models.CharField(max_length=10, choices=CRITICIDAD_CHOICES, default='MEDIA')
     causa = models.CharField(max_length=10, choices=CAUSA_CHOICES, default='MECANICA')
-    def __str__(self): return self.descripcion
+
+    def __str__(self):
+        return self.descripcion
 
 class PautaMantenimiento(models.Model):
     nombre = models.CharField(max_length=100)
@@ -74,15 +93,20 @@ class PautaMantenimiento(models.Model):
     kilometraje_pauta = models.PositiveIntegerField()
     tareas = models.ManyToManyField(Tarea, blank=True)
     archivo_pdf = models.FileField(upload_to='pautas/', blank=True, null=True)
-    def __str__(self): return f"{self.nombre} ({self.modelo_vehiculo.nombre} - {self.kilometraje_pauta} KM)"
+
+    def __str__(self):
+        return f"{self.nombre} ({self.modelo_vehiculo.nombre} - {self.kilometraje_pauta} KM)"
 
 class OrdenDeTrabajo(models.Model):
     ESTADO_CHOICES = [('PENDIENTE', 'Pendiente'), ('EN_PROCESO', 'En Proceso'), ('FINALIZADA', 'Finalizada'), ('CERRADA_MECANICO', 'Cerrada por Mecánico')]
     TIPO_CHOICES = [('PREVENTIVA', 'Preventiva'), ('CORRECTIVA', 'Correctiva')]
+    FORMATO_CHOICES = [('NORMAL', 'Mantenimiento Normal'), ('CONTRATO', 'Bajo Contrato')]
+
     folio = models.CharField(max_length=50, unique=True, blank=True, null=True, editable=False)
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.PROTECT, related_name='ordenes_trabajo')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='PENDIENTE')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    formato = models.CharField(max_length=20, choices=FORMATO_CHOICES, default='NORMAL')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_cierre = models.DateTimeField(null=True, blank=True)
     kilometraje_apertura = models.PositiveIntegerField()
@@ -91,17 +115,22 @@ class OrdenDeTrabajo(models.Model):
     costo_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     motivo_pendiente = models.TextField(blank=True, null=True, help_text="Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.")
     tfs_minutos = models.PositiveIntegerField(default=0, verbose_name="Tiempo Fuera de Servicio (minutos)", help_text="Tiempo total en minutos que la unidad estuvo detenida por esta falla.")
+    
     tareas_realizadas = models.ManyToManyField(Tarea, blank=True)
     insumos_utilizados = models.ManyToManyField(Insumo, through='DetalleInsumoOT', blank=True)
     personal_asignado = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)
     proveedor = models.ForeignKey(Proveedor, null=True, blank=True, on_delete=models.SET_NULL)
     tipo_falla = models.ForeignKey(TipoFalla, null=True, blank=True, on_delete=models.SET_NULL, help_text="Solo para OTs correctivas")
-    def __str__(self): return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
+
+    def __str__(self):
+        return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
+
     def calcular_costo_total(self):
         if not self.pk: return 0
         costo_insumos = sum((detalle.insumo.precio_unitario * detalle.cantidad) for detalle in self.detalleinsumoot_set.all())
         costo_tareas = sum(tarea.costo_base for tarea in self.tareas_realizadas.all())
         return costo_insumos + costo_tareas
+
     def save(self, *args, **kwargs):
         if not self.folio and not self.pk:
             now = timezone.now()
@@ -109,7 +138,8 @@ class OrdenDeTrabajo(models.Model):
             next_id = (last_ot.pk + 1) if last_ot else 1
             self.folio = f"OT-{now.year}{now.month:02d}-{next_id:04d}"
         super().save(*args, **kwargs)
-        if 'update_fields' not in kwargs or 'costo_total' not in kwargs['update_fields']:
+        is_updating_fields = 'update_fields' in kwargs and kwargs['update_fields'] is not None
+        if not is_updating_fields or 'costo_total' not in kwargs['update_fields']:
             nuevo_costo = self.calcular_costo_total()
             if self.costo_total != nuevo_costo:
                 self.costo_total = nuevo_costo

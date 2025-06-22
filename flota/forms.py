@@ -3,7 +3,7 @@
 from django import forms
 from .models import (
     OrdenDeTrabajo, Vehiculo, Tarea, Insumo, 
-    DetalleInsumoOT, BitacoraDiaria
+    DetalleInsumoOT, BitacoraDiaria, PautaMantenimiento
 )
 
 class VehiculoChoiceField(forms.ModelChoiceField):
@@ -12,12 +12,13 @@ class VehiculoChoiceField(forms.ModelChoiceField):
         return f"{obj.numero_interno} - {obj.modelo.marca} {obj.modelo.nombre} ({patente_str})"
 
 class OrdenDeTrabajoForm(forms.ModelForm):
-    vehiculo = VehiculoChoiceField(queryset=Vehiculo.objects.all().order_by('numero_interno'), label="Vehículo", widget=forms.Select(attrs={'class': 'form-control'}))
     class Meta:
         model = OrdenDeTrabajo
-        fields = ['vehiculo', 'tipo', 'kilometraje_apertura', 'observacion_inicial', 'tipo_falla', 'tfs_minutos']
+        fields = ['vehiculo', 'tipo', 'formato', 'kilometraje_apertura', 'observacion_inicial', 'tipo_falla', 'tfs_minutos']
         widgets = {
+            'vehiculo': forms.Select(attrs={'class': 'form-control'}),
             'tipo': forms.Select(attrs={'class': 'form-control'}),
+            'formato': forms.Select(attrs={'class': 'form-control'}),
             'kilometraje_apertura': forms.NumberInput(attrs={'class': 'form-control'}),
             'observacion_inicial': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'tipo_falla': forms.Select(attrs={'class': 'form-control'}),
