@@ -1,64 +1,77 @@
-# flota/forms.py
-
 from django import forms
-from .models import (
-    OrdenDeTrabajo, Vehiculo, Tarea, Insumo, 
-    DetalleInsumoOT, BitacoraDiaria, PautaMantenimiento
-)
-
-class VehiculoChoiceField(forms.ModelChoiceField):
-    def label_from_instance(self, obj):
-        patente_str = obj.patente or "S/P"
-        return f"{obj.numero_interno} - {obj.modelo.marca} {obj.modelo.nombre} ({patente_str})"
+from .models import OrdenDeTrabajo, Tarea, DetalleInsumoOT, Insumo, BitacoraDiaria
 
 class OrdenDeTrabajoForm(forms.ModelForm):
     class Meta:
         model = OrdenDeTrabajo
-        fields = ['vehiculo', 'tipo', 'formato', 'kilometraje_apertura', 'observacion_inicial', 'tipo_falla', 'tfs_minutos']
-        widgets = {
-            'vehiculo': forms.Select(attrs={'class': 'form-control'}),
-            'tipo': forms.Select(attrs={'class': 'form-control'}),
-            'formato': forms.Select(attrs={'class': 'form-control'}),
-            'kilometraje_apertura': forms.NumberInput(attrs={'class': 'form-control'}),
-            'observacion_inicial': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'tipo_falla': forms.Select(attrs={'class': 'form-control'}),
-            'tfs_minutos': forms.NumberInput(attrs={'class': 'form-control'}),
-        }
+        fields = ['vehiculo', 'tipo', 'formato', 'kilometraje_apertura', 'observacion_inicial']
 
-class AddTareaToOTForm(forms.Form):
-    tarea = forms.ModelChoiceField(queryset=Tarea.objects.all().order_by('descripcion'), label="Seleccionar Tarea a Añadir", widget=forms.Select(attrs={'class': 'form-control'}))
+class AddTareaToOTForm(forms.ModelForm):
+    tarea = forms.ModelChoiceField(queryset=Tarea.objects.all(), label="Seleccionar Tarea")
+    class Meta:
+        model = OrdenDeTrabajo
+        fields = ['tarea']
 
 class AddInsumoToOTForm(forms.ModelForm):
     class Meta:
         model = DetalleInsumoOT
         fields = ['insumo', 'cantidad']
-        widgets = {'insumo': forms.Select(attrs={'class': 'form-control'}), 'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Cantidad utilizada'})}
 
 class CambiarEstadoOTForm(forms.ModelForm):
     class Meta:
         model = OrdenDeTrabajo
         fields = ['estado']
-        widgets = {'estado': forms.Select(attrs={'class': 'form-control'})}
+
+class BitacoraDiariaForm(forms.ModelForm):
+    class Meta:
+        model = BitacoraDiaria
+        fields = '__all__'
+        widgets = {
+            'fecha': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class CargaMasivaForm(forms.Form):
+    archivo_vehiculos = forms.FileField(label="Archivo de Flota (Vehículos)", required=False)
+    archivo_pautas = forms.FileField(label="Archivo de Pautas de Mantenimiento", required=False)
 
 class CerrarOtMecanicoForm(forms.ModelForm):
     class Meta:
         model = OrdenDeTrabajo
         fields = ['motivo_pendiente']
-        widgets = {'motivo_pendiente': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Si dejas la OT pendiente, explica el motivo aquí...'})}
-
-class BitacoraDiariaForm(forms.ModelForm):
-    fecha = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    vehiculo = VehiculoChoiceField(queryset=Vehiculo.objects.all().order_by('numero_interno'), label="Vehículo", widget=forms.Select(attrs={'class': 'form-control'}))
-    class Meta:
-        model = BitacoraDiaria
-        fields = ['vehiculo', 'fecha', 'horas_operativas', 'horas_mantenimiento_prog', 'horas_falla']
         widgets = {
-            'horas_operativas': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'value': '0'}),
-            'horas_mantenimiento_prog': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'value': '0'}),
-            'horas_falla': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.5', 'value': '0'}),
+            'motivo_pendiente': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Describe el trabajo realizado o por qué queda pendiente...'}),
         }
 
-class CargaMasivaForm(forms.Form):
-    archivo_vehiculos = forms.FileField(label="Archivo de Vehículos (Excel)", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
-    archivo_tareas = forms.FileField(label="Archivo de Tareas (Excel)", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
-    archivo_insumos = forms.FileField(label="Archivo de Insumos (Excel)", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
+# --- NUEVO FORMULARIO PARA ASIGNAR PERSONAL ---
+class AsignarPersonalOTForm(forms.ModelForm):
+    class Meta:
+        model = OrdenDeTrabajo
+        fields = ['responsable', 'personal_asignado']
+        widgets = {
+            'personal_asignado': forms.CheckboxSelectMultiple,
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.contrib.auth.models import User
+        # Filtra para mostrar solo usuarios que tienen un perfil de Personal
+        usuarios_con_perfil = User.objects.filter(personal__isnull=False)
+        
+        self.fields['responsable'].queryset = usuarios_con_perfil
+        self.fields['responsable'].label = "Responsable Principal"
+        
+        self.fields['personal_asignado'].queryset = usuarios_con_perfil
+        self.fields['personal_asignado'].label = "Equipo de Ayudantes"
+
+    def clean(self):
+        cleaned_data = super().clean()
+        responsable = cleaned_data.get('responsable')
+        ayudantes = cleaned_data.get('personal_asignado')
+
+        if responsable and ayudantes and responsable in ayudantes:
+            # Si el responsable está en la lista de ayudantes, lo eliminamos automáticamente
+            # en lugar de dar un error, lo cual es más amigable para el usuario.
+            ayudantes_limpios = ayudantes.exclude(pk=responsable.pk)
+            cleaned_data['personal_asignado'] = ayudantes_limpios
+        
+        return cleaned_data

@@ -21,7 +21,8 @@ from .models import (
 )
 from .forms import (
     OrdenDeTrabajoForm, AddTareaToOTForm, AddInsumoToOTForm, 
-    CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, CerrarOtMecanicoForm
+    CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, CerrarOtMecanicoForm,
+    AsignarPersonalOTForm
 )
 
 
@@ -32,6 +33,8 @@ def es_supervisor_o_admin(user):
 
 # --- Vistas Principales de la Aplicación ---
 
+# Archivo: flota/views.py
+
 @login_required
 def dashboard_flota(request):
     connection.set_tenant(request.tenant)
@@ -39,11 +42,9 @@ def dashboard_flota(request):
     
     data_flota = []
     for vehiculo in vehiculos:
-        # --- Lógica existente ---
-        km_prom_dia = random.randint(150, 450) # Mantenemos tu cálculo aleatorio por ahora
+        # ... (lógica existente para km_prom_dia, km_actual, proxima_pauta_agg, etc.) ...
+        km_prom_dia = random.randint(150, 450)
         km_actual = vehiculo.kilometraje_actual
-        
-        # --- Lógica existente para la próxima pauta ---
         proxima_pauta_agg = PautaMantenimiento.objects.filter(
             modelo_vehiculo=vehiculo.modelo,
             kilometraje_pauta__gt=km_actual
@@ -55,14 +56,12 @@ def dashboard_flota(request):
         pauta_obj = None
         fecha_prox_mant = None
         
-        ### NUEVO: Variables para los datos que faltan (inicializamos) ###
         intervalo_km = None
         km_ultimo_mant = None
         fecha_ultimo_mant = None
         tipo_ultimo_mant = None
         km_acum_prox = None
 
-        ### NUEVO: Buscar la última OT Preventiva Finalizada para obtener datos del último mantenimiento ###
         ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(
             vehiculo=vehiculo,
             tipo='PREVENTIVA',
@@ -72,44 +71,41 @@ def dashboard_flota(request):
         if ultima_ot_preventiva:
             km_ultimo_mant = ultima_ot_preventiva.kilometraje_cierre
             fecha_ultimo_mant = ultima_ot_preventiva.fecha_cierre
-            # Asumimos que la OT puede tener una pauta asociada
             if ultima_ot_preventiva.pauta_mantenimiento:
                 tipo_ultimo_mant = ultima_ot_preventiva.pauta_mantenimiento.nombre
 
-        # --- Lógica existente para el estado y cálculo de la próxima fecha ---
+        ### NUEVO: Buscar la última OT abierta para este vehículo ###
+        ot_abierta = OrdenDeTrabajo.objects.filter(
+            vehiculo=vehiculo
+        ).exclude(
+            estado='FINALIZADA'
+        ).order_by('-fecha_creacion').first()
+
+        # ... (lógica existente para el estado de mantenimiento y cálculo de fechas) ...
         if proximo_km_pauta:
             try:
                 pauta_obj = PautaMantenimiento.objects.get(
                     modelo_vehiculo=vehiculo.modelo, 
                     kilometraje_pauta=proximo_km_pauta
                 )
-                
-                ### NUEVO: Obtener el intervalo y el acumulado desde la pauta encontrada ###
-                # Esto asume que tu modelo PautaMantenimiento tiene un campo 'intervalo_km'
                 if hasattr(pauta_obj, 'intervalo_km'):
                     intervalo_km = pauta_obj.intervalo_km  
-                
-                km_acum_prox = proximo_km_pauta # El KM acumulado es el KM de la próxima pauta
-
+                km_acum_prox = proximo_km_pauta
                 tolerancia = 1000
                 advertencia = 5000
                 kms_faltantes = proximo_km_pauta - km_actual
-                
                 if kms_faltantes <= tolerancia:
                     estado = "VENCIDO"
                 elif kms_faltantes <= advertencia:
                     estado = "PROXIMO"
-
                 if km_prom_dia > 0 and kms_faltantes > 0:
                     dias_para_pauta = kms_faltantes / km_prom_dia
                     fecha_prox_mant = datetime.now().date() + timedelta(days=dias_para_pauta)
-
             except PautaMantenimiento.DoesNotExist:
                 pauta_obj = None
         
-        ### MODIFICADO: Añadir los nuevos campos al diccionario ###
         data_flota.append({
-            # --- Datos existentes ---
+            # ... (datos existentes) ...
             'vehiculo': vehiculo,
             'proxima_pauta_obj': pauta_obj,
             'proximo_km': proximo_km_pauta,
@@ -117,13 +113,14 @@ def dashboard_flota(request):
             'estado': estado,
             'km_prom_dia': km_prom_dia,
             'fecha_prox_mant': fecha_prox_mant,
-            
-            # --- NUEVOS DATOS para el template ---
             'intervalo_km': intervalo_km,
             'km_ultimo_mant': km_ultimo_mant,
             'fecha_ultimo_mant': fecha_ultimo_mant,
             'tipo_ultimo_mant': tipo_ultimo_mant,
             'km_acum_prox': km_acum_prox,
+            
+            # --- NUEVO DATO para el template ---
+            'ot_abierta': ot_abierta,
         })
 
     context = {
@@ -132,9 +129,8 @@ def dashboard_flota(request):
     }
     return render(request, 'flota/dashboard.html', context)
 
-
 @login_required
-@user_passes_test(es_supervisor_o_admin)
+
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
     initial_data = {}
@@ -160,35 +156,54 @@ def orden_trabajo_detail(request, pk):
     connection.set_tenant(request.tenant)
     ot = get_object_or_404(OrdenDeTrabajo, pk=pk)
     es_admin_o_super = request.user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()
+    
+    asignar_form = AsignarPersonalOTForm(instance=ot)
+    tarea_form = AddTareaToOTForm()
+    insumo_form = AddInsumoToOTForm()
+    cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
+
     if request.method == 'POST':
+        # Identificar qué formulario se está enviando
         if 'add_tarea' in request.POST:
             tarea_form = AddTareaToOTForm(request.POST)
             if tarea_form.is_valid():
                 ot.tareas_realizadas.add(tarea_form.cleaned_data['tarea'])
-                ot.save()
                 messages.success(request, '¡Tarea añadida con éxito!')
                 return redirect('ot_detail', pk=ot.pk)
+        
         elif 'add_insumo' in request.POST:
             insumo_form = AddInsumoToOTForm(request.POST)
             if insumo_form.is_valid():
                 detalle_insumo = insumo_form.save(commit=False)
                 detalle_insumo.orden_de_trabajo = ot
                 detalle_insumo.save()
-                ot.save()
                 messages.success(request, '¡Insumo añadido con éxito!')
                 return redirect('ot_detail', pk=ot.pk)
+
         elif 'cerrar_mecanico' in request.POST:
-            form = CerrarOtMecanicoForm(request.POST, instance=ot)
-            if form.is_valid():
-                instancia = form.save(commit=False)
+            cerrar_mecanico_form = CerrarOtMecanicoForm(request.POST, instance=ot)
+            if cerrar_mecanico_form.is_valid():
+                instancia = cerrar_mecanico_form.save(commit=False)
                 instancia.estado = 'CERRADA_MECANICO'
                 instancia.save()
                 messages.info(request, f"OT #{ot.folio} marcada como 'Cerrada por Mecánico'.")
                 return redirect('ot_detail', pk=ot.pk)
-    tarea_form = AddTareaToOTForm()
-    insumo_form = AddInsumoToOTForm()
-    cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
-    context = {'ot': ot, 'tarea_form': tarea_form, 'insumo_form': insumo_form, 'cerrar_mecanico_form': cerrar_mecanico_form, 'es_admin_o_super': es_admin_o_super}
+
+        elif 'asignar_personal' in request.POST:
+            asignar_form = AsignarPersonalOTForm(request.POST, instance=ot)
+            if asignar_form.is_valid():
+                asignar_form.save()
+                messages.success(request, '¡Personal asignado a la OT con éxito!')
+                return redirect('ot_detail', pk=ot.pk)
+
+    context = {
+        'ot': ot, 
+        'tarea_form': tarea_form, 
+        'insumo_form': insumo_form, 
+        'cerrar_mecanico_form': cerrar_mecanico_form, 
+        'es_admin_o_super': es_admin_o_super,
+        'asignar_form': asignar_form,
+    }
     return render(request, 'flota/orden_trabajo_detail.html', context)
 
 
@@ -222,7 +237,7 @@ def bitacora_diaria_list(request):
 
 
 @login_required
-@user_passes_test(es_supervisor_o_admin)
+
 def carga_masiva(request):
     connection.set_tenant(request.tenant)
     if request.method == 'POST':
