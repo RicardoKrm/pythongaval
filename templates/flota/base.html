@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}TMS GAVAL{% endblock %} - {{ request.tenant.nombre }}</title>
+    
+    <!-- Librería de Iconos (necesaria para el rediseño) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
     <style>
+        /* ESTILOS ORIGINALES Y GLOBALES DE TU APLICACIÓN */
         body { font-family: system-ui, sans-serif; margin: 0; background-color: #1a202c; color: #cbd5e0; }
         nav { background-color: #2d3748; padding: 1em 2em; display: flex; justify-content: space-between; align-items: center; }
         .nav-links a { color: white; text-decoration: none; margin-right: 1.5em; font-weight: 500; }
@@ -31,7 +36,15 @@
         .btn-submit { background-color: #38a169; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn-submit:hover { background-color: #2f855a; }
         .card { background-color: #2d3748; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        /* Clases de utilidad que pueden ser útiles globalmente */
+        .btn-secondary { background-color: #4a5568; color: white; padding: 8px 12px; border-radius: 4px; text-decoration: none; }
+        .btn-secondary:hover { background-color: #2d3748; }
+        .mt-4 { margin-top: 1.5rem!important; }
     </style>
+    
+    <!-- Bloque para que las plantillas hijas puedan añadir CSS o JS extra al head -->
+    {% block extra_head %}{% endblock %}
+
 </head>
 <body>
     <nav>

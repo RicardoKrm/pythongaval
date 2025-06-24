@@ -1,4 +1,7 @@
 from pathlib import Path
+import locale
+locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-tu-secret-key-aqui'
 DEBUG = True

@@ -1,0 +1,170 @@
+{% extends "flota/base.html" %}
+
+{% block extra_head %}
+<style>
+/* --- ESTILOS ESPECÍFICOS PARA EL DISEÑO DEL DIBUJO --- */
+.header-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2d3748;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+.header-panel h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    border: none;
+    padding: 0;
+}
+.vehicle-info {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.9rem;
+    color: #a0aec0;
+}
+.info-grid, .main-grid {
+    display: grid;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+.info-grid {
+    grid-template-columns: repeat(3, 1fr);
+}
+.main-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+.info-card, .main-card {
+    background-color: #2d3748;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #4a5568;
+}
+.info-card {
+    text-align: center;
+}
+.info-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #a0aec0;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+.info-value {
+    display: block;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: white;
+    line-height: 1;
+}
+.main-card h4 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #e2e8f0;
+    border-bottom: 1px solid #4a5568;
+    padding-bottom: 0.75rem;
+}
+.calculator-form {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.calculator-form input {
+    flex-grow: 1;
+}
+.result-display, .result-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100px;
+    background-color: #1a202c;
+    border-radius: 6px;
+    padding: 1rem;
+}
+.result-display span, .result-placeholder span {
+    font-size: 2rem;
+    font-weight: bold;
+}
+.result-display span { color: #68d391; }
+.result-placeholder span { color: #a0aec0; }
+
+@media (max-width: 992px) {
+    .info-grid, .main-grid { grid-template-columns: 1fr; }
+    .header-panel { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    .vehicle-info { flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+}
+</style>
+{% endblock %}
+
+
+{% block title %}Panel de Análisis - Vehículo {{ vehiculo.numero_interno }}{% endblock %}
+
+{% block content %}
+    <!-- Barra de Encabezado -->
+    <div class="header-panel">
+        <h1>Panel de Análisis y Pronóstico</h1>
+        <div class="vehicle-info">
+            <span><strong>Vehículo:</strong> {{ vehiculo.modelo.marca }} {{ vehiculo.modelo.nombre }}</span>
+            <span><strong>Patente:</strong> {{ vehiculo.patente|default:'S/P' }}</span>
+            <span><strong>N° Interno:</strong> {{ vehiculo.numero_interno }}</span>
+        </div>
+    </div>
+
+    <!-- Rejilla de Datos Superiores -->
+    <div class="info-grid">
+        <div class="info-card">
+            <span class="info-label">Kilómetros Actuales</span>
+            <span class="info-value">{{ vehiculo.kilometraje_actual|floatformat:0 }}</span>
+        </div>
+        <div class="info-card">
+            <span class="info-label">Próximo Mantenimiento</span>
+            <span class="info-value">{{ proximo_km_pauta|floatformat:0|default:"N/A" }}</span>
+        </div>
+        <div class="info-card">
+            <span class="info-label">Promedio KM por Día</span>
+            <span class="info-value">{{ km_prom_dia_actual|floatformat:0 }}</span>
+        </div>
+    </div>
+
+    <!-- Rejilla Principal (Calculadora y Resultado) -->
+    <div class="main-grid">
+        <!-- Panel Izquierdo: Calculadora -->
+        <div class="main-card">
+            <h4>Calculadora de Pronóstico</h4>
+            {% if proximo_km_pauta %}
+                <p>A este vehículo le faltan <strong>{{ kms_faltantes|floatformat:0 }} KM</strong> para su siguiente pauta.</p>
+                <p>Simular con un nuevo promedio diario:</p>
+                
+                <form method="POST" action="#resultado-card" class="calculator-form">
+                    {% csrf_token %}
+                    <input type="number" name="km_prom_diario" value="{{ km_prom_usado }}" placeholder="Ingresa KM/Día" required>
+                    <button type="submit" class="btn-submit">Calcular</button>
+                </form>
+            {% else %}
+                <div class="alert alert-warning">No hay próxima pauta para calcular un pronóstico.</div>
+            {% endif %}
+        </div>
+
+        <!-- Panel Derecho: Resultado -->
+        <div class="main-card" id="resultado-card">
+            <h4>Fecha Estimada de Mantenimiento</h4>
+            
+            {% if fecha_pronosticada %}
+                <div class="result-display">
+                    <span>{{ fecha_pronosticada }}</span>
+                </div>
+            {% else %}
+                <div class="result-placeholder">
+                    <span>-</span>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Volver a la Pizarra</a>
+    </div>
+{% endblock %}

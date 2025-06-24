@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from flota import views as flota_views
+from flota import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -21,5 +22,6 @@ urlpatterns = [
     path('carga-masiva/', flota_views.carga_masiva, name='carga_masiva'),
     path('vehiculo/<int:pk>/historial/', flota_views.historial_vehiculo, name='historial_vehiculo'),
     path('vehiculo/<int:pk>/actualizar-km/', flota_views.actualizar_km_vehiculo, name='actualizar_km'),
+    path('vehiculo/<int:pk>/analisis-km/', views.analisis_km_vehiculo, name='analisis_km_vehiculo'),
     
 ]

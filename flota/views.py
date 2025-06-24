@@ -1,4 +1,4 @@
-# flota/views.py
+## Archivo completo: flota/views.py (con la función dashboard_flota actualizada) ##
 
 import json
 import random
@@ -39,8 +39,11 @@ def dashboard_flota(request):
     
     data_flota = []
     for vehiculo in vehiculos:
-        km_prom_dia = random.randint(150, 450)
+        # --- Lógica existente ---
+        km_prom_dia = random.randint(150, 450) # Mantenemos tu cálculo aleatorio por ahora
         km_actual = vehiculo.kilometraje_actual
+        
+        # --- Lógica existente para la próxima pauta ---
         proxima_pauta_agg = PautaMantenimiento.objects.filter(
             modelo_vehiculo=vehiculo.modelo,
             kilometraje_pauta__gt=km_actual
@@ -51,13 +54,43 @@ def dashboard_flota(request):
         kms_faltantes = None
         pauta_obj = None
         fecha_prox_mant = None
+        
+        ### NUEVO: Variables para los datos que faltan (inicializamos) ###
+        intervalo_km = None
+        km_ultimo_mant = None
+        fecha_ultimo_mant = None
+        tipo_ultimo_mant = None
+        km_acum_prox = None
 
+        ### NUEVO: Buscar la última OT Preventiva Finalizada para obtener datos del último mantenimiento ###
+        ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(
+            vehiculo=vehiculo,
+            tipo='PREVENTIVA',
+            estado='FINALIZADA'
+        ).order_by('-fecha_cierre').first()
+
+        if ultima_ot_preventiva:
+            km_ultimo_mant = ultima_ot_preventiva.kilometraje_cierre
+            fecha_ultimo_mant = ultima_ot_preventiva.fecha_cierre
+            # Asumimos que la OT puede tener una pauta asociada
+            if ultima_ot_preventiva.pauta_mantenimiento:
+                tipo_ultimo_mant = ultima_ot_preventiva.pauta_mantenimiento.nombre
+
+        # --- Lógica existente para el estado y cálculo de la próxima fecha ---
         if proximo_km_pauta:
             try:
                 pauta_obj = PautaMantenimiento.objects.get(
                     modelo_vehiculo=vehiculo.modelo, 
                     kilometraje_pauta=proximo_km_pauta
                 )
+                
+                ### NUEVO: Obtener el intervalo y el acumulado desde la pauta encontrada ###
+                # Esto asume que tu modelo PautaMantenimiento tiene un campo 'intervalo_km'
+                if hasattr(pauta_obj, 'intervalo_km'):
+                    intervalo_km = pauta_obj.intervalo_km  
+                
+                km_acum_prox = proximo_km_pauta # El KM acumulado es el KM de la próxima pauta
+
                 tolerancia = 1000
                 advertencia = 5000
                 kms_faltantes = proximo_km_pauta - km_actual
@@ -73,8 +106,10 @@ def dashboard_flota(request):
 
             except PautaMantenimiento.DoesNotExist:
                 pauta_obj = None
-
+        
+        ### MODIFICADO: Añadir los nuevos campos al diccionario ###
         data_flota.append({
+            # --- Datos existentes ---
             'vehiculo': vehiculo,
             'proxima_pauta_obj': pauta_obj,
             'proximo_km': proximo_km_pauta,
@@ -82,6 +117,13 @@ def dashboard_flota(request):
             'estado': estado,
             'km_prom_dia': km_prom_dia,
             'fecha_prox_mant': fecha_prox_mant,
+            
+            # --- NUEVOS DATOS para el template ---
+            'intervalo_km': intervalo_km,
+            'km_ultimo_mant': km_ultimo_mant,
+            'fecha_ultimo_mant': fecha_ultimo_mant,
+            'tipo_ultimo_mant': tipo_ultimo_mant,
+            'km_acum_prox': km_acum_prox,
         })
 
     context = {
@@ -351,3 +393,53 @@ def actualizar_km_vehiculo(request, pk):
         else:
             messages.error(request, "El kilometraje ingresado no es válido.")
     return redirect('dashboard')
+
+@login_required
+def analisis_km_vehiculo(request, pk):
+    """
+    Vista para mostrar el análisis de kilometraje y calcular pronósticos
+    para un vehículo específico.
+    """
+    connection.set_tenant(request.tenant)
+    vehiculo = get_object_or_404(Vehiculo, pk=pk)
+    
+    # --- Cálculo base (igual que en el dashboard) ---
+    km_actual = vehiculo.kilometraje_actual
+    proxima_pauta_agg = PautaMantenimiento.objects.filter(
+        modelo_vehiculo=vehiculo.modelo,
+        kilometraje_pauta__gt=km_actual
+    ).aggregate(proximo_km=Min('kilometraje_pauta'))
+    proximo_km_pauta = proxima_pauta_agg.get('proximo_km')
+
+    kms_faltantes = None
+    if proximo_km_pauta:
+        kms_faltantes = proximo_km_pauta - km_actual
+    
+    # --- Cálculo del promedio de KM diario (usamos el aleatorio por ahora) ---
+    km_prom_dia_actual = random.randint(150, 450)
+    
+    # --- Variables para el resultado del pronóstico ---
+    fecha_pronosticada = None
+    km_prom_usado = km_prom_dia_actual # Por defecto, usamos el promedio actual
+
+    # --- Procesar el formulario si se envía ---
+    if request.method == 'POST':
+        km_prom_input = request.POST.get('km_prom_diario')
+        if km_prom_input and km_prom_input.isdigit():
+            km_prom_usado = int(km_prom_input)
+
+    # --- Calcular la fecha pronosticada (con el promedio actual o el del usuario) ---
+    if kms_faltantes is not None and kms_faltantes > 0 and km_prom_usado > 0:
+        dias_para_pauta = kms_faltantes / km_prom_usado
+        fecha_pronosticada = (datetime.now().date() + timedelta(days=dias_para_pauta)).strftime("%d de %B de %Y")
+
+    context = {
+        'vehiculo': vehiculo,
+        'km_prom_dia_actual': km_prom_dia_actual,
+        'proximo_km_pauta': proximo_km_pauta,
+        'kms_faltantes': kms_faltantes,
+        'fecha_pronosticada': fecha_pronosticada,
+        'km_prom_usado': km_prom_usado, # Enviamos el valor usado para mostrarlo en el input
+    }
+    
+    return render(request, 'flota/analisis_km.html', context)

@@ -1,4 +1,4 @@
-# flota/models.py
+## Archivo completo: flota/models.py (con campos añadidos) ##
 
 from django.db import models
 from django.conf import settings
@@ -33,12 +33,22 @@ class Vehiculo(models.Model):
     chasis = models.CharField(max_length=100, blank=True, null=True)
     motor = models.CharField(max_length=100, blank=True, null=True)
     fecha_actualizacion_km = models.DateTimeField(auto_now=True)
-    # --- NUEVO CAMPO ---
     aplicacion = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Faena, Carretera, Interurbano")
+    
+    ### NUEVO: Añadimos una relación a NormaEuro para cumplir con el requisito del dashboard ###
+    # Permitimos que sea nulo para no romper vehículos existentes.
+    norma_euro = models.ForeignKey('NormaEuro', on_delete=models.SET_NULL, null=True, blank=True, related_name='vehiculos')
 
     def __str__(self):
         patente_str = self.patente or "S/P"
         return f"{self.numero_interno} - {self.modelo.marca} {self.modelo.nombre} ({patente_str})"
+
+### NUEVO: Modelo para las Normas Euro, como se pide en el dashboard ###
+class NormaEuro(models.Model):
+    nombre = models.CharField(max_length=20, unique=True, help_text="Ej: EURO V, EURO VI")
+
+    def __str__(self):
+        return self.nombre
 
 class Tarea(models.Model):
     descripcion = models.CharField(max_length=255, unique=True)
@@ -94,6 +104,12 @@ class PautaMantenimiento(models.Model):
     tareas = models.ManyToManyField(Tarea, blank=True)
     archivo_pdf = models.FileField(upload_to='pautas/', blank=True, null=True)
 
+    ### NUEVO: Campo para el intervalo en KM, como en el Excel ###
+    intervalo_km = models.PositiveIntegerField(
+        default=10000, 
+        help_text="Intervalo en kilómetros para esta pauta (ej. 10000, 20000)"
+    )
+
     def __str__(self):
         return f"{self.nombre} ({self.modelo_vehiculo.nombre} - {self.kilometraje_pauta} KM)"
 
@@ -121,6 +137,15 @@ class OrdenDeTrabajo(models.Model):
     personal_asignado = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True)
     proveedor = models.ForeignKey(Proveedor, null=True, blank=True, on_delete=models.SET_NULL)
     tipo_falla = models.ForeignKey(TipoFalla, null=True, blank=True, on_delete=models.SET_NULL, help_text="Solo para OTs correctivas")
+
+    ### MODIFICADO: Relación con PautaMantenimiento para OTs preventivas ###
+    pauta_mantenimiento = models.ForeignKey(
+        PautaMantenimiento, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        help_text="Pauta asociada, solo para OTs de tipo PREVENTIVA"
+    )
 
     def __str__(self):
         return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
