@@ -20,10 +20,10 @@ from .models import (
     Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT
 )
 from .forms import (
-    OrdenDeTrabajoForm, AddTareaToOTForm, AddInsumoToOTForm, 
-    CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, CerrarOtMecanicoForm,
-    AsignarPersonalOTForm
+    OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
+    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm
 )
+from django.utils import timezone # <-- Asegúrate de tener este import
 
 
 # --- Función de chequeo de rol ---
@@ -157,52 +157,81 @@ def orden_trabajo_detail(request, pk):
     ot = get_object_or_404(OrdenDeTrabajo, pk=pk)
     es_admin_o_super = request.user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()
     
+    # Inicialización de todos los formularios que usaremos
     asignar_form = AsignarPersonalOTForm(instance=ot)
-    tarea_form = AddTareaToOTForm()
-    insumo_form = AddInsumoToOTForm()
     cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
+    cambiar_estado_form = CambiarEstadoOTForm(instance=ot)
+    manual_tarea_form = ManualTareaForm()  # Formulario vacío para entrada manual
+    manual_insumo_form = ManualInsumoForm() # Formulario vacío para entrada manual
 
     if request.method == 'POST':
-        # Identificar qué formulario se está enviando
-        if 'add_tarea' in request.POST:
-            tarea_form = AddTareaToOTForm(request.POST)
-            if tarea_form.is_valid():
-                ot.tareas_realizadas.add(tarea_form.cleaned_data['tarea'])
-                messages.success(request, '¡Tarea añadida con éxito!')
-                return redirect('ot_detail', pk=ot.pk)
-        
-        elif 'add_insumo' in request.POST:
-            insumo_form = AddInsumoToOTForm(request.POST)
-            if insumo_form.is_valid():
-                detalle_insumo = insumo_form.save(commit=False)
-                detalle_insumo.orden_de_trabajo = ot
-                detalle_insumo.save()
-                messages.success(request, '¡Insumo añadido con éxito!')
+        if 'add_manual_tarea' in request.POST:
+            form = ManualTareaForm(request.POST)
+            if form.is_valid():
+                descripcion = form.cleaned_data['descripcion']
+                tarea, created = Tarea.objects.get_or_create(
+                    descripcion=descripcion,
+                    defaults={
+                        'horas_hombre': form.cleaned_data['horas_hombre'],
+                        'costo_base': form.cleaned_data['costo_base']
+                    }
+                )
+                ot.tareas_realizadas.add(tarea)
+                ot.save()
+                messages.success(request, f'Tarea "{descripcion}" añadida con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
 
+        elif 'add_manual_insumo' in request.POST:
+            form = ManualInsumoForm(request.POST)
+            if form.is_valid():
+                nombre = form.cleaned_data['nombre']
+                insumo, created = Insumo.objects.update_or_create(
+                    nombre=nombre,
+                    defaults={'precio_unitario': form.cleaned_data['precio_unitario']}
+                )
+                DetalleInsumoOT.objects.create(
+                    orden_de_trabajo=ot,
+                    insumo=insumo,
+                    cantidad=form.cleaned_data['cantidad']
+                )
+                ot.save()
+                messages.success(request, f'Insumo "{nombre}" añadido con éxito.')
+                return redirect('ot_detail', pk=ot.pk)
+
+        elif 'asignar_personal' in request.POST:
+            form = AsignarPersonalOTForm(request.POST, instance=ot)
+            if form.is_valid():
+                form.save()
+                messages.success(request, '¡Personal asignado con éxito!')
+                return redirect('ot_detail', pk=ot.pk)
+        
         elif 'cerrar_mecanico' in request.POST:
-            cerrar_mecanico_form = CerrarOtMecanicoForm(request.POST, instance=ot)
-            if cerrar_mecanico_form.is_valid():
-                instancia = cerrar_mecanico_form.save(commit=False)
+            form = CerrarOtMecanicoForm(request.POST, instance=ot)
+            if form.is_valid():
+                instancia = form.save(commit=False)
                 instancia.estado = 'CERRADA_MECANICO'
                 instancia.save()
                 messages.info(request, f"OT #{ot.folio} marcada como 'Cerrada por Mecánico'.")
                 return redirect('ot_detail', pk=ot.pk)
-
-        elif 'asignar_personal' in request.POST:
-            asignar_form = AsignarPersonalOTForm(request.POST, instance=ot)
-            if asignar_form.is_valid():
-                asignar_form.save()
-                messages.success(request, '¡Personal asignado a la OT con éxito!')
+        
+        elif 'cambiar_estado' in request.POST:
+            form = CambiarEstadoOTForm(request.POST, instance=ot)
+            if form.is_valid():
+                form.save()
+                if form.cleaned_data['estado'] == 'FINALIZADA':
+                    ot.fecha_cierre = timezone.now()
+                    ot.save(update_fields=['fecha_cierre'])
+                messages.success(request, f"Estado de la OT actualizado a '{ot.get_estado_display()}'.")
                 return redirect('ot_detail', pk=ot.pk)
 
     context = {
         'ot': ot, 
-        'tarea_form': tarea_form, 
-        'insumo_form': insumo_form, 
-        'cerrar_mecanico_form': cerrar_mecanico_form, 
         'es_admin_o_super': es_admin_o_super,
         'asignar_form': asignar_form,
+        'cerrar_mecanico_form': cerrar_mecanico_form,
+        'cambiar_estado_form': cambiar_estado_form,
+        'manual_tarea_form': manual_tarea_form,    # <-- Pasar el form correcto
+        'manual_insumo_form': manual_insumo_form, # <-- Pasar el form correcto
     }
     return render(request, 'flota/orden_trabajo_detail.html', context)
 

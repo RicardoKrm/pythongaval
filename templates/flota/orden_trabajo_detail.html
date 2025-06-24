@@ -3,65 +3,251 @@
 {% block title %}Detalle OT #{{ ot.folio }}{% endblock %}
 
 {% block extra_head %}
-<!-- Estilos que SÓLO se aplican a esta página y no romperán el resto del sitio -->
+<!-- Estilos que SÓLO se aplican a esta página -->
 <style>
-.grid-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
-@media (max-width: 992px) { .grid-container { grid-template-columns: 1fr; } }
-.ot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
-.ot-status { padding: .25rem .75rem; border-radius: 9999px; font-weight: bold; color: white; }
+.ot-page-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Columna izquierda más ancha */
+    gap: 2rem;
+}
+@media (max-width: 992px) {
+    .ot-page-grid { grid-template-columns: 1fr; } /* Apilado en pantallas pequeñas */
+}
+.ot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #4a5568;
+    padding-bottom: 1rem;
+}
+.ot-title h1 {
+    margin: 0;
+    border: none;
+    padding: 0;
+}
+.ot-title p {
+    margin: 0.25rem 0 0 0;
+    color: #a0aec0;
+}
+.ot-status-pill {
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    font-weight: bold;
+    color: white;
+    white-space: nowrap; /* Evita que el texto se parta */
+}
 .status-PENDIENTE { background-color: #dd6b20; }
 .status-EN_PROCESO { background-color: #3182ce; }
 .status-CERRADA_MECANICO { background-color: #718096; }
 .status-FINALIZADA { background-color: #2f855a; }
-.data-list { list-style: none; padding: 0; }
-.data-list li { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; border-bottom: 1px solid #4a5568; }
-.data-list li:last-child { border-bottom: none; }
-.data-list strong { color: #a0aec0; }
-.assigned-personnel-list { list-style: none; padding: 0; }
-.assigned-personnel-list li { padding: 0.5rem; border-radius: 4px; background-color: #1a202c; margin-bottom: 0.5rem; }
-.assigned-personnel-list .badge-responsable { background-color: #f6ad55; color: #1a202c; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; font-weight: bold; margin-right: 8px; }
-.card h4 i { font-size: 0.9em; color: #a0aec0; }
-.action-accordion .card { background-color: transparent; border: none; margin-bottom: 0.5rem; }
-.action-accordion .card-header { padding: 0; border: none; }
-.action-accordion .card-header button { width: 100%; background-color: #2d3748; color: #e2e8f0; text-align: left; padding: 1rem 1.5rem; border: 1px solid #4a5568; border-radius: 8px; font-weight: 600; text-decoration: none; display: flex; justify-content: space-between; align-items: center; }
-.action-accordion .card-header button:hover, .action-accordion .card-header button:focus { background-color: #4a5568; outline: none; }
-.action-accordion .card-header button.collapsed::after { content: '\f078'; font-family: 'Font Awesome 5 Free'; font-weight: 900; }
-.action-accordion .card-header button:not(.collapsed)::after { content: '\f077'; font-family: 'Font Awesome 5 Free'; font-weight: 900; }
-.action-accordion .card-body { background-color: #2d3748; padding: 1.5rem; border: 1px solid #4a5568; border-top: none; border-radius: 0 0 8px 8px; }
-.action-accordion form p { margin-bottom: 1rem; }
-.action-accordion form label { font-weight: 600; font-size: 0.9em; }
-.action-accordion .btn-submit { width: 100%; }
+
+.ot-panel {
+    background-color: #2d3748;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+.ot-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+.ot-panel-title i {
+    margin-right: 0.75rem;
+    color: #a0aec0;
+}
+.ot-data-list { list-style: none; padding: 0; margin: 0; }
+.ot-data-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #4a5568;
+}
+.ot-data-list li:last-child { border-bottom: none; }
+.ot-data-list strong { color: #a0aec0; }
+.ot-data-list .costo-total {
+    background-color: #1a202c;
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+}
+.ot-data-list .costo-total strong:last-child {
+    font-size: 1.5em;
+    color: #68d391;
+}
+
+.right-column .ot-panel {
+    margin-bottom: 1rem;
+}
+.right-column p.text-muted {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+/* --- ESTILOS PARA EL ACORDEÓN DE ACCIONES --- */
+.action-accordion .card {
+    border: none;
+    background-color: transparent;
+    margin-bottom: 1rem;
+}
+.action-accordion .card-header {
+    padding: 0;
+    border-bottom: none;
+    background-color: transparent;
+}
+.action-accordion .card-header button {
+    width: 100%;
+    background-color: #2d3748;
+    color: #e2e8f0;
+    text-align: left;
+    padding: 1rem 1.5rem;
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.action-accordion .card-header button:hover {
+    background-color: #4a5568;
+    text-decoration: none;
+}
+.action-accordion .card-header button.collapsed::after {
+    content: '\f078'; /* Flecha hacia abajo */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+.action-accordion .card-header button:not(.collapsed)::after {
+    content: '\f077'; /* Flecha hacia arriba */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+}
+.action-accordion .collapse.show {
+    border: 1px solid #4a5568;
+    border-radius: 8px;
+    margin-top: -0.5rem; /* Pequeño solapamiento para unir visualmente */
+    padding-top: 0.5rem;
+}
+.action-accordion .card-body {
+    background-color: #2d3748;
+    padding: 1.5rem;
+}
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9em; }
+
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="ot-header">
-    <div>
+    <div class="ot-title">
         <h1>Orden de Trabajo <span class="text-muted">#{{ ot.folio }}</span></h1>
-        <p class="h4">{{ ot.vehiculo }}</p>
+        <p>{{ ot.vehiculo }}</p>
     </div>
-    <span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
+    <span class="ot-status-pill status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
 </div>
 
-<div class="grid-container">
-    <!-- Columna Izquierda -->
+<div class="ot-page-grid">
+    <!-- Columna Izquierda: Información de la OT -->
     <div class="left-column">
-        <!-- ... contenido de la columna izquierda (Información, Tareas, Insumos) ... -->
+        <div class="ot-panel">
+            <h4 class="ot-panel-title"><i class="fas fa-info-circle"></i>Información General</h4>
+            <ul class="ot-data-list">
+                <li><strong>Tipo:</strong> <span>{{ ot.get_tipo_display }}</span></li>
+                <li><strong>Fecha Creación:</strong> <span>{{ ot.fecha_creacion|date:"d M Y, H:i" }}</span></li>
+                <li><strong>KM Apertura:</strong> <span>{{ ot.kilometraje_apertura|floatformat:0 }}</span></li>
+                <li class="costo-total">
+                    <strong>Costo Total Actualizado:</strong> 
+                    <strong>${{ ot.costo_total|floatformat:2 }}</strong>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="ot-panel">
+            <h4 class="ot-panel-title"><i class="fas fa-tasks"></i>Tareas Realizadas</h4>
+            {% if ot.tareas_realizadas.all %}
+                <ul class="ot-data-list">
+                    {% for tarea in ot.tareas_realizadas.all %}
+                        <li><span>{{ tarea.descripcion }}</span><span class="text-muted">${{ tarea.costo_base|floatformat:2 }}</span></li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Aún no se han añadido tareas.</p>
+            {% endif %}
+        </div>
+
+        <div class="ot-panel">
+            <h4 class="ot-panel-title"><i class="fas fa-boxes"></i>Insumos Utilizados</h4>
+            {% if ot.detalleinsumoot_set.all %}
+                <ul class="ot-data-list">
+                    {% for detalle in ot.detalleinsumoot_set.all %}
+                        <li><span>{{ detalle.cantidad|floatformat }} x {{ detalle.insumo.nombre }}</span><span class="text-muted">${{ detalle.insumo.precio_unitario|floatformat:2 }} c/u</span></li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-muted">Aún no se han añadido insumos.</p>
+            {% endif %}
+        </div>
     </div>
-    <!-- Columna Derecha -->
+
+   
+    <!-- Columna Derecha: Acciones -->
+    <!-- Columna Derecha: Panel de Acciones con Acordeón -->
     <div class="right-column">
         <div class="accordion action-accordion" id="accordionOT">
-            <!-- Acordeón para Añadir Tarea -->
+
+            <!-- Panel 1: Añadir Tarea (con renderizado manual) -->
             <div class="card">
                 <div class="card-header" id="headingTarea">
                     <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTarea" aria-expanded="false" aria-controls="collapseTarea">Añadir Tarea</button>
                 </div>
                 <div id="collapseTarea" class="collapse" aria-labelledby="headingTarea" data-parent="#accordionOT">
-                    <div class="card-body"><form method="post">{% csrf_token %}{{ manual_tarea_form.as_p }}<button type="submit" name="add_manual_tarea" class="btn-submit">Añadir Tarea</button></form></div>
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {% for field in manual_tarea_form %}
+                                <div class="form-group">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+                                </div>
+                            {% endfor %}
+                            <button type="submit" name="add_manual_tarea" class="btn-submit w-100 mt-3">Guardar Tarea</button>
+                        </form>
+                    </div>
                 </div>
             </div>
-            <!-- ... resto de los paneles del acordeón ... -->
+
+            <!-- Panel 2: Añadir Insumo (con renderizado manual) -->
+            <div class="card">
+                <div class="card-header" id="headingInsumo">
+                    <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseInsumo" aria-expanded="false" aria-controls="collapseInsumo">Añadir Insumo</button>
+                </div>
+                <div id="collapseInsumo" class="collapse" aria-labelledby="headingInsumo" data-parent="#accordionOT">
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {% for field in manual_insumo_form %}
+                                <div class="form-group">
+                                    {{ field.label_tag }}
+                                    {{ field }}
+                                </div>
+                            {% endfor %}
+                            <button type="submit" name="add_manual_insumo" class="btn-submit w-100 mt-3">Guardar Insumo</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ... (resto de los paneles del acordeón para Personal y Cerrar) ... -->
+            
         </div>
-    </div>
+</div>
 </div>
 {% endblock %}
