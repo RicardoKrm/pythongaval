@@ -3,251 +3,291 @@
 {% block title %}Detalle OT #{{ ot.folio }}{% endblock %}
 
 {% block extra_head %}
-<!-- Estilos que SÓLO se aplican a esta página -->
+<!-- Cargar Bootstrap CSS SÓLO para esta página -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<!-- Cargar Font Awesome para iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<!-- Estilos específicos para esta página -->
 <style>
-.ot-page-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr; /* Columna izquierda más ancha */
-    gap: 2rem;
-}
-@media (max-width: 992px) {
-    .ot-page-grid { grid-template-columns: 1fr; } /* Apilado en pantallas pequeñas */
-}
-.ot-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid #4a5568;
-    padding-bottom: 1rem;
-}
-.ot-title h1 {
-    margin: 0;
-    border: none;
-    padding: 0;
-}
-.ot-title p {
-    margin: 0.25rem 0 0 0;
-    color: #a0aec0;
-}
-.ot-status-pill {
-    padding: 0.4rem 1rem;
-    border-radius: 9999px;
-    font-weight: bold;
-    color: white;
-    white-space: nowrap; /* Evita que el texto se parta */
-}
+/* Forzar el fondo oscuro que Bootstrap sobrescribe */
+body { background-color: #1a202c !important; color: #cbd5e0 !important; }
+
+/* Layout de la página */
+.grid-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+@media (max-width: 992px) { .grid-container { grid-template-columns: 1fr; } }
+
+.ot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+.ot-status { padding: .25rem .75rem; border-radius: 9999px; font-weight: bold; color: white; }
 .status-PENDIENTE { background-color: #dd6b20; }
 .status-EN_PROCESO { background-color: #3182ce; }
 .status-CERRADA_MECANICO { background-color: #718096; }
 .status-FINALIZADA { background-color: #2f855a; }
 
-.ot-panel {
-    background-color: #2d3748;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+/* Estilos para las tarjetas de información */
+.card {
+    background-color: #2d3748; /* Fondo más oscuro para las tarjetas */
+    border: 1px solid #4a5568; /* Borde sutil */
+    border-radius: 0.5rem; /* Bordes redondeados */
+    padding: 1.5rem; /* Espaciado interno */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra suave */
 }
-.ot-panel-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #e2e8f0;
-    margin-top: 0;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-}
-.ot-panel-title i {
-    margin-right: 0.75rem;
-    color: #a0aec0;
-}
-.ot-data-list { list-style: none; padding: 0; margin: 0; }
-.ot-data-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid #4a5568;
-}
-.ot-data-list li:last-child { border-bottom: none; }
-.ot-data-list strong { color: #a0aec0; }
-.ot-data-list .costo-total {
-    background-color: #1a202c;
-    padding: 0.75rem;
-    border-radius: 6px;
-    margin-top: 0.5rem;
-}
-.ot-data-list .costo-total strong:last-child {
-    font-size: 1.5em;
-    color: #68d391;
-}
+.data-list { list-style: none; padding: 0; }
+.data-list li { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; border-bottom: 1px solid #4a5568; }
+.data-list li:last-child { border-bottom: none; }
+.data-list strong { color: #a0aec0; }
+.card h4 i { font-size: 0.9em; color: #a0aec0; margin-right: 0.5rem; }
 
-.right-column .ot-panel {
-    margin-bottom: 1rem;
-}
-.right-column p.text-muted {
-    text-align: center;
-    padding: 1rem 0;
-}
+/* Botones y listas en las tarjetas */
+.delete-btn { background: none; border: none; color: #a0aec0; cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+.delete-btn:hover { background-color: #c53030; color: white; }
+.assigned-personnel-list { list-style: none; padding: 0; margin-top: 1rem; }
+.assigned-personnel-list li { padding: 0.5rem; border-radius: 4px; background-color: #1a202c; margin-bottom: 0.5rem; display: flex; align-items: center; }
+.badge-responsable { background-color: #f6ad55; color: #1a202c; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; font-weight: bold; margin-right: 8px; }
+.comment-box { background-color: #1a202c; border: 1px solid #4a5568; border-radius: 6px; padding: 1rem; margin-top: 1rem; }
+.comment-box blockquote { margin: 0; font-style: italic; color: #cbd5e0; }
 
-/* --- ESTILOS PARA EL ACORDEÓN DE ACCIONES --- */
-.action-accordion .card {
-    border: none;
-    background-color: transparent;
-    margin-bottom: 1rem;
-}
-.action-accordion .card-header {
-    padding: 0;
-    border-bottom: none;
-    background-color: transparent;
-}
-.action-accordion .card-header button {
-    width: 100%;
-    background-color: #2d3748;
-    color: #e2e8f0;
-    text-align: left;
-    padding: 1rem 1.5rem;
-    border: 1px solid #4a5568;
-    border-radius: 8px;
-    font-weight: 600;
-    text-decoration: none;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.action-accordion .card-header button:hover {
-    background-color: #4a5568;
-    text-decoration: none;
-}
-.action-accordion .card-header button.collapsed::after {
-    content: '\f078'; /* Flecha hacia abajo */
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-}
-.action-accordion .card-header button:not(.collapsed)::after {
-    content: '\f077'; /* Flecha hacia arriba */
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-}
-.action-accordion .collapse.show {
-    border: 1px solid #4a5568;
-    border-radius: 8px;
-    margin-top: -0.5rem; /* Pequeño solapamiento para unir visualmente */
-    padding-top: 0.5rem;
-}
-.action-accordion .card-body {
-    background-color: #2d3748;
-    padding: 1.5rem;
-}
+/* Estilos para el Acordeón */
+.action-accordion .card { border: 1px solid #4a5568; background-color: #2d3748; margin-bottom: 1rem; border-radius: 8px !important; overflow: hidden; }
+.action-accordion .card-header { padding: 0; border-bottom: none; background-color: transparent; }
+.action-accordion .card-header button { width: 100%; color: #e2e8f0; text-align: left; padding: 1rem 1.5rem; font-weight: 600; text-decoration: none; border: none; background: none; display: flex; justify-content: space-between; align-items: center; }
+.action-accordion .card-header button:hover, .action-accordion .card-header button:focus { background-color: #4a5568; outline: none; text-decoration: none; }
+.action-accordion .card-header button.collapsed::after { content: '\f078'; font-family: 'Font Awesome 5 Free'; font-weight: 900; }
+.action-accordion .card-header button:not(.collapsed)::after { content: '\f077'; font-family: 'Font Awesome 5 Free'; font-weight: 900; }
+.action-accordion .card-body { padding: 1.5rem; border-top: 1px solid #4a5568; }
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9em; }
+.checkbox-list { max-height: 150px; overflow-y: auto; background-color: #1a202c; padding: 10px; border-radius: 4px; border: 1px solid #4a5568;}
+.checkbox-list ul { list-style: none; padding: 0; margin: 0; }
+.checkbox-list li { margin-bottom: 0.5rem; color: #cbd5e0 !important; } /* Forzar color de texto en checkboxes */
 
+/* Estilo para los botones de submit */
+.btn-submit {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    background-color: #4CAF50; /* Un verde vibrante */
+    color: white;
+    border: none;
+    border-radius: 0.375rem; /* Bordes ligeramente redondeados */
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-submit:hover {
+    background-color: #45a049; /* Un verde un poco más oscuro al pasar el ratón */
+    transform: translateY(-2px); /* Un pequeño efecto de levantamiento */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-submit:active {
+    transform: translateY(0); /* Vuelve a la posición original al hacer clic */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="ot-header">
-    <div class="ot-title">
+    <div>
         <h1>Orden de Trabajo <span class="text-muted">#{{ ot.folio }}</span></h1>
-        <p>{{ ot.vehiculo }}</p>
+        <p class="h4">{{ ot.vehiculo }}</p>
     </div>
-    <span class="ot-status-pill status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
+    <span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
 </div>
 
-<div class="ot-page-grid">
-    <!-- Columna Izquierda: Información de la OT -->
+<div class="grid-container">
+    <!-- Columna Izquierda -->
     <div class="left-column">
-        <div class="ot-panel">
-            <h4 class="ot-panel-title"><i class="fas fa-info-circle"></i>Información General</h4>
-            <ul class="ot-data-list">
+        <div class="card mb-4">
+            <h4><i class="fas fa-info-circle"></i>Información General</h4>
+            <ul class="data-list">
                 <li><strong>Tipo:</strong> <span>{{ ot.get_tipo_display }}</span></li>
                 <li><strong>Fecha Creación:</strong> <span>{{ ot.fecha_creacion|date:"d M Y, H:i" }}</span></li>
                 <li><strong>KM Apertura:</strong> <span>{{ ot.kilometraje_apertura|floatformat:0 }}</span></li>
-                <li class="costo-total">
-                    <strong>Costo Total Actualizado:</strong> 
-                    <strong>${{ ot.costo_total|floatformat:2 }}</strong>
+                <li style="background-color: #1a202c; padding: 10px; border-radius: 4px;">
+                    <strong>Costo Total Actualizado:</strong> <strong style="font-size: 1.5em; color: #68d391;">${{ ot.costo_total|floatformat:2 }}</strong>
                 </li>
             </ul>
         </div>
-        
-        <div class="ot-panel">
-            <h4 class="ot-panel-title"><i class="fas fa-tasks"></i>Tareas Realizadas</h4>
+        <div class="card mb-4">
+            <h4><i class="fas fa-tasks"></i>Tareas Realizadas</h4>
             {% if ot.tareas_realizadas.all %}
-                <ul class="ot-data-list">
-                    {% for tarea in ot.tareas_realizadas.all %}
-                        <li><span>{{ tarea.descripcion }}</span><span class="text-muted">${{ tarea.costo_base|floatformat:2 }}</span></li>
-                    {% endfor %}
-                </ul>
+            <ul class="data-list">
+                {% for tarea in ot.tareas_realizadas.all %}
+                <li>
+                    <span>{{ tarea.descripcion }}</span>
+                    <span class="text-muted">
+                        ${{ tarea.costo_base|floatformat:2 }}
+                        <form action="{% url 'eliminar_tarea_ot' ot.pk tarea.pk %}" method="post" style="display: inline;" onsubmit="return confirm('¿Eliminar esta tarea?');">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-btn"><i class="fas fa-trash-alt fa-xs"></i></button>
+                        </form>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p class="text-muted">Aún no se han añadido tareas.</p>
+            <p class="text-muted">Aún no se han añadido tareas.</p>
             {% endif %}
         </div>
-
-        <div class="ot-panel">
-            <h4 class="ot-panel-title"><i class="fas fa-boxes"></i>Insumos Utilizados</h4>
+        <div class="card mb-4">
+            <h4><i class="fas fa-boxes"></i>Insumos Utilizados</h4>
             {% if ot.detalleinsumoot_set.all %}
-                <ul class="ot-data-list">
-                    {% for detalle in ot.detalleinsumoot_set.all %}
-                        <li><span>{{ detalle.cantidad|floatformat }} x {{ detalle.insumo.nombre }}</span><span class="text-muted">${{ detalle.insumo.precio_unitario|floatformat:2 }} c/u</span></li>
-                    {% endfor %}
-                </ul>
+            <ul class="data-list">
+                {% for detalle in ot.detalleinsumoot_set.all %}
+                <li>
+                    <span>{{ detalle.cantidad|floatformat }} x {{ detalle.insumo.nombre }}</span>
+                    <span class="text-muted">
+                        ${{ detalle.insumo.precio_unitario|floatformat:2 }} c/u
+                        <form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" style="display: inline;" onsubmit="return confirm('¿Eliminar este insumo?');">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-btn"><i class="fas fa-trash-alt fa-xs"></i></button>
+                        </form>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
             {% else %}
-                <p class="text-muted">Aún no se han añadido insumos.</p>
+            <p class="text-muted">Aún no se han añadido insumos.</p>
             {% endif %}
         </div>
+        {% if ot.estado == 'CERRADA_MECANICO' and ot.motivo_pendiente %}
+        <div class="card">
+            <h4 class="ot-panel-title"><i class="fas fa-comment-dots"></i>Comentarios del Mecánico</h4>
+            <div class="comment-box">
+                <blockquote>{{ ot.motivo_pendiente }}</blockquote>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-   
-    <!-- Columna Derecha: Acciones -->
-    <!-- Columna Derecha: Panel de Acciones con Acordeón -->
+    <!-- Columna Derecha -->
     <div class="right-column">
         <div class="accordion action-accordion" id="accordionOT">
-
-            <!-- Panel 1: Añadir Tarea (con renderizado manual) -->
+            <!-- Panel 1: Añadir Tarea -->
             <div class="card">
-                <div class="card-header" id="headingTarea">
-                    <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTarea" aria-expanded="false" aria-controls="collapseTarea">Añadir Tarea</button>
+                <div class="card-header">
+                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTarea">
+                        Añadir Tarea
+                    </button>
                 </div>
-                <div id="collapseTarea" class="collapse" aria-labelledby="headingTarea" data-parent="#accordionOT">
+                <div id="collapseTarea" class="collapse" data-parent="#accordionOT">
                     <div class="card-body">
                         <form method="post">
                             {% csrf_token %}
-                            {% for field in manual_tarea_form %}
-                                <div class="form-group">
-                                    {{ field.label_tag }}
-                                    {{ field }}
-                                </div>
-                            {% endfor %}
-                            <button type="submit" name="add_manual_tarea" class="btn-submit w-100 mt-3">Guardar Tarea</button>
+                            {{ manual_tarea_form.as_p }}
+                            <button type="submit" name="add_manual_tarea" class="btn-submit w-100">Guardar Tarea</button>
                         </form>
                     </div>
                 </div>
             </div>
-
-            <!-- Panel 2: Añadir Insumo (con renderizado manual) -->
+            <!-- Panel 2: Añadir Insumo -->
             <div class="card">
-                <div class="card-header" id="headingInsumo">
-                    <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseInsumo" aria-expanded="false" aria-controls="collapseInsumo">Añadir Insumo</button>
+                <div class="card-header">
+                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseInsumo">
+                        Añadir Insumo
+                    </button>
                 </div>
-                <div id="collapseInsumo" class="collapse" aria-labelledby="headingInsumo" data-parent="#accordionOT">
+                <div id="collapseInsumo" class="collapse" data-parent="#accordionOT">
                     <div class="card-body">
                         <form method="post">
                             {% csrf_token %}
-                            {% for field in manual_insumo_form %}
-                                <div class="form-group">
-                                    {{ field.label_tag }}
-                                    {{ field }}
-                                </div>
-                            {% endfor %}
-                            <button type="submit" name="add_manual_insumo" class="btn-submit w-100 mt-3">Guardar Insumo</button>
+                            {{ manual_insumo_form.as_p }}
+                            <button type="submit" name="add_manual_insumo" class="btn-submit w-100">Guardar Insumo</button>
                         </form>
                     </div>
                 </div>
             </div>
-            
-            <!-- ... (resto de los paneles del acordeón para Personal y Cerrar) ... -->
-            
+            <!-- Panel 3: Asignar Personal - AHORA SIEMPRE VISIBLE -->
+            <div class="card">
+                <div class="card-header">
+                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapsePersonal">
+                        Asignar Personal
+                    </button>
+                </div>
+                <div id="collapsePersonal" class="collapse" data-parent="#accordionOT">
+                    <div class="card-body">
+                        <h5>Personal Actual</h5>
+                        {% if ot.responsable or ot.personal_asignado.all %}
+                        <ul class="assigned-personnel-list">
+                            {% if ot.responsable %}
+                            <li><span class="badge-responsable">Responsable</span>{{ ot.responsable.username }}</li>
+                            {% endif %}
+                            {% for ayudante in ot.personal_asignado.all %}
+                            <li><i class="fas fa-user-friends mr-2 text-muted"></i>{{ ayudante.username }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">No hay personal asignado.</p>
+                        {% endif %}
+                        <hr style="border-color: #4a5568; margin: 1.5rem 0;">
+                        <h5 class="mt-4">Modificar Asignación</h5>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="{{ asignar_form.responsable.id_for_label }}">{{ asignar_form.responsable.label }}</label>
+                                {{ asignar_form.responsable }}
+                            </div>
+                            <div class="form-group mt-4">
+                                <label>{{ asignar_form.personal_asignado.label }}</label>
+                                <div class="checkbox-list">
+                                    {{ asignar_form.personal_asignado }}
+                                </div>
+                            </div>
+                            <button type="submit" name="asignar_personal" class="btn-submit w-100 mt-3">Guardar Asignación</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Panel 4: Cambiar Estado - AHORA SIEMPRE VISIBLE -->
+            <div class="card">
+                <div class="card-header">
+                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseEstado">
+                        Cambiar Estado
+                    </button>
+                </div>
+                <div id="collapseEstado" class="collapse" data-parent="#accordionOT">
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ cambiar_estado_form.as_p }}
+                            <button type="submit" name="cambiar_estado" class="btn-submit w-100">Actualizar Estado</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Panel 5: Cerrar para Revisión -->
+            <div class="card">
+                <div class="card-header">
+                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseFinalizar">
+                        Cerrar para Revisión
+                    </button>
+                </div>
+                <div id="collapseFinalizar" class="collapse" data-parent="#accordionOT">
+                    <div class="card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <label for="{{ cerrar_mecanico_form.motivo_pendiente.id_for_label }}">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>
+                                {{ cerrar_mecanico_form.motivo_pendiente }}
+                                <small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small>
+                            </div>
+                            <button type="submit" name="cerrar_mecanico" class="btn-submit w-100">Marcar como Realizado</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
+    </div>
 </div>
-</div>
+
+<!-- Scripts de Bootstrap (jQuery, Popper.js y Bootstrap JS) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 {% endblock %}

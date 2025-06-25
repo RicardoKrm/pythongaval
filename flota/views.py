@@ -487,3 +487,29 @@ def analisis_km_vehiculo(request, pk):
     }
     
     return render(request, 'flota/analisis_km.html', context)
+
+# En flota/views.py
+@login_required
+def eliminar_tarea_ot(request, ot_pk, tarea_pk):
+    connection.set_tenant(request.tenant)
+    ot = get_object_or_404(OrdenDeTrabajo, pk=ot_pk)
+    tarea = get_object_or_404(Tarea, pk=tarea_pk)
+    if request.method == 'POST':
+        ot.tareas_realizadas.remove(tarea)
+        ot.save() # Para recalcular costos
+        # --- CORREGIDO ---
+        messages.warning(request, f'Tarea "{tarea.descripcion}" eliminada de la OT.')
+    return redirect('ot_detail', pk=ot_pk)
+
+@login_required
+def eliminar_insumo_ot(request, ot_pk, detalle_pk):
+    connection.set_tenant(request.tenant)
+    ot = get_object_or_404(OrdenDeTrabajo, pk=ot_pk)
+    detalle = get_object_or_404(DetalleInsumoOT, pk=detalle_pk)
+    if request.method == 'POST':
+        insumo_nombre = detalle.insumo.nombre
+        detalle.delete()
+        ot.save() # Para recalcular costos
+        # --- CORREGIDO ---
+        messages.warning(request, f'Insumo "{insumo_nombre}" eliminado de la OT.')
+    return redirect('ot_detail', pk=ot_pk)
