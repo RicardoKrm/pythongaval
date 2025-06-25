@@ -1,5 +1,5 @@
 from django import forms
-from .models import OrdenDeTrabajo, Tarea, DetalleInsumoOT, Insumo, BitacoraDiaria
+from .models import OrdenDeTrabajo, Tarea, DetalleInsumoOT, Insumo, BitacoraDiaria, ModeloVehiculo
 
 class OrdenDeTrabajoForm(forms.ModelForm):
     class Meta:
@@ -59,3 +59,31 @@ class ManualInsumoForm(forms.Form):
     nombre = forms.CharField(label="Nombre del Insumo", widget=forms.TextInput(attrs={'placeholder': 'Ej: Filtro de aceite'}))
     cantidad = forms.DecimalField(label="Cantidad", initial=1)
     precio_unitario = forms.DecimalField(label="Precio Unitario ($)")
+
+
+# En flota/forms.py
+
+# ... (tus otros formularios)
+
+class FiltroPizarraForm(forms.Form):
+    # Usamos ModelChoiceField para que las opciones se generen desde la base de datos
+    # `required=False` es clave para que el filtro sea opcional
+    
+    modelo = forms.ModelChoiceField(
+        queryset=ModeloVehiculo.objects.all(),
+        required=False,
+        label="Filtrar por Modelo"
+    )
+    
+    ESTADO_CHOICES = [
+        ('', 'Todos los Estados'), # Opción para no filtrar
+        ('PROXIMO', 'Próximo'),
+        ('VENCIDO', 'Vencido'),
+        ('NORMAL', 'Normal'),
+    ]
+    
+    estado = forms.ChoiceField(
+        choices=ESTADO_CHOICES,
+        required=False,
+        label="Filtrar por Estado"
+    )

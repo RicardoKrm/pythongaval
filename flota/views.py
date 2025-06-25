@@ -33,79 +33,74 @@ def es_supervisor_o_admin(user):
 
 # --- Vistas Principales de la Aplicación ---
 
-# Archivo: flota/views.py
-
+# Reemplaza tu función existente con esta versión
 @login_required
 def dashboard_flota(request):
     connection.set_tenant(request.tenant)
-    vehiculos = Vehiculo.objects.all().order_by('numero_interno')
     
+    # === PARÁMETRO DE ALERTA FIJO (FÁCIL DE CAMBIAR AQUÍ) ===
+    # En lugar de leer de la BD, lo definimos directamente.
+    # ¡Aquí puedes poner 25, 50, 80 para probar!
+    porcentaje_alerta = 25
+
+    vehiculos = Vehiculo.objects.all().order_by('numero_interno')
     data_flota = []
+
     for vehiculo in vehiculos:
-        # ... (lógica existente para km_prom_dia, km_actual, proxima_pauta_agg, etc.) ...
-        km_prom_dia = random.randint(150, 450)
+        # Inicialización de variables para cada vehículo
         km_actual = vehiculo.kilometraje_actual
+        estado = "NORMAL"  # Estado por defecto
+        
+        pauta_obj = None
+        proximo_km_pauta = None
+        kms_faltantes = None
+        intervalo_km = None
+        
+        # Obtener el último mantenimiento (si existe)
+        ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(
+            vehiculo=vehiculo, tipo='PREVENTIVA', estado='FINALIZADA'
+        ).order_by('-fecha_cierre').first()
+        
+        km_ultimo_mant = ultima_ot_preventiva.kilometraje_cierre if ultima_ot_preventiva else None
+        fecha_ultimo_mant = ultima_ot_preventiva.fecha_cierre if ultima_ot_preventiva else None
+        tipo_ultimo_mant = ultima_ot_preventiva.pauta_mantenimiento.nombre if ultima_ot_preventiva and ultima_ot_preventiva.pauta_mantenimiento else None
+
+        # Obtener la próxima pauta (si existe)
         proxima_pauta_agg = PautaMantenimiento.objects.filter(
-            modelo_vehiculo=vehiculo.modelo,
-            kilometraje_pauta__gt=km_actual
+            modelo_vehiculo=vehiculo.modelo, kilometraje_pauta__gt=km_actual
         ).aggregate(proximo_km=Min('kilometraje_pauta'))
         proximo_km_pauta = proxima_pauta_agg.get('proximo_km')
-        
-        estado = "NORMAL"
-        kms_faltantes = None
-        pauta_obj = None
-        fecha_prox_mant = None
-        
-        intervalo_km = None
-        km_ultimo_mant = None
-        fecha_ultimo_mant = None
-        tipo_ultimo_mant = None
-        km_acum_prox = None
 
-        ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(
-            vehiculo=vehiculo,
-            tipo='PREVENTIVA',
-            estado='FINALIZADA'
-        ).order_by('-fecha_cierre').first()
-
-        if ultima_ot_preventiva:
-            km_ultimo_mant = ultima_ot_preventiva.kilometraje_cierre
-            fecha_ultimo_mant = ultima_ot_preventiva.fecha_cierre
-            if ultima_ot_preventiva.pauta_mantenimiento:
-                tipo_ultimo_mant = ultima_ot_preventiva.pauta_mantenimiento.nombre
-
-        ### NUEVO: Buscar la última OT abierta para este vehículo ###
-        ot_abierta = OrdenDeTrabajo.objects.filter(
-            vehiculo=vehiculo
-        ).exclude(
-            estado='FINALIZADA'
-        ).order_by('-fecha_creacion').first()
-
-        # ... (lógica existente para el estado de mantenimiento y cálculo de fechas) ...
+        # Lógica de cálculo de estado
         if proximo_km_pauta:
             try:
-                pauta_obj = PautaMantenimiento.objects.get(
-                    modelo_vehiculo=vehiculo.modelo, 
-                    kilometraje_pauta=proximo_km_pauta
-                )
-                if hasattr(pauta_obj, 'intervalo_km'):
-                    intervalo_km = pauta_obj.intervalo_km  
-                km_acum_prox = proximo_km_pauta
-                tolerancia = 1000
-                advertencia = 5000
+                pauta_obj = PautaMantenimiento.objects.get(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta=proximo_km_pauta)
+                intervalo_km = getattr(pauta_obj, 'intervalo_km', 0)
+                
                 kms_faltantes = proximo_km_pauta - km_actual
-                if kms_faltantes <= tolerancia:
+                
+                # Definimos los umbrales dinámicamente
+                umbral_vencido = 2000  # Fijo para emergencia
+                umbral_proximo = (intervalo_km * porcentaje_alerta / 100) if intervalo_km > 0 else 5000 # Usa el %
+
+                if kms_faltantes <= umbral_vencido:
                     estado = "VENCIDO"
-                elif kms_faltantes <= advertencia:
+                elif kms_faltantes <= umbral_proximo:
                     estado = "PROXIMO"
-                if km_prom_dia > 0 and kms_faltantes > 0:
-                    dias_para_pauta = kms_faltantes / km_prom_dia
-                    fecha_prox_mant = datetime.now().date() + timedelta(days=dias_para_pauta)
+                # Si no, se mantiene en NORMAL
+                
             except PautaMantenimiento.DoesNotExist:
-                pauta_obj = None
-        
+                pass
+
+        # Resto de la lógica (sin cambios)
+        ot_abierta = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo).exclude(estado='FINALIZADA').order_by('-fecha_creacion').first()
+        km_prom_dia = random.randint(50, 250)
+        fecha_prox_mant = None
+        if kms_faltantes and kms_faltantes > 0 and km_prom_dia > 0:
+            dias_para_pauta = kms_faltantes / km_prom_dia
+            fecha_prox_mant = datetime.now().date() + timedelta(days=dias_para_pauta)
+
         data_flota.append({
-            # ... (datos existentes) ...
             'vehiculo': vehiculo,
             'proxima_pauta_obj': pauta_obj,
             'proximo_km': proximo_km_pauta,
@@ -117,9 +112,7 @@ def dashboard_flota(request):
             'km_ultimo_mant': km_ultimo_mant,
             'fecha_ultimo_mant': fecha_ultimo_mant,
             'tipo_ultimo_mant': tipo_ultimo_mant,
-            'km_acum_prox': km_acum_prox,
-            
-            # --- NUEVO DATO para el template ---
+            'km_acum_prox': kms_faltantes, # Esta columna ahora muestra los KM faltantes
             'ot_abierta': ot_abierta,
         })
 

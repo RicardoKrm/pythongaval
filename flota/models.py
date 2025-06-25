@@ -146,5 +146,3 @@ class BitacoraDiaria(models.Model):
         unique_together = ('vehiculo', 'fecha')
         ordering = ['-fecha']
     def __str__(self): return f"Bitácora de {self.vehiculo.numero_interno} para {self.fecha}"
-
-    
