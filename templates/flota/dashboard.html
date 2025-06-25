@@ -10,82 +10,78 @@ Archivo: templates/flota/dashboard.html
 Modificado para añadir columnas del Excel, respetando la estructura de `data_flota`.
 {% endcomment %}
 
-<table class="table table-bordered table-hover table-striped" id="pizarraMantenimientoTable">
-    <thead>
-        <tr>
-            <!-- Columnas de trazabilidad del Excel -->
-            <th>N° Int.</th>
-            <th>PPU</th>
-            <th>Marca</th>              <!-- NUEVA -->
-            <th>Modelo</th>
-            <th>Norma</th>              <!-- NUEVA -->
-            <th>Intervalo KM</th>       <!-- NUEVA -->
-            <th>KM Últ. Mant.</th>      <!-- NUEVA -->
-            <th>Fecha Últ. Mant.</th>   <!-- NUEVA -->
-            <th>Tipo Mant. Anterior</th><!-- NUEVA -->
+        <table class="table table-bordered table-hover table-striped" id="pizarraMantenimientoTable">
+            <thead>
+                <tr>
+                    <!-- Columnas de trazabilidad -->
+                    <th>N° Int.</th>
+                    <th>PPU</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Norma</th>
+                    <th>Intervalo KM</th>
+                    <th>KM Últ. Mant.</th>
+                    <th>Fecha Últ. Mant.</th>
+                    <th>Tipo Mant. Anterior</th>
 
-            <!-- Columnas de estado del Excel -->
-            <th>Estatus de la Mantención</th>
-            <th>KM para Mantención</th>
-            <th>Acum. Próx. Mant.</th>  <!-- NUEVA -->
-            
-            <!-- Columnas de pronóstico del Excel -->
-            <th>KM Actual</th>
-            <th>Fecha KM Actual</th>
-            <th>KM Prox. Mant.</th>
-            <th>Tipo Próx. Mant.</th>
-            <th>Fecha Próx. Mant.</th>
-            <th style="text-align: center;">Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in data_flota %}
-            <!-- Usamos la clase de estado que ya tenías -->
-            <tr class="estado-{{ item.estado }}">
-                <!-- ======================= -->
-                <!-- Datos de Trazabilidad -->
-                <!-- ======================= -->
-                <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
-                <td>{{ item.vehiculo.ppu|default:"N/A" }}</td> <!-- Tu código original usa 'patente', lo cambio a 'ppu' para coincidir con tu modelo -->
-                <td>{{ item.vehiculo.modelo.marca.nombre|default:"N/A" }}</td> <!-- NUEVA -->
-                <td>{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td> <!-- Tu código original usa item.vehiculo.modelo, lo ajusto -->
-                <td>{{ item.vehiculo.norma_euro.nombre|default:"N/A" }}</td> <!-- NUEVA -->
-                <td>{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td> <!-- NUEVA -->
-                <td>{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td> <!-- NUEVA -->
-                <td>{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td> <!-- NUEVA -->
-                <td>{{ item.tipo_ultimo_mant|default:"--" }}</td> <!-- NUEVA -->
+                    <!-- Estado -->
+                    <th>Estatus de la Mantención</th>
+                    <th>KM Acum. Prox. Mant.</th>
+                    <!-- <th>Acum. Próx. Mant.</th> -->
 
-                <!-- ======================= -->
-                <!-- Datos de Estado -->
-                <!-- ======================= -->
-                <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
-                <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td> <!-- Reutilizo 'kms_faltantes' -->
-                <td>{{ item.km_acum_prox|floatformat:"0"|default:"--" }}</td> <!-- NUEVA -->
+                    <!-- Pronóstico -->
+                    <th>KM Actual</th>
+                    <th>Fecha KM Actual</th>
+                    <th>KM Prox. Mant.</th>
+                    <th>Tipo Próx. Mant.</th>
+                    <th>Fecha Próx. Mant.</th>
+                    <th style="text-align: center;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data_flota %}
+                <tr class="estado-{{ item.estado }}">
+                    <!-- Trazabilidad -->
+                    <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
+                    <td>{{ item.vehiculo.ppu|default:"N/A" }}</td>
+                    <td>{{ item.vehiculo.modelo.marca.nombre|default:"N/A" }}</td>
+                    <td>{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td>
+                    <td>{{ item.vehiculo.norma_euro.nombre|default:"N/A" }}</td>
+                    <td>{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td>
+                    <td>{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td>
+                    <td>{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td>
+                    <td>{{ item.tipo_ultimo_mant|default:"--" }}</td>
 
-                <!-- ======================= -->
-                <!-- Datos de Pronóstico -->
-                <!-- ======================= -->
-                <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
-                <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
-                <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td> <!-- Reutilizo 'proximo_km' -->
-                <td>{{ item.proxima_pauta_obj.nombre|default:"--" }}</td> <!-- Reutilizo 'proxima_pauta_obj.nombre' -->
-                <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
-                <td class="actions-cell">
-                    <!-- Tu menú de acciones se mantiene intacto -->
-                    <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">⋮</button>
-                    <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
-                        <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
-                        <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}">Ver Historial</a>
-                        <a href="{% url 'analisis_km_vehiculo' pk=item.vehiculo.pk %}">Análisis de KM Diario</a>
-                        <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}">Crear OT Correctiva</a>
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr><td colspan="18" style="text-align: center; padding: 20px;">No hay vehículos registrados para esta empresa.</td></tr>
-        {% endfor %}
-    </tbody>
-</table>
+                    <!-- Estado -->
+                    <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
+                    <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td>
+                    <!-- <td>{{ item.km_acum_prox|floatformat:"0"|default:"--" }}</td> -->
+
+                    <!-- Pronóstico -->
+                    <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
+                    <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
+                    <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
+                    <td>{{ item.proxima_pauta_obj.nombre|default:"--" }}</td>
+                    <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
+                    <td class="actions-cell">
+                        <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">⋮</button>
+                        <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
+                            <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
+                            <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}">Ver Historial</a>
+                            <a href="{% url 'analisis_km_vehiculo' pk=item.vehiculo.pk %}">Análisis de KM Diario</a>
+                            <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}">Crear OT Correctiva</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="17" style="text-align: center; padding: 20px;">
+                        No hay vehículos registrados para esta empresa.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
 
     <!-- HTML del Modal para Actualizar KM (sin cambios) -->
     <div id="kmModal" class="modal">
