@@ -146,3 +146,24 @@ class BitacoraDiaria(models.Model):
         unique_together = ('vehiculo', 'fecha')
         ordering = ['-fecha']
     def __str__(self): return f"Bitácora de {self.vehiculo.numero_interno} para {self.fecha}"
+
+class ConfiguracionEmpresa(models.Model):
+    porcentaje_alerta_mantenimiento = models.PositiveIntegerField(
+        default=25,
+        help_text="Porcentaje del intervalo de KM para activar la alerta 'PRÓXIMO'. Ej: 25."
+    )
+
+    def __str__(self):
+        return "Configuración General de la Empresa"
+
+    class Meta:
+        verbose_name_plural = "Configuraciones de Empresa"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super(ConfiguracionEmpresa, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj    

@@ -1,4 +1,3 @@
-<!-- templates/flota/dashboard.html (Versión Final Combinada) -->
 {% extends "flota/base.html" %}
 
 {% block title %}Pizarra de Mantenimiento{% endblock %}
@@ -10,80 +9,131 @@ Archivo: templates/flota/dashboard.html
 Modificado para añadir columnas del Excel, respetando la estructura de `data_flota`.
 {% endcomment %}
 
-        <table class="table table-bordered table-hover table-striped" id="pizarraMantenimientoTable">
-            <thead>
-                <tr>
-                    <!-- Columnas de trazabilidad -->
-                    <th>N° Int.</th>
-                    <th>PPU</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Norma</th>
-                    <th>Intervalo KM</th>
-                    <th>KM Últ. Mant.</th>
-                    <th>Fecha Últ. Mant.</th>
-                    <th>Tipo Mant. Anterior</th>
+    <div class="dashboard-top-section"> {# Contenedor principal de toda la sección superior #}
 
-                    <!-- Estado -->
-                    <th>Estatus de la Mantención</th>
-                    <th>KM Acum. Prox. Mant.</th>
-                    <!-- <th>Acum. Próx. Mant.</th> -->
+        {# Sección de Filtros - Horizontal y 100% Ancho #}
+        <div class="card filter-section-professional mb-4"> {# Añadimos mb-4 para espacio debajo del card #}
+            <div class="card-body">
+                <form method="get" action="" class="filter-form-professional">
+                    {# Campos de filtro organizados horizontalmente con flexbox #}
+                    <div class="filter-group">
+                        <label for="{{ filtro_form.modelo.id_for_label }}">Modelos</label>
+                        {{ filtro_form.modelo }}
+                    </div>
+                    <div class="filter-group">
+                        <label for="{{ filtro_form.tipo_mantenimiento.id_for_label }}">Tipo Mantención</label>
+                        {{ filtro_form.tipo_mantenimiento }}
+                    </div>
+                    <div class="filter-group">
+                        <label for="id_fecha_desde">Fecha Desde</label>
+                        <input type="date" name="fecha_desde" id="id_fecha_desde" class="form-control" value="{{ request.GET.fecha_desde }}">
+                    </div>
+                    <div class="filter-group">
+                        <label for="id_fecha_hasta">Fecha Hasta</label>
+                        <input type="date" name="fecha_hasta" id="id_fecha_hasta" class="form-control" value="{{ request.GET.fecha_hasta }}">
+                    </div>
+                    {# Espacio para los botones #}
+                    <div class="filter-buttons-professional">
+                        <button type="submit" class="btn btn-primary btn-professional">Aplicar</button>
+                        <button type="submit" name="proximos_5000_km" value="true" class="btn btn-warning btn-professional">Próximos 5000 KM</button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-professional">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
 
-                    <!-- Pronóstico -->
-                    <th>KM Actual</th>
-                    <th>Fecha KM Actual</th>
-                    <th>KM Prox. Mant.</th>
-                    <th>Tipo Próx. Mant.</th>
-                    <th>Fecha Próx. Mant.</th>
-                    <th style="text-align: center;">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in data_flota %}
-                <tr class="estado-{{ item.estado }}">
-                    <!-- Trazabilidad -->
-                    <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
-                    <td>{{ item.vehiculo.ppu|default:"N/A" }}</td>
-                    <td>{{ item.vehiculo.modelo.marca.nombre|default:"N/A" }}</td>
-                    <td>{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td>
-                    <td>{{ item.vehiculo.norma_euro.nombre|default:"N/A" }}</td>
-                    <td>{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td>
-                    <td>{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td>
-                    <td>{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td>
-                    <td>{{ item.tipo_ultimo_mant|default:"--" }}</td>
+        {# Sección de KPIs - Horizontal y 100% Ancho, debajo de los filtros #}
+        <div class="card kpi-section-professional mb-4">
+            <div class="card-body kpi-grid-professional">
+                <div class="kpi-card-professional">
+                    <span class="kpi-label">Cant. Filtrado / % de Flota</span>
+                    <span class="kpi-value">{{ kpi_total_filtrado }} ({{ kpi_porcentaje_flota|floatformat:1 }}%)</span>
+                </div>
+                <div class="kpi-card-professional">
+                    <span class="kpi-label">Costo Total Neto</span>
+                    <span class="kpi-value" id="kpi-costo-total">${{ kpi_costo_total|default:"0" }}</span>
+                </div>
+                <div class="kpi-card-professional">
+                    <span class="kpi-label">Costo Promedio por KM</span>
+                    <span class="kpi-value" id="kpi-costo-km">${{ kpi_costo_km|default:"0" }}</span>
+                </div>
+                {% if kpi_rango_fechas %}
+                <div class="kpi-card-professional kpi-period-info">
+                    <span class="kpi-label">Periodo Filtrado</span>
+                    <span class="kpi-value">{{ kpi_rango_fechas }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
 
-                    <!-- Estado -->
-                    <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
-                    <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td>
-                    <!-- <td>{{ item.km_acum_prox|floatformat:"0"|default:"--" }}</td> -->
+    </div>
+    
+    {# La tabla permanece igual #}
+    <table class="table table-bordered table-hover table-striped mt-3" id="pizarraMantenimientoTable">
+        <thead>
+            <tr>
+                <th>N° Int.</th>
+                <th>PPU</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Norma</th>
+                <th>Intervalo KM</th>
+                <th>KM Últ. Mant.</th>
+                <th>Fecha Últ. Mant.</th>
+                <th>Tipo Mant. Anterior</th>
 
-                    <!-- Pronóstico -->
-                    <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
-                    <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
-                    <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
-                    <td>{{ item.proxima_pauta_obj.nombre|default:"--" }}</td>
-                    <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
-                    <td class="actions-cell">
-                        <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">⋮</button>
-                        <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
-                            <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
-                            <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}">Ver Historial</a>
-                            <a href="{% url 'analisis_km_vehiculo' pk=item.vehiculo.pk %}">Análisis de KM Diario</a>
-                            <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}">Crear OT Correctiva</a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="17" style="text-align: center; padding: 20px;">
-                        No hay vehículos registrados para esta empresa.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                <th>Estatus de la Mantención</th>
+                <th>KM Acum. Prox. Mant.</th>
 
-    <!-- HTML del Modal para Actualizar KM (sin cambios) -->
+                <th>KM Actual</th>
+                <th>Fecha KM Actual</th>
+                <th>KM Prox. Mant.</th>
+                <th>Tipo Próx. Mant.</th>
+                <th>Fecha Próx. Mant.</th>
+                <th style="text-align: center;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in data_flota %}
+            <tr class="estado-{{ item.estado }}">
+                <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
+                <td>{{ item.vehiculo.ppu|default:"N/A" }}</td>
+                <td>{{ item.vehiculo.modelo.marca.nombre|default:"N/A" }}</td>
+                <td>{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td>
+                <td>{{ item.vehiculo.norma_euro.nombre|default:"N/A" }}</td>
+                <td>{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td>
+                <td>{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td>
+                <td>{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td>
+                <td>{{ item.tipo_ultimo_mant|default:"--" }}</td>
+
+                <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
+                <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td>
+
+                <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
+                <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
+                <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
+                <td>{{ item.proxima_pauta_obj.nombre|default:"--" }}</td>
+                <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
+                <td class="actions-cell">
+                    <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">⋮</button>
+                    <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
+                        <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
+                        <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}">Ver Historial</a>
+                        <a href="{% url 'analisis_km_vehiculo' pk=item.vehiculo.pk %}">Análisis de KM Diario</a>
+                        <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}">Crear OT Correctiva</a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="17" style="text-align: center; padding: 20px;">
+                    No hay vehículos registrados para esta empresa.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
     <div id="kmModal" class="modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeModal()">×</span>
@@ -98,7 +148,6 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
         </div>
     </div>
 
-    <!-- JavaScript para manejar el Modal y los Menús Desplegables -->
     <script>
         const modal = document.getElementById('kmModal');
         const form = document.getElementById('kmForm');
@@ -140,9 +189,33 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
             }
         }
     </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Función para formatear un número con separadores de miles
+        function formatNumber(num) {
+            return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
+        }
+
+        // Formatear el Costo Total
+        const costoTotalEl = document.getElementById('kpi-costo-total');
+        if (costoTotalEl) {
+            const valor = parseFloat(costoTotalEl.innerText.replace('$', '').replace(/,/g, '')); // Remover comas para parsear
+            costoTotalEl.innerText = '$' + formatNumber(parseInt(valor));
+        }
+
+        // Formatear el Costo por KM
+        const costoKmEl = document.getElementById('kpi-costo-km');
+        if (costoKmEl) {
+            const valor = parseFloat(costoKmEl.innerText.replace('$', '').replace(/,/g, '')); // Remover comas para parsear
+            // Lo formateamos a 2 decimales y luego añadimos separadores
+            costoKmEl.innerText = '$' + formatNumber(valor.toFixed(2));
+        }
+    });
+    </script>
     
-    <!-- Estilos CSS -->
     <style>
+        /* Estilos existentes (mantener estos si no hay conflictos específicos) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); }
         .modal-content { background-color: #2d3748; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px; position: relative; }
         .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
@@ -186,5 +259,203 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
         }
         .action-menu a:hover { background-color: #2d3748; }
         .action-menu.show { display: block; }
+
+        /* ================================================= */
+        /* === NUEVOS ESTILOS PARA LAYOUT PROFESIONAL    === */
+        /* === Filtros y KPIs en filas completas         === */
+        /* ================================================= */
+
+        .dashboard-top-section {
+            width: 100%; /* Asegura que ocupe todo el ancho disponible */
+            margin-bottom: 20px; /* Espacio entre esta sección y la tabla */
+        }
+
+        /* --- Sección de Filtros Profesional --- */
+        .filter-section-professional {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 15px 20px; /* Padding ajustado para espacio interno */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sutil sombra para dar profundidad */
+        }
+
+        .filter-form-professional {
+            display: flex; /* Usamos flexbox para organizar los elementos horizontalmente */
+            flex-wrap: wrap; /* Permitir que los elementos se envuelvan a la siguiente línea */
+            gap: 15px 25px; /* Espacio entre grupos de filtro y botones */
+            align-items: flex-end; /* Alinea los elementos a la base (bottom) */
+            justify-content: flex-start; /* Alinea al inicio, para que los campos queden a la izquierda */
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column; /* Label arriba del input/select */
+            min-width: 180px; /* Ancho mínimo para cada grupo de filtro */
+            flex-grow: 1; /* Permite que los grupos crezcan para llenar el espacio */
+        }
+
+        .filter-group label {
+            color: #a0aec0;
+            margin-bottom: 5px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .filter-group select.form-control,
+        .filter-group input[type="date"].form-control {
+            width: 100%;
+            padding: 8px 12px; /* Más padding para mejor usabilidad */
+            border-radius: 6px; /* Bordes más suaves */
+            border: 1px solid #4a5568;
+            background-color: #4a5568;
+            color: #e2e8f0;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%204%205%22%3E%3Cpath%20fill%3D%22%23e2e8f0%22%20d%3D%22M2%200L0%202h4zm0%205L0%203h4z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 0.7em top 50%;
+            background-size: 0.6em auto;
+            font-size: 0.95em;
+            height: 40px; /* Altura consistente */
+        }
+
+        .filter-group input[type="date"].form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .filter-group select.form-control:focus,
+        .filter-group input[type="date"].form-control:focus {
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.2);
+            outline: none;
+        }
+
+        .filter-buttons-professional {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            /* margin-left: auto; */ /* Empuja los botones a la derecha si hay espacio */
+            align-items: flex-end; /* Alinea los botones con la parte inferior de los campos */
+        }
+
+        .btn-professional {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            border-radius: 6px;
+            height: 40px; /* Altura consistente con los inputs */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap; /* Evita que el texto de los botones se rompa */
+        }
+
+        /* --- Sección de KPIs Profesional --- */
+        .kpi-section-professional {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-top: 20px; /* Espacio entre los filtros y los KPIs */
+        }
+
+        .kpi-grid-professional {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* KPIs se distribuyen en columnas flexibles */
+            gap: 15px; /* Espacio entre cada KPI */
+            justify-content: space-around; /* Distribuir KPIs uniformemente */
+            align-items: center; /* Centrar verticalmente si tienen diferentes alturas de contenido */
+        }
+
+        .kpi-card-professional {
+            background-color: #2d3748; /* Mantener mismo fondo que el card padre */
+            border: 1px solid #4a5568;
+            border-radius: 6px;
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start; /* Alinea texto a la izquierda dentro de cada KPI */
+            justify-content: center;
+            text-align: left; /* Alinea texto a la izquierda */
+            box-shadow: none; /* Eliminar sombra extra */
+            transition: transform 0.2s ease-in-out; /* Animación al pasar el mouse */
+        }
+
+        .kpi-card-professional:hover {
+            transform: translateY(-3px); /* Pequeño efecto de elevación al pasar el mouse */
+        }
+
+        .kpi-label {
+            color: #a0aec0;
+            font-size: 0.9em; /* Tamaño de fuente ligeramente más grande */
+            margin-bottom: 5px;
+            white-space: nowrap; /* Evita que la etiqueta se rompa */
+        }
+
+        .kpi-value {
+            color: #e2e8f0;
+            font-size: 1.6em; /* Tamaño de fuente más grande para los valores */
+            font-weight: bold;
+            word-break: break-word; /* Permite que los números largos se rompan si es necesario */
+        }
+
+        .kpi-period-info .kpi-value {
+            font-size: 1.1em; /* Ajustar tamaño para el periodo */
+        }
+
+        /* ================================================= */
+        /* === RESPONSIVE DESIGN (Profesional)           === */
+        /* ================================================= */
+
+        @media (max-width: 992px) {
+            .filter-form-professional {
+                flex-direction: column; /* Apilar campos de filtro en pantallas medianas */
+                align-items: stretch; /* Estirar elementos al 100% del ancho */
+            }
+            .filter-group {
+                min-width: unset; /* Desactivar min-width para mayor flexibilidad */
+                width: 100%;
+            }
+            .filter-buttons-professional {
+                flex-direction: column; /* Apilar botones */
+                align-items: stretch;
+            }
+            .btn-professional {
+                width: 100%; /* Estirar botones al 100% */
+            }
+            .kpi-grid-professional {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); /* Ajustar min-width para KPIs */
+            }
+        }
+
+        @media (max-width: 600px) {
+            .filter-section-professional,
+            .kpi-section-professional {
+                padding: 10px 15px; /* Reducir padding en pantallas muy pequeñas */
+            }
+            .filter-form-professional {
+                gap: 10px; /* Reducir el espacio entre elementos del filtro */
+            }
+            .filter-group select.form-control,
+            .filter-group input[type="date"].form-control,
+            .btn-professional {
+                height: 38px; /* Ligeramente más pequeños en móvil */
+                font-size: 0.8em;
+            }
+            .kpi-grid-professional {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Reducir aún más el min-width para KPIs en móvil muy pequeños */
+                gap: 10px;
+            }
+            .kpi-card-professional {
+                padding: 10px 12px;
+            }
+            .kpi-label {
+                font-size: 0.8em;
+            }
+            .kpi-value {
+                font-size: 1.3em;
+            }
+        }
     </style>
 {% endblock %}

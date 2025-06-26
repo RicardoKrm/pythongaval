@@ -21,7 +21,7 @@ from .models import (
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
-    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm
+    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm
 )
 from django.utils import timezone # <-- Asegúrate de tener este import
 
@@ -34,91 +34,98 @@ def es_supervisor_o_admin(user):
 # --- Vistas Principales de la Aplicación ---
 
 # Reemplaza tu función existente con esta versión
+# Reemplaza tu función dashboard_flota con esta versión
 @login_required
 def dashboard_flota(request):
     connection.set_tenant(request.tenant)
     
-    # === PARÁMETRO DE ALERTA FIJO (FÁCIL DE CAMBIAR AQUÍ) ===
-    # En lugar de leer de la BD, lo definimos directamente.
-    # ¡Aquí puedes poner 25, 50, 80 para probar!
-    porcentaje_alerta = 25
+    # === TU LÓGICA DE PARÁMETRO DE ALERTA (INTACTA) ===
+    porcentaje_alerta = 90
 
-    vehiculos = Vehiculo.objects.all().order_by('numero_interno')
-    data_flota = []
+    # --- NUEVO: Lógica de Filtros (antes del bucle) ---
+    vehiculos_qs = Vehiculo.objects.select_related('modelo', 'norma_euro').order_by('numero_interno')
+    filtro_form = FiltroPizarraForm(request.GET or None)
+    
+    # Aplicamos los filtros que se pueden hacer a nivel de base de datos
+    if filtro_form.is_valid():
+        if filtro_form.cleaned_data.get('modelo'):
+            vehiculos_qs = vehiculos_qs.filter(modelo=filtro_form.cleaned_data['modelo'])
+    
+    # 1. Calculamos los datos para TODOS los vehículos (o los pre-filtrados)
+    data_flota_completa = []
+    costo_total_acumulado = 0
+    km_total_flota = 0
 
-    for vehiculo in vehiculos:
-        # Inicialización de variables para cada vehículo
+    for vehiculo in vehiculos_qs:
+        # === TU LÓGICA DE CÁLCULO PARA CADA VEHÍCULO (INTACTA) ===
         km_actual = vehiculo.kilometraje_actual
-        estado = "NORMAL"  # Estado por defecto
+        estado = "NORMAL"
+        pauta_obj, proximo_km_pauta, kms_faltantes, intervalo_km, fecha_prox_mant = None, None, None, None, None
         
-        pauta_obj = None
-        proximo_km_pauta = None
-        kms_faltantes = None
-        intervalo_km = None
-        
-        # Obtener el último mantenimiento (si existe)
-        ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(
-            vehiculo=vehiculo, tipo='PREVENTIVA', estado='FINALIZADA'
-        ).order_by('-fecha_cierre').first()
-        
+        ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo, tipo='PREVENTIVA', estado='FINALIZADA').order_by('-fecha_cierre').first()
         km_ultimo_mant = ultima_ot_preventiva.kilometraje_cierre if ultima_ot_preventiva else None
         fecha_ultimo_mant = ultima_ot_preventiva.fecha_cierre if ultima_ot_preventiva else None
         tipo_ultimo_mant = ultima_ot_preventiva.pauta_mantenimiento.nombre if ultima_ot_preventiva and ultima_ot_preventiva.pauta_mantenimiento else None
-
-        # Obtener la próxima pauta (si existe)
-        proxima_pauta_agg = PautaMantenimiento.objects.filter(
-            modelo_vehiculo=vehiculo.modelo, kilometraje_pauta__gt=km_actual
-        ).aggregate(proximo_km=Min('kilometraje_pauta'))
+        
+        proxima_pauta_agg = PautaMantenimiento.objects.filter(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta__gt=km_actual).aggregate(proximo_km=Min('kilometraje_pauta'))
         proximo_km_pauta = proxima_pauta_agg.get('proximo_km')
 
-        # Lógica de cálculo de estado
         if proximo_km_pauta:
             try:
                 pauta_obj = PautaMantenimiento.objects.get(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta=proximo_km_pauta)
                 intervalo_km = getattr(pauta_obj, 'intervalo_km', 0)
-                
                 kms_faltantes = proximo_km_pauta - km_actual
-                
-                # Definimos los umbrales dinámicamente
-                umbral_vencido = 2000  # Fijo para emergencia
-                umbral_proximo = (intervalo_km * porcentaje_alerta / 100) if intervalo_km > 0 else 5000 # Usa el %
+                umbral_vencido = 2000
+                umbral_proximo = (intervalo_km * porcentaje_alerta / 100) if intervalo_km > 0 else 5000
+                if kms_faltantes <= umbral_vencido: estado = "VENCIDO"
+                elif kms_faltantes <= umbral_proximo: estado = "PROXIMO"
+            except PautaMantenimiento.DoesNotExist: pass
 
-                if kms_faltantes <= umbral_vencido:
-                    estado = "VENCIDO"
-                elif kms_faltantes <= umbral_proximo:
-                    estado = "PROXIMO"
-                # Si no, se mantiene en NORMAL
-                
-            except PautaMantenimiento.DoesNotExist:
-                pass
-
-        # Resto de la lógica (sin cambios)
         ot_abierta = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo).exclude(estado='FINALIZADA').order_by('-fecha_creacion').first()
         km_prom_dia = random.randint(50, 250)
-        fecha_prox_mant = None
+        
         if kms_faltantes and kms_faltantes > 0 and km_prom_dia > 0:
             dias_para_pauta = kms_faltantes / km_prom_dia
             fecha_prox_mant = datetime.now().date() + timedelta(days=dias_para_pauta)
 
-        data_flota.append({
-            'vehiculo': vehiculo,
-            'proxima_pauta_obj': pauta_obj,
-            'proximo_km': proximo_km_pauta,
-            'kms_faltantes': kms_faltantes,
-            'estado': estado,
-            'km_prom_dia': km_prom_dia,
-            'fecha_prox_mant': fecha_prox_mant,
-            'intervalo_km': intervalo_km,
-            'km_ultimo_mant': km_ultimo_mant,
-            'fecha_ultimo_mant': fecha_ultimo_mant,
-            'tipo_ultimo_mant': tipo_ultimo_mant,
-            'km_acum_prox': kms_faltantes, # Esta columna ahora muestra los KM faltantes
-            'ot_abierta': ot_abierta,
+        # NUEVO: Cálculo de KPIs por vehículo
+        costo_vehiculo = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo, estado='FINALIZADA').aggregate(total=Sum('costo_total'))['total'] or 0
+        costo_total_acumulado += costo_vehiculo
+        km_total_flota += km_actual
+        
+        data_flota_completa.append({
+            'vehiculo': vehiculo, 'proxima_pauta_obj': pauta_obj, 'proximo_km': proximo_km_pauta,
+            'kms_faltantes': kms_faltantes, 'estado': estado, 'km_prom_dia': km_prom_dia,
+            'fecha_prox_mant': fecha_prox_mant, 'intervalo_km': intervalo_km, 'km_ultimo_mant': km_ultimo_mant,
+            'fecha_ultimo_mant': fecha_ultimo_mant, 'tipo_ultimo_mant': tipo_ultimo_mant,
+            'km_acum_prox': kms_faltantes, 'ot_abierta': ot_abierta,
         })
 
+    # --- NUEVO: Filtrado post-cálculo ---
+    data_flota_filtrada = data_flota_completa
+    if filtro_form.is_valid():
+        tipo_mant = filtro_form.cleaned_data.get('tipo_mantenimiento')
+        proximos_5000 = filtro_form.cleaned_data.get('proximos_5000_km')
+
+        if tipo_mant:
+            data_flota_filtrada = [item for item in data_flota_filtrada if item['proxima_pauta_obj'] and item['proxima_pauta_obj'].nombre == tipo_mant]
+        if proximos_5000:
+            data_flota_filtrada = [item for item in data_flota_filtrada if item['kms_faltantes'] is not None and item['kms_faltantes'] <= 5000]
+
+    # --- NUEVO: Cálculo de KPIs finales ---
+    total_vehiculos_flota = len(data_flota_completa)
+    total_vehiculos_filtrados = len(data_flota_filtrada)
+    porcentaje_filtrado = (total_vehiculos_filtrados / total_vehiculos_flota * 100) if total_vehiculos_flota > 0 else 0
+    costo_por_km = (costo_total_acumulado / km_total_flota) if km_total_flota > 0 else 0
+
     context = {
-        'data_flota': data_flota,
+        'data_flota': data_flota_filtrada,
         'tenant_name': request.tenant.nombre,
+        'filtro_form': filtro_form,
+        'kpi_total_filtrado': total_vehiculos_filtrados,
+        'kpi_porcentaje_flota': porcentaje_filtrado,
+        'kpi_costo_total': costo_total_acumulado,
+        'kpi_costo_km': costo_por_km,
     }
     return render(request, 'flota/dashboard.html', context)
 

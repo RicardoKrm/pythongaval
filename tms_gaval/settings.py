@@ -16,6 +16,7 @@ SHARED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
 ]
 TENANT_APPS = [
     'django.contrib.admin',
@@ -23,6 +24,7 @@ TENANT_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    
     'flota',
     'cuentas',
 ]

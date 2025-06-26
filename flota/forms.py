@@ -1,5 +1,5 @@
 from django import forms
-from .models import OrdenDeTrabajo, Tarea, DetalleInsumoOT, Insumo, BitacoraDiaria, ModeloVehiculo
+from .models import OrdenDeTrabajo, Tarea, DetalleInsumoOT, Insumo, BitacoraDiaria, ModeloVehiculo, ModeloVehiculo, PautaMantenimiento
 
 class OrdenDeTrabajoForm(forms.ModelForm):
     class Meta:
@@ -87,3 +87,28 @@ class FiltroPizarraForm(forms.Form):
         required=False,
         label="Filtrar por Estado"
     )
+
+class FiltroPizarraForm(forms.Form):
+    modelo = forms.ModelChoiceField(
+        queryset=ModeloVehiculo.objects.none(), # Se llena en el __init__
+        required=False,
+        label="Modelo"
+    )
+    tipo_mantenimiento = forms.ChoiceField(
+        choices=[('', 'Todos los Tipos')], # Se llena en el __init__
+        required=False,
+        label="Tipo de Mantención"
+    )
+    # Campo oculto para el botón de "próximos 5000"
+    proximos_5000_km = forms.BooleanField(required=False, widget=forms.HiddenInput())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Llenamos los campos dinámicamente para evitar errores al migrar
+        try:
+            self.fields['modelo'].queryset = ModeloVehiculo.objects.all()
+            pautas = list(PautaMantenimiento.objects.values_list('nombre', 'nombre').distinct())
+            self.fields['tipo_mantenimiento'].choices += pautas
+        except Exception:
+            # Si las tablas no existen, no hacemos nada.
+            pass    
