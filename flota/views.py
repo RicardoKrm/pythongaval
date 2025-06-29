@@ -14,6 +14,7 @@ from django.db.models.functions import TruncMonth
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
@@ -22,7 +23,7 @@ from .models import (
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
     CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm,
-    PausarOTForm, DiagnosticoEvaluacionForm
+    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm
 )
 from django.utils import timezone # <-- Asegúrate de tener este import
 
@@ -131,62 +132,81 @@ def dashboard_flota(request):
     return render(request, 'flota/dashboard.html', context)
 
 
+# ==========================================================
+#    INICIO DEL BLOQUE PARA REEMPLAZAR orden_trabajo_list
+# =======================================================
+
+# ====================================================================
+#    INICIO DEL BLOQUE PARA REEMPLAZAR la función orden_trabajo_list
+# ====================================================================
+
+# Asegúrate de tener estos imports al principio de tu views.py
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from .forms import OTFiltroForm # Y los otros formularios que ya tenías
+
 @login_required
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
     
-    # --- Lógica para el método POST (cuando se envía el formulario) ---
+    # Lógica para el método POST (cuando se envía el formulario de CREACIÓN)
     if request.method == 'POST':
         form = OrdenDeTrabajoForm(request.POST)
-        
         if form.is_valid():
             ot = form.save()
-            
-            # Creamos el registro en el historial para la nueva OT
-            HistorialOT.objects.create(
-                orden_de_trabajo=ot,
-                usuario=request.user,
-                tipo_evento='CREACION',
-                descripcion=f"OT #{ot.folio} creada con éxito."
-            )
-            
+            HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CREACION', descripcion=f"OT #{ot.folio} creada con éxito.")
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
-            
-            # Redirigimos a una página limpia para evitar el reenvío del formulario
             return redirect('ot_list')
         else:
-            # Si el formulario NO es válido, guardamos los errores en los mensajes de Django
-            # y redirigimos de vuelta a la página.
-            
-            # Primero, un mensaje general
             messages.error(request, 'Por favor, corrija los errores en el formulario.')
-            
-            # Luego, los errores específicos de cada campo
             for field, errors in form.errors.items():
                 for error in errors:
                     label = form.fields[field].label or field.capitalize()
                     messages.error(request, f"Error en '{label}': {error}")
-            
-            # Redirigimos para completar el patrón PRG
+            # Aunque hay errores, redirigimos para limpiar el POST y mostramos errores como mensajes
             return redirect('ot_list')
 
-    # --- Lógica para el método GET (cuando se carga la página por primera vez) ---
+    # Lógica para el método GET (cargar la página, filtrar, paginar)
     else:
-        # Tu lógica original para pre-rellenar el formulario se mantiene
+        # Tu lógica original para pre-rellenar el formulario
         initial_data = {}
         vehiculo_id = request.GET.get('vehiculo_id')
         if vehiculo_id:
             initial_data['vehiculo'] = vehiculo_id
             initial_data['tipo'] = 'CORRECTIVA'
-        
-        # Creamos una instancia de formulario vacía (o con datos iniciales)
         form = OrdenDeTrabajoForm(initial=initial_data)
 
-    # Obtenemos las OTs para mostrarlas en la tabla
-    ordenes = OrdenDeTrabajo.objects.all().order_by('-fecha_creacion')
+    # 1. Obtenemos el queryset base
+    ordenes_list = OrdenDeTrabajo.objects.all().select_related('vehiculo').order_by('-fecha_creacion')
     
-    # Preparamos el contexto y renderizamos la plantilla
-    context = {'ordenes': ordenes, 'form': form}
+    # 2. Instanciamos y procesamos el formulario de filtros
+    filtro_form = OTFiltroForm(request.GET)
+    if filtro_form.is_valid():
+        if filtro_form.cleaned_data['vehiculo']:
+            ordenes_list = ordenes_list.filter(vehiculo=filtro_form.cleaned_data['vehiculo'])
+        if filtro_form.cleaned_data['tipo']:
+            ordenes_list = ordenes_list.filter(tipo=filtro_form.cleaned_data['tipo'])
+        if filtro_form.cleaned_data['estado']:
+            ordenes_list = ordenes_list.filter(estado=filtro_form.cleaned_data['estado'])
+        if filtro_form.cleaned_data['fecha_desde']:
+            ordenes_list = ordenes_list.filter(fecha_creacion__date__gte=filtro_form.cleaned_data['fecha_desde'])
+        if filtro_form.cleaned_data['fecha_hasta']:
+            ordenes_list = ordenes_list.filter(fecha_creacion__date__lte=filtro_form.cleaned_data['fecha_hasta'])
+
+    # 3. Paginación
+    paginator = Paginator(ordenes_list, 10) # 20 OTs por página
+    page = request.GET.get('page')
+    try:
+        ordenes_paginadas = paginator.page(page)
+    except PageNotAnInteger:
+        ordenes_paginadas = paginator.page(1)
+    except EmptyPage:
+        ordenes_paginadas = paginator.page(paginator.num_pages)
+    
+    context = {
+        'ordenes': ordenes_paginadas,      # Pasamos el objeto paginado
+        'form': form,                      # Formulario de creación
+        'filtro_form': filtro_form,        # Formulario de filtros
+    }
     return render(request, 'flota/orden_trabajo_list.html', context)
 
 

@@ -199,3 +199,38 @@ class DiagnosticoEvaluacionForm(forms.ModelForm):
         widgets = {
             'diagnostico_evaluacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Ingrese el diagnóstico técnico aquí...'}),
         }
+
+# En flota/forms.py
+
+# ... (tus otros formularios) ...
+
+class OTFiltroForm(forms.Form):
+    # Usamos campos no requeridos (required=False) para que el filtro sea opcional
+    vehiculo = forms.ModelChoiceField(
+        queryset=Vehiculo.objects.all(), 
+        required=False,
+        label="Vehículo",
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    tipo = forms.ChoiceField(
+        choices=[('', 'Todos los Tipos')] + OrdenDeTrabajo.TIPO_CHOICES, # Añadimos una opción "Todos"
+        required=False, 
+        label="Tipo de OT",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    estado = forms.ChoiceField(
+        choices=[('', 'Todos los Estados')] + OrdenDeTrabajo.ESTADO_CHOICES,
+        required=False, 
+        label="Estado",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    fecha_desde = forms.DateField(
+        required=False, 
+        label="Fecha Desde",
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    fecha_hasta = forms.DateField(
+        required=False, 
+        label="Fecha Hasta",
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
