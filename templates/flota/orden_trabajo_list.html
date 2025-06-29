@@ -2,61 +2,120 @@
 
 {% block title %}Órdenes de Trabajo{% endblock %}
 
-{% block content %}
-    <div class="card">
-        <h2>Crear Nueva Orden de Trabajo</h2>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn-submit">Guardar OT</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <h2>Listado de Órdenes de Trabajo</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Vehículo</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th>Fecha Creación</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ot in ordenes %}
-                <tr>
-                    <td>{{ ot.folio|default:"N/A" }}</td>
-                    <td>{{ ot.vehiculo.numero_interno }}</td>
-                    <td>{{ ot.get_tipo_display }}</td>
-                    <td>{{ ot.get_estado_display }}</td>
-                    <td>{{ ot.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                    <td>
-                        <a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-action">Ver Detalle</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 20px;">No hay órdenes de trabajo registradas.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        .btn-action {
-            background-color: #2b6cb0;
-            color: white;
-            padding: 5px 10px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-        .btn-action:hover {
-            background-color: #2c5282;
-        }
+        body { background-color: #1a202c !important; color: #cbd5e0 !important; }
+        .table { color: #cbd5e0; }
+        .table thead th { border-bottom: 2px solid #4a5568; }
+        .table th, .table td { border-top: 1px solid #4a5568; }
+        .table-hover tbody tr:hover { background-color: #2d3748; }
+        .card { background-color: #2d3748; border: 1px solid #4a5568; }
+        .form-group label { font-weight: bold; display: block; margin-bottom: 0.5rem; }
+        .form-control, .form-select { display: block; width: 100%; padding: .375rem .75rem; font-size: 1rem; font-weight: 400; line-height: 1.5; color: #cbd5e0; background-color: #1a202c; background-clip: padding-box; border: 1px solid #4a5568; -webkit-appearance: none; -moz-appearance: none; appearance: none; border-radius: .25rem; }
+        .form-control:focus, .form-select:focus { background-color: #2d3748; color: #cbd5e0; border-color: #3182ce; box-shadow: none; }
+        .select2-container--default .select2-selection--single { background-color: #1a202c !important; border: 1px solid #4a5568 !important; height: calc(1.5em + .75rem + 2px) !important; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { color: #cbd5e0 !important; line-height: calc(1.5em + .75rem) !important; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow { height: calc(1.5em + .75rem) !important; }
+        .btn-success { background-color: #38a169; border-color: #38a169; }
+        .ot-status { padding: .25rem .75rem; border-radius: 9999px; font-weight: bold; color: white; font-size: 0.8em; }
+        .status-PENDIENTE { background-color: #dd6b20; }
+        .status-EN_PROCESO { background-color: #3182ce; }
+        .status-PAUSADA { background-color: #d69e2e; }
+        .status-CERRADA_MECANICO { background-color: #718096; }
+        .status-FINALIZADA { background-color: #2f855a; }
+        .errorlist { color: #f56565; margin: 5px 0 0 0; padding: 0; list-style-type: none; font-size: 0.9em; font-weight: bold; }
     </style>
 {% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Órdenes de Trabajo</h1>
+
+<!-- BLOQUE 1: FORMULARIO DE CREACIÓN (ARRIBA) -->
+<div id="crear-ot-seccion" class="card mb-5">
+    <div class="card-header">
+        <h4><i class="fas fa-plus-circle me-2"></i> Crear Nueva Orden de Trabajo</h4>
+    </div>
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.errors %}
+                <div class="alert alert-danger" style="background-color: #c53030;">
+                    <strong>Por favor, corrija los siguientes errores:</strong>
+                    {{ form.non_field_errors }}
+                    <ul class="mb-0 mt-2">
+                        {% for field in form %}{% for error in field.errors %}<li><strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div class="form-group mb-3">{{ form.vehiculo.label_tag }}{{ form.vehiculo }}{{ form.vehiculo.errors }}</div>
+            <div class="form-group mb-3">{{ form.tipo.label_tag }}{{ form.tipo }}{{ form.tipo.errors }}</div>
+            <div class="form-group mb-3">{{ form.formato.label_tag }}{{ form.formato }}{{ form.formato.errors }}</div>
+            <div class="form-group mb-3">{{ form.kilometraje_apertura.label_tag }}{{ form.kilometraje_apertura }}{{ form.kilometraje_apertura.errors }}</div>
+            
+            <div class="form-group mb-3" id="campo-pauta_mantenimiento" style="display: none;">{{ form.pauta_mantenimiento.label_tag }}{{ form.pauta_mantenimiento }}{{ form.pauta_mantenimiento.errors }}</div>
+            <div class="form-group mb-3" id="campo-tipo_falla" style="display: none;">{{ form.tipo_falla.label_tag }}{{ form.tipo_falla }}{{ form.tipo_falla.errors }}</div>
+            <div class="form-group mb-3" id="campo-sintomas_reportados" style="display: none;">{{ form.sintomas_reportados.label_tag }}{{ form.sintomas_reportados }}{{ form.sintomas_reportados.errors }}</div>
+            
+            <div class="form-group mb-3">{{ form.observacion_inicial.label_tag }}{{ form.observacion_inicial }}{{ form.observacion_inicial.errors }}</div>
+            
+            <button type="submit" class="btn btn-success mt-3">Crear OT</button>
+        </form>
+    </div>
+</div>
+
+<!-- BLOQUE 2: TABLA DE OTs EXISTENTES (ABAJO) -->
+<div class="card">
+    <div class="card-header">
+        <h4>Listado de Órdenes de Trabajo Existentes</h4>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead><tr><th>Folio</th><th>Vehículo</th><th>Tipo</th><th>Estado</th><th>Fecha Creación</th><th>Acciones</th></tr></thead>
+                <tbody>
+                    {% for ot in ordenes %}
+                    <tr>
+                        <td>{{ ot.folio }}</td>
+                        <td>{{ ot.vehiculo.numero_interno }} - {{ ot.vehiculo.patente }}</td>
+                        <td>{{ ot.get_tipo_display }}</td>
+                        <td><span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span></td>
+                        <td>{{ ot.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                        <td><a href="{% url 'ot_detail' pk=ot.pk %}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> Ver Detalle</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center">No hay órdenes de trabajo registradas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    const tipoSelect = $('#id_tipo');
+    const pautaField = $('#id_pauta_mantenimiento').closest('.form-group');
+    const tipoFallaField = $('#id_tipo_falla').closest('.form-group');
+    const sintomasField = $('#id_sintomas_reportados').closest('.form-group');
+
+    function toggleFields() {
+        const tipo = tipoSelect.val();
+        pautaField.hide();
+        tipoFallaField.hide();
+        sintomasField.hide();
+        if (tipo === 'PREVENTIVA') pautaField.show();
+        else if (tipo === 'CORRECTIVA') tipoFallaField.show();
+        else if (tipo === 'EVALUATIVA') {
+            tipoFallaField.show();
+            sintomasField.show();
+        }
+    }
+    tipoSelect.on('change', toggleFields);
+    toggleFields();
+});
+</script>
+{% endblock extra_scripts %}

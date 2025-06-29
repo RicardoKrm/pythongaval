@@ -3,291 +3,122 @@
 {% block title %}Detalle OT #{{ ot.folio }}{% endblock %}
 
 {% block extra_head %}
-<!-- Cargar Bootstrap CSS SÓLO para esta página -->
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-<!-- Cargar Font Awesome para iconos -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-<!-- Estilos específicos para esta página -->
-<style>
-/* Forzar el fondo oscuro que Bootstrap sobrescribe */
-body { background-color: #1a202c !important; color: #cbd5e0 !important; }
-
-/* Layout de la página */
-.grid-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
-@media (max-width: 992px) { .grid-container { grid-template-columns: 1fr; } }
-
-.ot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
-.ot-status { padding: .25rem .75rem; border-radius: 9999px; font-weight: bold; color: white; }
-.status-PENDIENTE { background-color: #dd6b20; }
-.status-EN_PROCESO { background-color: #3182ce; }
-.status-CERRADA_MECANICO { background-color: #718096; }
-.status-FINALIZADA { background-color: #2f855a; }
-
-/* Estilos para las tarjetas de información */
-.card {
-    background-color: #2d3748; /* Fondo más oscuro para las tarjetas */
-    border: 1px solid #4a5568; /* Borde sutil */
-    border-radius: 0.5rem; /* Bordes redondeados */
-    padding: 1.5rem; /* Espaciado interno */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Sombra suave */
-}
-.data-list { list-style: none; padding: 0; }
-.data-list li { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; border-bottom: 1px solid #4a5568; }
-.data-list li:last-child { border-bottom: none; }
-.data-list strong { color: #a0aec0; }
-.card h4 i { font-size: 0.9em; color: #a0aec0; margin-right: 0.5rem; }
-
-/* Botones y listas en las tarjetas */
-.delete-btn { background: none; border: none; color: #a0aec0; cursor: pointer; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
-.delete-btn:hover { background-color: #c53030; color: white; }
-.assigned-personnel-list { list-style: none; padding: 0; margin-top: 1rem; }
-.assigned-personnel-list li { padding: 0.5rem; border-radius: 4px; background-color: #1a202c; margin-bottom: 0.5rem; display: flex; align-items: center; }
-.badge-responsable { background-color: #f6ad55; color: #1a202c; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; font-weight: bold; margin-right: 8px; }
-.comment-box { background-color: #1a202c; border: 1px solid #4a5568; border-radius: 6px; padding: 1rem; margin-top: 1rem; }
-.comment-box blockquote { margin: 0; font-style: italic; color: #cbd5e0; }
-
-/* Estilos para el Acordeón */
-.action-accordion .card { border: 1px solid #4a5568; background-color: #2d3748; margin-bottom: 1rem; border-radius: 8px !important; overflow: hidden; }
-.action-accordion .card-header { padding: 0; border-bottom: none; background-color: transparent; }
-.action-accordion .card-header button { width: 100%; color: #e2e8f0; text-align: left; padding: 1rem 1.5rem; font-weight: 600; text-decoration: none; border: none; background: none; display: flex; justify-content: space-between; align-items: center; }
-.action-accordion .card-header button:hover, .action-accordion .card-header button:focus { background-color: #4a5568; outline: none; text-decoration: none; }
-.action-accordion .card-header button.collapsed::after { content: '\f078'; font-family: 'Font Awesome 5 Free'; font-weight: 900; }
-.action-accordion .card-header button:not(.collapsed)::after { content: '\f077'; font-family: 'Font Awesome 5 Free'; font-weight: 900; }
-.action-accordion .card-body { padding: 1.5rem; border-top: 1px solid #4a5568; }
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9em; }
-.checkbox-list { max-height: 150px; overflow-y: auto; background-color: #1a202c; padding: 10px; border-radius: 4px; border: 1px solid #4a5568;}
-.checkbox-list ul { list-style: none; padding: 0; margin: 0; }
-.checkbox-list li { margin-bottom: 0.5rem; color: #cbd5e0 !important; } /* Forzar color de texto en checkboxes */
-
-/* Estilo para los botones de submit */
-.btn-submit {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    background-color: #4CAF50; /* Un verde vibrante */
-    color: white;
-    border: none;
-    border-radius: 0.375rem; /* Bordes ligeramente redondeados */
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.btn-submit:hover {
-    background-color: #45a049; /* Un verde un poco más oscuro al pasar el ratón */
-    transform: translateY(-2px); /* Un pequeño efecto de levantamiento */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.btn-submit:active {
-    transform: translateY(0); /* Vuelve a la posición original al hacer clic */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-</style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #1a202c !important; color: #cbd5e0 !important; }
+        .container { max-width: 1200px; }
+        h1, h2, h4 { color: #e2e8f0; }
+        hr { border-color: #4a5568; }
+        .grid-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
+        @media (max-width: 992px) { .grid-container { grid-template-columns: 1fr; } }
+        .ot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+        .ot-status { padding: .3rem .9rem; border-radius: 9999px; font-weight: bold; color: white; }
+        .status-PENDIENTE { background-color: #dd6b20; }
+        .status-EN_PROCESO { background-color: #3182ce; }
+        .status-PAUSADA { background-color: #d69e2e; }
+        .status-CERRADA_MECANICO { background-color: #718096; }
+        .status-FINALIZADA { background-color: #2f855a; }
+        .card { background-color: #2d3748; border: 1px solid #4a5568; border-radius: 0.5rem; }
+        .data-list { list-style: none; padding: 0; margin:0; }
+        .data-list li { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; border-bottom: 1px solid #4a5568; }
+        .data-list li:last-child { border-bottom: none; }
+        .data-list strong { color: #a0aec0; }
+        .card h4 i, .card h5 i { color: #a0aec0; margin-right: 0.75rem; }
+        .accordion-button { background-color: #2d3748 !important; color: #e2e8f0 !important; box-shadow: none !important; }
+        .accordion-button:not(.collapsed) { background-color: #4a5568 !important; }
+        .accordion-button::after { filter: invert(1) grayscale(100%) brightness(200%); }
+        .accordion-body { background-color: #2d3748; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9em; color: #a0aec0; }
+        .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border: 1px solid #4a5568; }
+        .form-control:focus, .form-select:focus { background-color: #1a202c; color: #cbd5e0; border-color: #3182ce; box-shadow: none; }
+        .history-item-icon { width: 30px; text-align: center; }
+    </style>
 {% endblock %}
 
 {% block content %}
 <div class="ot-header">
     <div>
         <h1>Orden de Trabajo <span class="text-muted">#{{ ot.folio }}</span></h1>
-        <p class="h4">{{ ot.vehiculo }}</p>
+        <p class="h4 text-muted">{{ ot.vehiculo }}</p>
     </div>
     <span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
 </div>
 
+{% if ot.estado == 'PAUSADA' %}
+<div class="alert alert-warning" role="alert" style="background-color: #d69e2e; border-color: #b08020; color: #fff;">
+    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> ¡OT Pausada!</h4>
+    <p class="mb-0"><strong>Motivo:</strong> {{ ot.get_motivo_pausa_display }}. {{ ot.notas_pausa }}</p>
+</div>
+{% endif %}
+
+<div class="mb-4">
+    {% if es_admin_o_super and ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#pausarOTModal"><i class="fas fa-pause me-1"></i> Pausar OT</button>{% endif %}
+    {% if es_admin_o_super and ot.estado == 'PAUSADA' %}<form method="post" class="d-inline"><{% csrf_token %}<input type="hidden" name="estado" value="EN_PROCESO"><button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button></form>{% endif %}
+    {% if ot.tipo == 'EVALUATIVA' %}<button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#diagnosticoModal"><i class="fas fa-stethoscope me-1"></i> Añadir Diagnóstico</button>{% endif %}
+</div>
+
 <div class="grid-container">
-    <!-- Columna Izquierda -->
     <div class="left-column">
-        <div class="card mb-4">
-            <h4><i class="fas fa-info-circle"></i>Información General</h4>
+        <div class="card mb-4"><div class="card-body">
+            <h4 class="mb-3"><i class="fas fa-info-circle"></i>Información General</h4>
             <ul class="data-list">
                 <li><strong>Tipo:</strong> <span>{{ ot.get_tipo_display }}</span></li>
                 <li><strong>Fecha Creación:</strong> <span>{{ ot.fecha_creacion|date:"d M Y, H:i" }}</span></li>
                 <li><strong>KM Apertura:</strong> <span>{{ ot.kilometraje_apertura|floatformat:0 }}</span></li>
-                <li style="background-color: #1a202c; padding: 10px; border-radius: 4px;">
-                    <strong>Costo Total Actualizado:</strong> <strong style="font-size: 1.5em; color: #68d391;">${{ ot.costo_total|floatformat:2 }}</strong>
-                </li>
+                <li class="border-0"><strong>Costo Total:</strong> <strong class="fs-4 text-success">${{ ot.costo_total|floatformat:2 }}</strong></li>
             </ul>
-        </div>
-        <div class="card mb-4">
-            <h4><i class="fas fa-tasks"></i>Tareas Realizadas</h4>
-            {% if ot.tareas_realizadas.all %}
-            <ul class="data-list">
-                {% for tarea in ot.tareas_realizadas.all %}
-                <li>
-                    <span>{{ tarea.descripcion }}</span>
-                    <span class="text-muted">
-                        ${{ tarea.costo_base|floatformat:2 }}
-                        <form action="{% url 'eliminar_tarea_ot' ot.pk tarea.pk %}" method="post" style="display: inline;" onsubmit="return confirm('¿Eliminar esta tarea?');">
-                            {% csrf_token %}
-                            <button type="submit" class="delete-btn"><i class="fas fa-trash-alt fa-xs"></i></button>
-                        </form>
-                    </span>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-muted">Aún no se han añadido tareas.</p>
-            {% endif %}
-        </div>
-        <div class="card mb-4">
-            <h4><i class="fas fa-boxes"></i>Insumos Utilizados</h4>
-            {% if ot.detalleinsumoot_set.all %}
-            <ul class="data-list">
-                {% for detalle in ot.detalleinsumoot_set.all %}
-                <li>
-                    <span>{{ detalle.cantidad|floatformat }} x {{ detalle.insumo.nombre }}</span>
-                    <span class="text-muted">
-                        ${{ detalle.insumo.precio_unitario|floatformat:2 }} c/u
-                        <form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" style="display: inline;" onsubmit="return confirm('¿Eliminar este insumo?');">
-                            {% csrf_token %}
-                            <button type="submit" class="delete-btn"><i class="fas fa-trash-alt fa-xs"></i></button>
-                        </form>
-                    </span>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="text-muted">Aún no se han añadido insumos.</p>
-            {% endif %}
-        </div>
-        {% if ot.estado == 'CERRADA_MECANICO' and ot.motivo_pendiente %}
-        <div class="card">
-            <h4 class="ot-panel-title"><i class="fas fa-comment-dots"></i>Comentarios del Mecánico</h4>
-            <div class="comment-box">
-                <blockquote>{{ ot.motivo_pendiente }}</blockquote>
-            </div>
-        </div>
+        </div></div>
+
+        {% if ot.tipo == 'EVALUATIVA' %}
+        <div class="card mb-4"><div class="card-body">
+            <h4 class="mb-3"><i class="fas fa-search"></i>Detalles de Evaluación</h4>
+            <h5><i class="fas fa-comment-dots text-muted"></i> Síntomas Reportados</h5><p class="ms-4">{{ ot.sintomas_reportados|linebreaksbr|default:"No especificados." }}</p>
+            <hr><h5 class="mt-3"><i class="fas fa-user-md text-muted"></i> Diagnóstico Técnico</h5><p class="ms-4">{{ ot.diagnostico_evaluacion|linebreaksbr|default:"Pendiente de diagnóstico." }}</p>
+        </div></div>
         {% endif %}
+
+        <div class="card mb-4"><div class="card-body">
+            <h4 class="mb-3"><i class="fas fa-tasks"></i>Tareas Realizadas</h4>
+            {% if ot.tareas_realizadas.all %}<ul class="data-list">{% for tarea in ot.tareas_realizadas.all %}<li><span>{{ tarea.descripcion }}</span><span class="text-muted">${{ tarea.costo_base|floatformat:2 }}<form action="{% url 'eliminar_tarea_ot' ot.pk tarea.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta tarea?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger ms-2 py-0 px-1"><i class="fas fa-trash-alt fa-xs"></i></button></form></span></li>{% endfor %}</ul>{% else %}<p class="text-muted">Aún no se han añadido tareas.</p>{% endif %}
+        </div></div>
+
+        <div class="card mb-4"><div class="card-body">
+            <h4 class="mb-3"><i class="fas fa-boxes"></i>Insumos Utilizados</h4>
+            {% if ot.detalleinsumoot_set.all %}<ul class="data-list">{% for detalle in ot.detalleinsumoot_set.all %}<li><span>{{ detalle.cantidad|floatformat }} x {{ detalle.insumo.nombre }}</span><span class="text-muted">${{ detalle.insumo.precio_unitario|floatformat:2 }} c/u<form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este insumo?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger ms-2 py-0 px-1"><i class="fas fa-trash-alt fa-xs"></i></button></form></span></li>{% endfor %}</ul>{% else %}<p class="text-muted">Aún no se han añadido insumos.</p>{% endif %}
+        </div></div>
+
+        <div class="card"><div class="card-body">
+            <h4 class="mb-3"><i class="fas fa-history"></i>Historial de la OT</h4>
+            <div style="max-height: 400px; overflow-y: auto;"><ul class="list-group list-group-flush">
+                {% for evento in ot.historial.all %}
+                <li class="list-group-item bg-transparent border-secondary ps-0"><div class="d-flex w-100"><div class="history-item-icon me-3"><i class="fas fa-info-circle text-primary"></i></div><div>
+                    <div class="d-flex justify-content-between"><h6 class="mb-1">{{ evento.get_tipo_evento_display }}</h6><small class="text-muted">{{ evento.fecha_evento|date:"d/m/Y H:i" }}</small></div>
+                    <p class="mb-1 small">{{ evento.descripcion }}</p><small class="text-muted">Por: {{ evento.usuario.username|default:"Sistema" }}</small>
+                </div></div></li>
+                {% empty %}
+                <li class="list-group-item bg-transparent border-secondary">No hay eventos registrados.</li>
+                {% endfor %}
+            </ul></div>
+        </div></div>
     </div>
 
-    <!-- Columna Derecha -->
     <div class="right-column">
-        <div class="accordion action-accordion" id="accordionOT">
-            <!-- Panel 1: Añadir Tarea -->
-            <div class="card">
-                <div class="card-header">
-                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTarea">
-                        Añadir Tarea
-                    </button>
-                </div>
-                <div id="collapseTarea" class="collapse" data-parent="#accordionOT">
-                    <div class="card-body">
-                        <form method="post">
-                            {% csrf_token %}
-                            {{ manual_tarea_form.as_p }}
-                            <button type="submit" name="add_manual_tarea" class="btn-submit w-100">Guardar Tarea</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <!-- Panel 2: Añadir Insumo -->
-            <div class="card">
-                <div class="card-header">
-                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseInsumo">
-                        Añadir Insumo
-                    </button>
-                </div>
-                <div id="collapseInsumo" class="collapse" data-parent="#accordionOT">
-                    <div class="card-body">
-                        <form method="post">
-                            {% csrf_token %}
-                            {{ manual_insumo_form.as_p }}
-                            <button type="submit" name="add_manual_insumo" class="btn-submit w-100">Guardar Insumo</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <!-- Panel 3: Asignar Personal - AHORA SIEMPRE VISIBLE -->
-            <div class="card">
-                <div class="card-header">
-                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapsePersonal">
-                        Asignar Personal
-                    </button>
-                </div>
-                <div id="collapsePersonal" class="collapse" data-parent="#accordionOT">
-                    <div class="card-body">
-                        <h5>Personal Actual</h5>
-                        {% if ot.responsable or ot.personal_asignado.all %}
-                        <ul class="assigned-personnel-list">
-                            {% if ot.responsable %}
-                            <li><span class="badge-responsable">Responsable</span>{{ ot.responsable.username }}</li>
-                            {% endif %}
-                            {% for ayudante in ot.personal_asignado.all %}
-                            <li><i class="fas fa-user-friends mr-2 text-muted"></i>{{ ayudante.username }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p class="text-muted">No hay personal asignado.</p>
-                        {% endif %}
-                        <hr style="border-color: #4a5568; margin: 1.5rem 0;">
-                        <h5 class="mt-4">Modificar Asignación</h5>
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="{{ asignar_form.responsable.id_for_label }}">{{ asignar_form.responsable.label }}</label>
-                                {{ asignar_form.responsable }}
-                            </div>
-                            <div class="form-group mt-4">
-                                <label>{{ asignar_form.personal_asignado.label }}</label>
-                                <div class="checkbox-list">
-                                    {{ asignar_form.personal_asignado }}
-                                </div>
-                            </div>
-                            <button type="submit" name="asignar_personal" class="btn-submit w-100 mt-3">Guardar Asignación</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <!-- Panel 4: Cambiar Estado - AHORA SIEMPRE VISIBLE -->
-            <div class="card">
-                <div class="card-header">
-                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseEstado">
-                        Cambiar Estado
-                    </button>
-                </div>
-                <div id="collapseEstado" class="collapse" data-parent="#accordionOT">
-                    <div class="card-body">
-                        <form method="post">
-                            {% csrf_token %}
-                            {{ cambiar_estado_form.as_p }}
-                            <button type="submit" name="cambiar_estado" class="btn-submit w-100">Actualizar Estado</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <!-- Panel 5: Cerrar para Revisión -->
-            <div class="card">
-                <div class="card-header">
-                    <button class="btn btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseFinalizar">
-                        Cerrar para Revisión
-                    </button>
-                </div>
-                <div id="collapseFinalizar" class="collapse" data-parent="#accordionOT">
-                    <div class="card-body">
-                        <form method="post">
-                            {% csrf_token %}
-                            <div class="form-group">
-                                <label for="{{ cerrar_mecanico_form.motivo_pendiente.id_for_label }}">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>
-                                {{ cerrar_mecanico_form.motivo_pendiente }}
-                                <small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small>
-                            </div>
-                            <button type="submit" name="cerrar_mecanico" class="btn-submit w-100">Marcar como Realizado</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
+        <div class="accordion" id="accordionOT">
+            {% if ot.tipo == 'PREVENTIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePauta">Cargar Tareas de Pauta</button></h2><div id="collapsePauta" class="accordion-collapse collapse show" data-bs-parent="#accordionOT"><div class="accordion-body">{% if ot.pauta_mantenimiento %}<p>Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post"><{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn btn-success w-100">Cargar Tareas</button></form>{% else %}<p class="text-warning">No hay pauta asignada.</p>{% endif %}</div></div></div>{% endif %}
+            {% if ot.tipo == 'CORRECTIVA' or ot.tipo == 'EVALUATIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTarea">Añadir Tarea Manual</button></h2><div id="collapseTarea" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ manual_tarea_form.as_p }}<button type="submit" name="add_manual_tarea" class="btn btn-success w-100">Guardar Tarea</button></form></div></div></div>{% endif %}
+            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsumo">Añadir Insumo</button></h2><div id="collapseInsumo" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ manual_insumo_form.as_p }}<button type="submit" name="add_manual_insumo" class="btn btn-success w-100">Guardar Insumo</button></form></div></div></div>
+            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button></h2><div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><h5>Personal Actual</h5>{% if ot.responsable or ot.personal_asignado.all %}<ul class="list-unstyled">{% if ot.responsable %}<li><span class="badge bg-warning text-dark">Responsable</span> {{ ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}<li><i class="fas fa-user-friends text-muted"></i> {{ ayudante.username }}</li>{% endfor %}</ul>{% else %}<p class="text-muted">No hay personal asignado.</p>{% endif %}<hr><h5 class="mt-3">Modificar Asignación</h5><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div class="mb-3"><label class="form-label">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-3">Guardar Asignación</button></form></div></div></div>
+            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstado">Cambiar Estado</button></h2><div id="collapseEstado" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ cambiar_estado_form.as_p }}<button type="submit" name="cambiar_estado" class="btn btn-success w-100">Actualizar Estado</button></form></div></div></div>
+            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFinalizar">Cerrar para Revisión</button></h2><div id="collapseFinalizar" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}<small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small></div><button type="submit" name="cerrar_mecanico" class="btn btn-success w-100">Marcar como Realizado</button></form></div></div></div>
         </div>
     </div>
 </div>
 
-<!-- Scripts de Bootstrap (jQuery, Popper.js y Bootstrap JS) -->
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<div class="modal fade" id="pausarOTModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><form method="post"><{% csrf_token %}<div class="modal-header border-secondary"><h5 class="modal-title">Pausar OT #{{ ot.folio }}</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Especifique el motivo de la pausa.</p>{{ pausar_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="pausar_ot" class="btn btn-warning">Confirmar Pausa</button></div></form></div></div></div>
+<div class="modal fade" id="diagnosticoModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><form method="post"><{% csrf_token %}<div class="modal-header border-secondary"><h5 class="modal-title">Diagnóstico para OT #{{ ot.folio }}</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Añada el diagnóstico técnico.</p>{{ diagnostico_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="guardar_diagnostico" class="btn btn-primary">Guardar Diagnóstico</button></div></form></div></div></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 {% endblock %}

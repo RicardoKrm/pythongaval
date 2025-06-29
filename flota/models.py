@@ -84,8 +84,8 @@ class PautaMantenimiento(models.Model):
     def __str__(self): return f"{self.nombre} ({self.modelo_vehiculo.nombre} - {self.kilometraje_pauta} KM)"
 
 class OrdenDeTrabajo(models.Model):
-    ESTADO_CHOICES = [('PENDIENTE', 'Pendiente'), ('EN_PROCESO', 'En Proceso'), ('FINALIZADA', 'Finalizada'), ('CERRADA_MECANICO', 'Cerrada por Mecánico')]
-    TIPO_CHOICES = [('PREVENTIVA', 'Preventiva'), ('CORRECTIVA', 'Correctiva')]
+    ESTADO_CHOICES = [('PENDIENTE', 'Pendiente'), ('EN_PROCESO', 'En Proceso'), ('PAUSADA', 'Pausada'), ('FINALIZADA', 'Finalizada'), ('CERRADA_MECANICO', 'Cerrada por Mecánico')]
+    TIPO_CHOICES = [('PREVENTIVA', 'Preventiva'), ('CORRECTIVA', 'Correctiva'), ('EVALUATIVA', 'Evaluativa')]
     FORMATO_CHOICES = [('NORMAL', 'Mantenimiento Normal'), ('CONTRATO', 'Bajo Contrato')]
     folio = models.CharField(max_length=50, unique=True, blank=True, null=True, editable=False)
     vehiculo = models.ForeignKey(Vehiculo, on_delete=models.PROTECT, related_name='ordenes_trabajo')
@@ -110,6 +110,17 @@ class OrdenDeTrabajo(models.Model):
     responsable = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='ots_responsable', help_text="Mecánico principal a cargo de la OT.")
     personal_asignado = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='ots_ayudante', help_text="Equipo de ayudantes que participan en la OT.")
     
+    sintomas_reportados = models.TextField(blank=True, help_text="Descripción de síntomas (ruidos, luces, etc.) reportados por el conductor.")
+    diagnostico_evaluacion = models.TextField(blank=True, help_text="Conclusión técnica del mecánico tras la evaluación.")
+
+    MOTIVO_PAUSA_CHOICES = [
+        ('FALTA_REPUESTO', 'Falta de Repuesto'),
+        ('ESPERA_AUTORIZACION', 'Espera de Autorización'),
+        ('FALTA_HERRAMIENTA', 'Falta de Herramienta Especial'),
+        ('OTRO', 'Otro (ver notas)'),
+    ]
+    motivo_pausa = models.CharField(max_length=30, choices=MOTIVO_PAUSA_CHOICES, blank=True, null=True)
+    notas_pausa = models.TextField(blank=True, help_text="Detalles adicionales sobre el motivo de la pausa.")
     def __str__(self): return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
     def calcular_costo_total(self):
         if not self.pk: return 0
@@ -167,3 +178,33 @@ class ConfiguracionEmpresa(models.Model):
     def load(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj    
+    
+class HistorialOT(models.Model):
+    """
+    Registra cada evento significativo que ocurre en una Orden de Trabajo
+    para propósitos de auditoría y trazabilidad.
+    """
+    TIPO_EVENTO_CHOICES = [
+        ('CREACION', 'Creación de OT'),
+        ('ASIGNACION', 'Asignación de Personal'),
+        ('INICIO', 'Inicio de Tareas'),
+        ('PAUSA', 'OT Pausada'),
+        ('REANUDACION', 'OT Reanudada'),
+        ('CIERRE_MECANICO', 'Cierre por Mecánico'),
+        ('FINALIZACION', 'Finalización de OT'),
+        ('MODIFICACION', 'Modificación de Datos'),
+        ('COMENTARIO', 'Comentario'),
+    ]
+
+    orden_de_trabajo = models.ForeignKey(OrdenDeTrabajo, on_delete=models.CASCADE, related_name='historial')
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, help_text="Usuario que realizó la acción")
+    fecha_evento = models.DateTimeField(auto_now_add=True)
+    tipo_evento = models.CharField(max_length=20, choices=TIPO_EVENTO_CHOICES)
+    descripcion = models.TextField(help_text="Detalle del evento. Ej: 'Pausada por falta de repuesto: Filtro de aceite.'")
+
+    class Meta:
+        ordering = ['-fecha_evento'] # Muestra los eventos más recientes primero
+
+    def __str__(self):
+        user_str = self.usuario.username if self.usuario else "Sistema"
+        return f"{self.get_tipo_evento_display()} en OT-{self.orden_de_trabajo.folio} por {user_str}"    

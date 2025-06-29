@@ -17,11 +17,12 @@ from django.template.loader import render_to_string
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
-    Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT
+    Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
-    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm
+    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm,
+    PausarOTForm, DiagnosticoEvaluacionForm
 )
 from django.utils import timezone # <-- Asegúrate de tener este import
 
@@ -129,24 +130,62 @@ def dashboard_flota(request):
     }
     return render(request, 'flota/dashboard.html', context)
 
-@login_required
 
+@login_required
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
-    initial_data = {}
-    vehiculo_id = request.GET.get('vehiculo_id')
-    if vehiculo_id:
-        initial_data['vehiculo'] = vehiculo_id
-        initial_data['tipo'] = 'CORRECTIVA'
+    
+    # --- Lógica para el método POST (cuando se envía el formulario) ---
     if request.method == 'POST':
         form = OrdenDeTrabajoForm(request.POST)
+        
         if form.is_valid():
             ot = form.save()
+            
+            # Creamos el registro en el historial para la nueva OT
+            HistorialOT.objects.create(
+                orden_de_trabajo=ot,
+                usuario=request.user,
+                tipo_evento='CREACION',
+                descripcion=f"OT #{ot.folio} creada con éxito."
+            )
+            
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
+            
+            # Redirigimos a una página limpia para evitar el reenvío del formulario
             return redirect('ot_list')
+        else:
+            # Si el formulario NO es válido, guardamos los errores en los mensajes de Django
+            # y redirigimos de vuelta a la página.
+            
+            # Primero, un mensaje general
+            messages.error(request, 'Por favor, corrija los errores en el formulario.')
+            
+            # Luego, los errores específicos de cada campo
+            for field, errors in form.errors.items():
+                for error in errors:
+                    label = form.fields[field].label or field.capitalize()
+                    messages.error(request, f"Error en '{label}': {error}")
+            
+            # Redirigimos para completar el patrón PRG
+            return redirect('ot_list')
+
+    # --- Lógica para el método GET (cuando se carga la página por primera vez) ---
     else:
+        # Tu lógica original para pre-rellenar el formulario se mantiene
+        initial_data = {}
+        vehiculo_id = request.GET.get('vehiculo_id')
+        if vehiculo_id:
+            initial_data['vehiculo'] = vehiculo_id
+            initial_data['tipo'] = 'CORRECTIVA'
+        
+        # Creamos una instancia de formulario vacía (o con datos iniciales)
         form = OrdenDeTrabajoForm(initial=initial_data)
+
+    # Obtenemos las OTs para mostrarlas en la tabla
     ordenes = OrdenDeTrabajo.objects.all().order_by('-fecha_creacion')
+    
+    # Preparamos el contexto y renderizamos la plantilla
     context = {'ordenes': ordenes, 'form': form}
     return render(request, 'flota/orden_trabajo_list.html', context)
 
@@ -161,79 +200,160 @@ def orden_trabajo_detail(request, pk):
     asignar_form = AsignarPersonalOTForm(instance=ot)
     cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
     cambiar_estado_form = CambiarEstadoOTForm(instance=ot)
-    manual_tarea_form = ManualTareaForm()  # Formulario vacío para entrada manual
-    manual_insumo_form = ManualInsumoForm() # Formulario vacío para entrada manual
+    manual_tarea_form = ManualTareaForm()
+    manual_insumo_form = ManualInsumoForm()
+    pausar_form = PausarOTForm(instance=ot)
+    diagnostico_form = DiagnosticoEvaluacionForm(instance=ot)
 
     if request.method == 'POST':
-        if 'add_manual_tarea' in request.POST:
-            form = ManualTareaForm(request.POST)
-            if form.is_valid():
-                descripcion = form.cleaned_data['descripcion']
-                tarea, created = Tarea.objects.get_or_create(
-                    descripcion=descripcion,
-                    defaults={
-                        'horas_hombre': form.cleaned_data['horas_hombre'],
-                        'costo_base': form.cleaned_data['costo_base']
-                    }
+        # --- Lógica para Cargar Tareas de una Pauta (para OTs Preventivas) ---
+        if 'cargar_tareas_pauta' in request.POST:
+            if ot.tipo == 'PREVENTIVA' and ot.pauta_mantenimiento:
+                tareas_de_pauta = ot.pauta_mantenimiento.tareas.all()
+                ot.tareas_realizadas.add(*tareas_de_pauta)
+                
+                HistorialOT.objects.create(
+                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', 
+                    descripcion=f"Se cargaron {tareas_de_pauta.count()} tareas desde la pauta '{ot.pauta_mantenimiento.nombre}'."
                 )
-                ot.tareas_realizadas.add(tarea)
-                ot.save()
-                messages.success(request, f'Tarea "{descripcion}" añadida con éxito.')
+                messages.success(request, f"Tareas de la pauta '{ot.pauta_mantenimiento.nombre}' cargadas con éxito.")
+            else:
+                messages.error(request, "Esta acción solo es válida para OTs Preventivas con una pauta asignada.")
+            return redirect('ot_detail', pk=ot.pk)
+
+        # --- Lógica para Pausar la OT ---
+        elif 'pausar_ot' in request.POST:
+            if not es_admin_o_super:
+                messages.error(request, "No tienes permiso para pausar la OT.")
+            else:
+                form = PausarOTForm(request.POST, instance=ot)
+                if form.is_valid():
+                    instancia = form.save(commit=False)
+                    instancia.estado = 'PAUSADA'
+                    instancia.save()
+                    
+                    detalle_pausa = f"Motivo: {instancia.get_motivo_pausa_display()}. Notas: {instancia.notas_pausa or 'N/A'}"
+                    HistorialOT.objects.create(
+                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa
+                    )
+                    messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
+                    return redirect('ot_detail', pk=ot.pk)
+
+        # --- Lógica para Guardar Diagnóstico (para OTs Evaluativas) ---
+        elif 'guardar_diagnostico' in request.POST:
+            form = DiagnosticoEvaluacionForm(request.POST, instance=ot)
+            if form.is_valid():
+                instancia = form.save()
+                HistorialOT.objects.create(
+                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', 
+                    descripcion=f"Se añadió/actualizó el diagnóstico: '{instancia.diagnostico_evaluacion}'"
+                )
+                messages.success(request, 'Diagnóstico guardado con éxito.')
+                return redirect('ot_detail', pk=ot.pk)
+        
+        # --- Lógica para Añadir Tarea Manual (para OTs Correctivas/Evaluativas) ---
+        elif 'add_manual_tarea' in request.POST:
+            if ot.tipo in ['CORRECTIVA', 'EVALUATIVA']:
+                form = ManualTareaForm(request.POST)
+                if form.is_valid():
+                    descripcion = form.cleaned_data['descripcion']
+                    tarea, created = Tarea.objects.get_or_create(
+                        descripcion=descripcion,
+                        defaults={'horas_hombre': form.cleaned_data['horas_hombre'], 'costo_base': form.cleaned_data['costo_base']}
+                    )
+                    ot.tareas_realizadas.add(tarea)
+                    ot.save()
+                    messages.success(request, f'Tarea "{descripcion}" añadida con éxito.')
+                return redirect('ot_detail', pk=ot.pk)
+            else:
+                messages.error(request, "No se pueden añadir tareas manuales a una OT Preventiva.")
                 return redirect('ot_detail', pk=ot.pk)
 
+        # --- Lógica para Añadir Insumo Manual (para todas las OTs) ---
         elif 'add_manual_insumo' in request.POST:
             form = ManualInsumoForm(request.POST)
             if form.is_valid():
+                # ... (tu código original para añadir insumo, está perfecto)
                 nombre = form.cleaned_data['nombre']
                 insumo, created = Insumo.objects.update_or_create(
                     nombre=nombre,
                     defaults={'precio_unitario': form.cleaned_data['precio_unitario']}
                 )
-                DetalleInsumoOT.objects.create(
-                    orden_de_trabajo=ot,
-                    insumo=insumo,
-                    cantidad=form.cleaned_data['cantidad']
-                )
+                DetalleInsumoOT.objects.create(orden_de_trabajo=ot, insumo=insumo, cantidad=form.cleaned_data['cantidad'])
                 ot.save()
                 messages.success(request, f'Insumo "{nombre}" añadido con éxito.')
-                return redirect('ot_detail', pk=ot.pk)
+            return redirect('ot_detail', pk=ot.pk)
 
+        # --- Lógica para Asignar Personal ---
         elif 'asignar_personal' in request.POST:
+            # ... (tu código original para asignar personal con la adición del historial)
             form = AsignarPersonalOTForm(request.POST, instance=ot)
             if form.is_valid():
                 form.save()
+                responsable = form.cleaned_data.get('responsable')
+                ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado')])
+                descripcion = f"Se asignó a {responsable.username if responsable else 'nadie'} como responsable. Ayudantes: {ayudantes or 'ninguno'}."
+                HistorialOT.objects.create(
+                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='ASIGNACION', descripcion=descripcion
+                )
                 messages.success(request, '¡Personal asignado con éxito!')
-                return redirect('ot_detail', pk=ot.pk)
+            return redirect('ot_detail', pk=ot.pk)
         
+        # --- Lógica para Cambiar Estado General ---
+        elif 'cambiar_estado' in request.POST:
+            # ... (tu código original para cambiar estado con la adición del historial)
+            form = CambiarEstadoOTForm(request.POST, instance=ot)
+            if form.is_valid():
+                nuevo_estado = form.cleaned_data['estado']
+                if ot.estado == 'PAUSADA' and nuevo_estado == 'EN_PROCESO':
+                    ot.motivo_pausa, ot.notas_pausa = None, ""
+                    HistorialOT.objects.create(
+                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='REANUDACION', 
+                        descripcion="La OT ha sido reanudada y puesta 'En Proceso'."
+                    )
+                if nuevo_estado == 'FINALIZADA' and ot.estado != 'FINALIZADA':
+                    ot.fecha_cierre = timezone.now()
+                    HistorialOT.objects.create(
+                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='FINALIZACION', 
+                        descripcion=f"La OT ha sido finalizada por {request.user.username}."
+                    )
+                ot.estado = nuevo_estado
+                ot.save()
+                messages.success(request, f"Estado de la OT actualizado a '{ot.get_estado_display()}'.")
+            return redirect('ot_detail', pk=ot.pk)
+            
+        # --- Lógica para Cerrar por Mecánico ---
+        # He añadido esta sección que faltaba, basándome en tu código anterior.
         elif 'cerrar_mecanico' in request.POST:
             form = CerrarOtMecanicoForm(request.POST, instance=ot)
             if form.is_valid():
                 instancia = form.save(commit=False)
                 instancia.estado = 'CERRADA_MECANICO'
                 instancia.save()
+                # REGISTRAMOS EL EVENTO
+                HistorialOT.objects.create(
+                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='CIERRE_MECANICO',
+                    descripcion=f"Cerrada por mecánico. Notas: {instancia.motivo_pendiente or 'N/A'}"
+                )
                 messages.info(request, f"OT #{ot.folio} marcada como 'Cerrada por Mecánico'.")
-                return redirect('ot_detail', pk=ot.pk)
-        
-        elif 'cambiar_estado' in request.POST:
-            form = CambiarEstadoOTForm(request.POST, instance=ot)
-            if form.is_valid():
-                form.save()
-                if form.cleaned_data['estado'] == 'FINALIZADA':
-                    ot.fecha_cierre = timezone.now()
-                    ot.save(update_fields=['fecha_cierre'])
-                messages.success(request, f"Estado de la OT actualizado a '{ot.get_estado_display()}'.")
-                return redirect('ot_detail', pk=ot.pk)
+            return redirect('ot_detail', pk=ot.pk)
 
     context = {
-        'ot': ot, 
+        'ot': ot,
         'es_admin_o_super': es_admin_o_super,
         'asignar_form': asignar_form,
         'cerrar_mecanico_form': cerrar_mecanico_form,
         'cambiar_estado_form': cambiar_estado_form,
-        'manual_tarea_form': manual_tarea_form,    # <-- Pasar el form correcto
-        'manual_insumo_form': manual_insumo_form, # <-- Pasar el form correcto
+        'manual_tarea_form': manual_tarea_form,
+        'manual_insumo_form': manual_insumo_form,
+        'pausar_form': pausar_form,
+        'diagnostico_form': diagnostico_form,
     }
     return render(request, 'flota/orden_trabajo_detail.html', context)
+
+# ====================================================================
+#    FIN DEL BLOQUE PARA REEMPLAZAR
+# ====================================================================
 
 
 @login_required
