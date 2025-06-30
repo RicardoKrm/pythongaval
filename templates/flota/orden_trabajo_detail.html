@@ -2,7 +2,6 @@
 
 {% block title %}Detalle OT #{{ ot.folio }}{% endblock %}
 
-<!-- ======================= BLOQUE ÚNICO Y CORREGIDO ======================= -->
 {% block extra_head %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -88,22 +87,15 @@
 {% endblock %}
 
 {% block content %}
-<!-- El contenido HTML del body no necesita cambios, usamos el de la versión anterior -->
-<!-- En orden_trabajo_detail.html -->
-
 <div class="ot-header">
     <div>
         <h1>Orden de Trabajo <span class="text-muted">#{{ ot.folio }}</span></h1>
-        
-        <!-- === BLOQUE MEJORADO CON BOTÓN DE HISTORIAL === -->
         <div class="d-flex align-items-center mt-2">
             <p class="h4 text-muted mb-0 me-3">{{ ot.vehiculo }}</p>
             <a href="{% url 'historial_vehiculo' pk=ot.vehiculo.pk %}" class="btn btn-sm btn-outline-info">
                 <i class="fas fa-history me-1"></i> Ver Historial del Vehículo
             </a>
         </div>
-        <!-- === FIN DEL BLOQUE MEJORADO === -->
-
     </div>
     <span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
 </div>
@@ -123,6 +115,7 @@
 
 <div class="grid-container">
     <div class="left-column">
+        <!-- ... (resto de las tarjetas de la columna izquierda, sin cambios) ... -->
         <div class="card mb-4"><div class="card-body">
             <h4 class="mb-3"><i class="fas fa-info-circle"></i>Información General</h4>
             <ul class="data-list">
@@ -171,67 +164,85 @@
         <div class="accordion" id="accordionOT">
             {% if ot.tipo == 'PREVENTIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePauta">Cargar Tareas de Pauta</button></h2><div id="collapsePauta" class="accordion-collapse collapse show" data-bs-parent="#accordionOT"><div class="accordion-body">{% if ot.pauta_mantenimiento %}<p>Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post"><{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn btn-success w-100">Cargar Tareas</button></form>{% else %}<p class="text-warning">No hay pauta asignada.</p>{% endif %}</div></div></div>{% endif %}
             {% if ot.tipo == 'CORRECTIVA' or ot.tipo == 'EVALUATIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTarea">Añadir Tarea Manual</button></h2><div id="collapseTarea" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ manual_tarea_form.as_p }}<button type="submit" name="add_manual_tarea" class="btn btn-success w-100">Guardar Tarea</button></form></div></div></div>{% endif %}
-            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsumo">Añadir Insumo</button></h2><div id="collapseInsumo" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ manual_insumo_form.as_p }}<button type="submit" name="add_manual_insumo" class="btn btn-success w-100">Guardar Insumo</button></form></div></div></div>
-            
+
+            <!-- ======================= SECCIÓN DE INSUMOS MEJORADA ======================= -->
             <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button>
+                <h2 class="accordion-header" id="headingInsumo">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsumo" aria-expanded="false" aria-controls="collapseInsumo">
+                        Gestión de Insumos/Repuestos
+                    </button>
                 </h2>
-                <div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT">
+                <div id="collapseInsumo" class="accordion-collapse collapse" aria-labelledby="headingInsumo" data-bs-parent="#accordionOT">
                     <div class="accordion-body">
-                        <h5 class="mb-3"><i class="fas fa-users text-muted"></i> Personal Asignado Actualmente</h5>
-                        {% if ot.responsable or ot.personal_asignado.all %}
-                            <ul class="list-unstyled mb-4">
-                                {% if ot.responsable %}
-                                    <li class="mb-2">
-                                        <span class="badge bg-warning text-dark me-2">Responsable</span> 
-                                        <i class="fas fa-user-check"></i> {{ ot.responsable.get_full_name|default:ot.responsable.username }}
-                                    </li>
-                                {% endif %}
-                                {% for ayudante in ot.personal_asignado.all %}
-                                    {% if ayudante != ot.responsable %}
-                                        <li class="mb-1">
-                                            <span class="badge bg-secondary me-2">Ayudante</span> 
-                                            <i class="fas fa-user"></i> {{ ayudante.get_full_name|default:ayudante.username }}
-                                        </li>
-                                    {% endif %}
-                                {% endfor %}
-                            </ul>
-                        {% else %}
-                            <div class="alert alert-secondary border-0" style="background-color: #4a5568;">
-                                <i class="fas fa-info-circle me-1"></i> No hay personal asignado a esta OT.
-                            </div>
-                        {% endif %}
+                        <p class="text-muted small">Añada repuestos desde el inventario o registre un insumo que no está en stock.</p>
+                        
+                        <!-- Botón para abrir el Modal de búsqueda de repuestos -->
+                        <button type="button" class="btn btn-info w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalBuscarRepuesto">
+                            <i class="fas fa-search me-2"></i> Añadir Repuesto desde Inventario
+                        </button>
+
                         <hr>
-                        <h5 class="mt-3 mb-3"><i class="fas fa-edit text-muted"></i> Modificar Asignación</h5>
+                        
+                        <!-- Formulario para añadir insumos manuales (como antes) -->
+                        <h6 class="mt-3">Añadir Insumo Manual</h6>
                         <form method="post">
                             {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="{{ asignar_form.responsable.id_for_label }}" class="form-label">{{ asignar_form.responsable.label }}</label>
-                                {{ asignar_form.responsable }}
+                            <div class="mb-2">
+                                <label class="form-label">{{ manual_insumo_form.nombre.label }}</label>
+                                {{ manual_insumo_form.nombre }}
                             </div>
-                            <div class="mb-3">
-                                <label for="{{ asignar_form.personal_asignado.id_for_label }}" class="form-label">{{ asignar_form.personal_asignado.label }}</label>
-                                {{ asignar_form.personal_asignado }}
+                            <div class="row">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">{{ manual_insumo_form.cantidad.label }}</label>
+                                    {{ manual_insumo_form.cantidad }}
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <label class="form-label">{{ manual_insumo_form.precio_unitario.label }}</label>
+                                    {{ manual_insumo_form.precio_unitario }}
+                                </div>
                             </div>
-                            <button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-2">
-                                <i class="fas fa-save me-2"></i>Guardar Asignación
-                            </button>
+                            <button type="submit" name="add_manual_insumo" class="btn btn-outline-success w-100 mt-2">Guardar Insumo Manual</button>
                         </form>
                     </div>
                 </div>
             </div>
+            <!-- ========================================================================= -->
 
+            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button></h2><div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><h5 class="mb-3"><i class="fas fa-users text-muted"></i> Personal Asignado Actualmente</h5>{% if ot.responsable or ot.personal_asignado.all %}<ul class="list-unstyled mb-4">{% if ot.responsable %}<li class="mb-2"><span class="badge bg-warning text-dark me-2">Responsable</span><i class="fas fa-user-check"></i> {{ ot.responsable.get_full_name|default:ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}{% if ayudante != ot.responsable %}<li class="mb-1"><span class="badge bg-secondary me-2">Ayudante</span><i class="fas fa-user"></i> {{ ayudante.get_full_name|default:ayudante.username }}</li>{% endif %}{% endfor %}</ul>{% else %}<div class="alert alert-secondary border-0" style="background-color: #4a5568;"><i class="fas fa-info-circle me-1"></i> No hay personal asignado a esta OT.</div>{% endif %}<hr><h5 class="mt-3 mb-3"><i class="fas fa-edit text-muted"></i> Modificar Asignación</h5><form method="post">{% csrf_token %}<div class="mb-3"><label for="{{ asignar_form.responsable.id_for_label }}" class="form-label">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div class="mb-3"><label for="{{ asignar_form.personal_asignado.id_for_label }}" class="form-label">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-2"><i class="fas fa-save me-2"></i>Guardar Asignación</button></form></div></div></div>
             <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstado">Cambiar Estado</button></h2><div id="collapseEstado" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ cambiar_estado_form.as_p }}<button type="submit" name="cambiar_estado" class="btn btn-success w-100">Actualizar Estado</button></form></div></div></div>
             <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFinalizar">Cerrar para Revisión</button></h2><div id="collapseFinalizar" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}<small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small></div><button type="submit" name="cerrar_mecanico" class="btn btn-success w-100">Marcar como Realizado</button></form></div></div></div>
         </div>
     </div>
 </div>
 
-<!-- Modales -->
-<div class="modal fade" id="pausarOTModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><form method="post"><{% csrf_token %}<div class="modal-header border-secondary"><h5 class="modal-title">Pausar OT #{{ ot.folio }}</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Especifique el motivo de la pausa.</p>{{ pausar_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="pausar_ot" class="btn btn-warning">Confirmar Pausa</button></div></form></div></div></div>
-<div class="modal fade" id="diagnosticoModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><form method="post"><{% csrf_token %}<div class="modal-header border-secondary"><h5 class="modal-title">Diagnóstico para OT #{{ ot.folio }}</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Añada el diagnóstico técnico.</p>{{ diagnostico_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="guardar_diagnostico" class="btn btn-primary">Guardar Diagnóstico</button></div></form></div></div></div>
-{% endblock %}
+<!-- ======================= MODAL PARA BÚSQUEDA DE REPUESTOS ======================= -->
+<div class="modal fade" id="modalBuscarRepuesto" tabindex="-1" aria-labelledby="modalBuscarRepuestoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title" id="modalBuscarRepuestoLabel"><i class="fas fa-search"></i> Buscar Repuesto en Inventario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Campo de Búsqueda -->
+                <div class="mb-3">
+                    <input type="text" id="repuesto-search-input" class="form-control" placeholder="Escriba para buscar por nombre o número de parte...">
+                </div>
+
+                <!-- Área de Resultados (se llenará con JavaScript) -->
+                <div id="repuesto-search-results" style="max-height: 400px; overflow-y: auto;">
+                    <p class="text-muted text-center">Los resultados de la búsqueda aparecerán aquí.</p>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ============================================================================== -->
+
+{% endblock content %}
 
 {% block extra_scripts %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
