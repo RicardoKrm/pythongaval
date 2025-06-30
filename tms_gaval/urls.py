@@ -26,6 +26,8 @@ urlpatterns = [
     path('vehiculo/<int:pk>/analisis-km/', views.analisis_km_vehiculo, name='analisis_km_vehiculo'),
     path('orden-trabajo/<int:ot_pk>/eliminar-tarea/<int:tarea_pk>/', views.eliminar_tarea_ot, name='eliminar_tarea_ot'),
     path('orden-trabajo/<int:ot_pk>/eliminar-insumo/<int:detalle_pk>/', views.eliminar_insumo_ot, name='eliminar_insumo_ot'),
+     path('api/mecanicos-recursos/', flota_views.mecanicos_recursos_api, name='mecanicos_recursos_api'),
+    path('api/ot-actualizar-fecha/<int:pk>/', flota_views.actualizar_fecha_ot_api, name='actualizar_fecha_ot_api'),
 
     
 ]

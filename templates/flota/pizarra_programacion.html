@@ -3,68 +3,159 @@
 {% block title %}Pizarra de Programación{% endblock %}
 
 {% block extra_head %}
+    <!-- CSS de FullCalendar -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+
+    <!-- CSS de Bootstrap 5 (para estilizar los componentes) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Estilos personalizados para el tema oscuro y el calendario -->
     <style>
-        /* ... tus estilos ... */
+        /* ========================================================== */
+        /*                 ÚNICO CAMBIO REALIZADO AQUÍ                */
+        /* ========================================================== */
+        /* Forzamos el fondo oscuro para evitar que otras librerías lo sobreescriban */
+        html, body { 
+            background-color: #1a202c !important; 
+            color: #cbd5e0 !important;
+        }
+
+        .card { background-color: #2d3748; border: 1px solid #4a5568; }
+        .form-label { font-weight: bold; }
+        .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border-color: #4a5568; }
+        .form-control:focus, .form-select:focus { background-color: #2d3748; border-color: #3182ce; box-shadow: none; color: #cbd5e0;}
+        .select2-container--default .select2-selection--single { background-color: #1a202c !important; border: 1px solid #4a5568 !important; height: calc(1.5em + .75rem + 2px) !important; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { color: #cbd5e0 !important; line-height: calc(1.5em + .75rem) !important; }
+        
+        #calendar { max-width: 100%; margin: 0 auto; }
+        .fc-daygrid-day-number, .fc-col-header-cell-cushion { color: #a0aec0; text-decoration: none; }
+        .fc-day-today { background: #2d3748 !important; }
+        .fc-button { background-color: #3182ce !important; border-color: #3182ce !important; box-shadow: none !important; }
+        .fc-toolbar-title { color: #e2e8f0; }
+        .fc-event { cursor: grab; background-color: #dd6b20; border-color: #dd6b20; } /* Color base para eventos */
+        .fc-event:active { cursor: grabbing; }
+
+        /* Colores de eventos por estado (opcional, pero recomendado) */
+        .fc-event.estado-PENDIENTE { background-color: #dd6b20; border-color: #dd6b20; }
+        .fc-event.estado-EN_PROCESO { background-color: #3182ce; border-color: #3182ce; }
+        .fc-event.estado-PAUSADA { background-color: #d69e2e; border-color: #d69e2e; }
+        .fc-event.estado-CERRADA_MECANICO { background-color: #718096; border-color: #718096; }
+        .fc-event.estado-FINALIZADA { background-color: #2f855a; border-color: #2f855a; }
+
     </style>
 {% endblock %}
 
 {% block content %}
 <h1 class="mb-4">Pizarra de Programación</h1>
 
-<!-- Formulario de Filtros (sin cambios) -->
+<!-- Formulario de Filtros -->
 <div class="card mb-4">
-    <!-- ... tu código del formulario de filtros ... -->
+    <div class="card-body">
+        <form method="get" id="filtro-calendario-form" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="{{ filtro_form.vehiculo.id_for_label }}" class="form-label">{{ filtro_form.vehiculo.label }}</label>
+                {{ filtro_form.vehiculo }}
+            </div>
+            <div class="col-md-3">
+                <label for="{{ filtro_form.estado.id_for_label }}" class="form-label">{{ filtro_form.estado.label }}</label>
+                {{ filtro_form.estado }}
+            </div>
+            <div class="col-md-4">
+                <label for="{{ filtro_form.responsable.id_for_label }}" class="form-label">{{ filtro_form.responsable.label }}</label>
+                {{ filtro_form.responsable }}
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Contenedor del Calendario -->
-<div id='calendar-container' class="card p-4">
+<div class="card p-4">
     <div id='calendar'></div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
+    <!-- JS de FullCalendar y sus plugins GRATUITOS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/interaction/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script> 
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@5.11.3/main.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@5.11.3/main.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@5.11.3/main.global.min.js'></script>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
+        
         var calendar = new FullCalendar.Calendar(calendarEl, {
-            // ... (opciones de initialView, locale, headerToolbar, events, etc.) ...
-            selectable: true,
+            initialView: 'timeGridWeek', 
+            locale: 'es',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridWeek,timeGridDay,dayGridMonth'
+            },
+            editable: true,
+            
+            // Para colorear los eventos según su estado, necesitamos añadir una clase
+            eventClassNames: function(arg) {
+                if (arg.event.extendedProps.estado) {
+                    return [ 'estado-' + arg.event.extendedProps.estado.replace(' ', '_').toUpperCase() ];
+                }
+                return [];
+            },
 
-             locale: 'es', // <-- AQUÍ ESTÁ LA LÍNEA CLAVE
-
-            selectable: true,
-            select: function(info) {
-                const fechaSeleccionada = info.startStr.split('T')[0];
-                const url = `{% url 'ot_list' %}?fecha_inicio=${fechaSeleccionada}#crear-ot-seccion`; // Añadimos el ancla
-                window.location.href = url;
-                 },
-
-            // ==========================================================
-            //           LÓGICA DE REDIRECCIÓN AL SELECCIONAR FECHA
-            // ==========================================================
-            select: function(info) {
-                // Obtenemos la fecha de inicio de la selección en formato YYYY-MM-DD
-                const fechaSeleccionada = info.startStr.split('T')[0];
-                
-                // Construimos la URL para la página de creación de OT, añadiendo la fecha como parámetro GET
-                const url = `{% url 'ot_list' %}?fecha_inicio=${fechaSeleccionada}`;
-                
-                // Redirigimos al usuario a esa URL
-                window.location.href = url;
+            events: function(fetchInfo, successCallback, failureCallback) {
+                const params = new URLSearchParams(new FormData(document.getElementById('filtro-calendario-form')));
+                const url = `{% url 'ot_eventos_api' %}?${params.toString()}`;
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => successCallback(data))
+                    .catch(error => failureCallback(error));
             },
             
-            eventClick: function(info) { /* ... (sin cambios) ... */ },
-            eventDidMount: function(info) { /* ... (sin cambios) ... */ }
+            eventDrop: function(info) {
+                const otId = info.event.id;
+                const nuevaFecha = info.event.start.toISOString();
+                const csrfToken = '{{ csrf_token }}';
+
+                fetch(`/api/ot-actualizar-fecha/${otId}/`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                    body: JSON.stringify({ fecha_programada: nuevaFecha })
+                })
+                .then(response => {
+                    if (!response.ok) { info.revert(); alert('Error al reprogramar la OT.'); return Promise.reject('Respuesta no OK'); }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status !== 'ok') { info.revert(); alert('Error: ' + data.message); }
+                })
+                .catch(error => { 
+                    if (error !== 'Respuesta no OK') { info.revert(); alert('Ocurrió un error de conexión.'); }
+                });
+            },
+
+            eventDidMount: function(info) {
+                new bootstrap.Tooltip(info.el, {
+                    title: `<b>Vehículo:</b> ${info.event.title}<br><b>Tipo:</b> ${info.event.extendedProps.tipo}<br><b>Estado:</b> ${info.event.extendedProps.estado}<br><b>Responsable:</b> ${info.event.extendedProps.responsable || 'N/A'}`,
+                    html: true, placement: 'top', trigger: 'hover', container: 'body'
+                });
+            },
+            
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                if (info.event.url) { window.open(info.event.url, "_blank"); }
+            }
         });
 
         calendar.render();
-        
-        // ... (el JavaScript para los filtros se mantiene igual) ...
+
+        document.getElementById('filtro-calendario-form').addEventListener('change', function() {
+            calendar.refetchEvents();
+        });
     });
     </script>
 {% endblock extra_scripts %}
+
+
+

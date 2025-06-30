@@ -8,6 +8,7 @@ from weasyprint import HTML
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import User
 from django.db import connection, transaction
 from django.db.models import Min, Sum, Count, F, Q
 from django.db.models.functions import TruncMonth
@@ -211,53 +212,49 @@ def orden_trabajo_list(request):
     }
     return render(request, 'flota/orden_trabajo_list.html', context)
 
-# ====================================================================
-#    FIN DEL BLOQUE
-# ====================================================================
-
-
-# En flota/views.py
-
 @login_required
 def ot_eventos_api(request):
     """
-    Esta vista devuelve las OTs en formato JSON para FullCalendar,
-    AHORA ACEPTA PARÁMETROS DE FILTRADO.
+    Devuelve las OTs en formato JSON para FullCalendar, usando fecha_programada
+    y permitiendo filtrado.
     """
     connection.set_tenant(request.tenant)
-    
-    # Empezamos con todas las OTs
     ordenes = OrdenDeTrabajo.objects.all().select_related('vehiculo', 'responsable')
     
-    # Obtenemos los posibles filtros de la petición GET
+    # Lógica de filtros
     vehiculo_id = request.GET.get('vehiculo')
     estado = request.GET.get('estado')
     responsable_id = request.GET.get('responsable')
 
-    # Aplicamos los filtros si existen
-    if vehiculo_id:
-        ordenes = ordenes.filter(vehiculo_id=vehiculo_id)
-    if estado:
-        ordenes = ordenes.filter(estado=estado)
-    if responsable_id:
-        ordenes = ordenes.filter(responsable_id=responsable_id)
+    if vehiculo_id: ordenes = ordenes.filter(vehiculo_id=vehiculo_id)
+    if estado: ordenes = ordenes.filter(estado=estado)
+    if responsable_id: ordenes = ordenes.filter(responsable_id=responsable_id)
 
-    # El resto de la función es igual
     eventos = []
     for ot in ordenes:
-        # ... (código para crear el diccionario del evento, sin cambios) ...
+        # Usar fecha_programada, si no, fecha_creacion
+        fecha_inicio_evento = ot.fecha_programada if ot.fecha_programada else ot.fecha_creacion.date()
+        
         color = {'PENDIENTE': '#dd6b20', 'EN_PROCESO': '#3182ce', 'PAUSADA': '#d69e2e', 'CERRADA_MECANICO': '#718096', 'FINALIZADA': '#2f855a'}.get(ot.estado, '#718096')
+        
         eventos.append({
-            'id': ot.pk, 'title': f"OT-{ot.folio or ot.pk} ({ot.vehiculo.numero_interno})",
-            'start': ot.fecha_creacion.isoformat(),
-            'end': ot.fecha_cierre.isoformat() if ot.fecha_cierre else None,
+            'id': ot.pk,
+            'title': f"OT-{ot.folio or ot.pk} ({ot.vehiculo.numero_interno})",
+            'resourceId': ot.responsable_id, # Asocia el evento al ID del mecánico responsable
+            'start': fecha_inicio_evento.isoformat(),
+            'end': ot.fecha_cierre.isoformat() if ot.fecha_cierre else None, # Si hay fecha_cierre, también es un buen fin de evento
             'url': reverse('ot_detail', args=[ot.pk]),
-            'backgroundColor': color, 'borderColor': color,
-            'extendedProps': {'tipo': ot.get_tipo_display(), 'estado': ot.get_estado_display(), 'responsable': ot.responsable.username if ot.responsable else 'N/A'}
+            'backgroundColor': color,
+            'borderColor': color,
+            'extendedProps': {
+                'tipo': ot.get_tipo_display(),
+                'estado': ot.get_estado_display(),
+                'responsable': ot.responsable.username if ot.responsable else 'N/A',
+                'vehiculo_patente': ot.vehiculo.patente, # Añadir para el tooltip si es útil
+            }
         })
             
     return JsonResponse(eventos, safe=False)
-
 
 @login_required
 def orden_trabajo_detail(request, pk):
@@ -440,17 +437,20 @@ def historial_vehiculo(request, pk):
 @login_required
 def pizarra_programacion(request):
     """
-    Renderiza la plantilla del calendario Y le pasa un formulario de creación vacío
-    para que lo use el modal.
+    Renderiza la plantilla del calendario y le pasa el formulario de filtros.
     """
     connection.set_tenant(request.tenant)
-    form = OrdenDeTrabajoForm() # Creamos una instancia vacía
+    filtro_form = CalendarioFiltroForm(request.GET or None)
     
+    # También pasamos un formulario de creación vacío para el futuro modal si lo queremos.
+    # Por ahora, solo lo pasamos, aunque no lo usemos.
+    form_creacion_ot = OrdenDeTrabajoForm() 
+
     context = {
-        'form': form 
+        'filtro_form': filtro_form,
+        'form_creacion_ot': form_creacion_ot, # Pasamos el formulario de creación
     } 
     return render(request, 'flota/pizarra_programacion.html', context)
-
 
 
 @login_required
@@ -701,3 +701,50 @@ def eliminar_insumo_ot(request, ot_pk, detalle_pk):
         # --- CORREGIDO ---
         messages.warning(request, f'Insumo "{insumo_nombre}" eliminado de la OT.')
     return redirect('ot_detail', pk=ot_pk)
+
+@login_required
+def mecanicos_recursos_api(request):
+    """
+    API que devuelve una lista de usuarios que son Mecánicos o Supervisores
+    en el formato que FullCalendar Resource-Timeline necesita.
+    """
+    connection.set_tenant(request.tenant)
+    recursos_qs = User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']).distinct()
+    recursos = []
+    for usuario in recursos_qs:
+        recursos.append({
+            'id': usuario.pk,
+            'title': usuario.get_full_name() or usuario.username,
+        })
+    return JsonResponse(recursos, safe=False)
+
+@login_required
+def actualizar_fecha_ot_api(request, pk):
+    """
+    API para actualizar la fecha_programada de una OT cuando se arrastra
+    en el calendario.
+    """
+    connection.set_tenant(request.tenant)
+    if request.method == 'POST':
+        try:
+            ot = OrdenDeTrabajo.objects.get(pk=pk)
+            data = json.loads(request.body)
+            nueva_fecha_str = data.get('fecha_programada')
+
+            if nueva_fecha_str:
+                ot.fecha_programada = datetime.fromisoformat(nueva_fecha_str.split('T')[0]).date()
+                ot.save(update_fields=['fecha_programada'])
+                
+                HistorialOT.objects.create(
+                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION',
+                    descripcion=f"OT reprogramada para el {ot.fecha_programada.strftime('%d/%m/%Y')}."
+                )
+                return JsonResponse({'status': 'ok', 'message': 'Fecha actualizada con éxito.'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No se proporcionó una nueva fecha.'}, status=400)
+        except OrdenDeTrabajo.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'OT no encontrada.'}, status=404)
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            return JsonResponse({'status': 'error', 'message': f'Datos inválidos: {e}'}, status=400)
+            
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
