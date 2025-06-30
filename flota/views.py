@@ -1,4 +1,4 @@
-## Archivo completo: flota/views.py (con la función dashboard_flota actualizada) ##
+# flota/views.py
 
 import json
 import random
@@ -22,7 +22,7 @@ from django.urls import reverse
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
     Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto,
-    MovimientoStock
+    MovimientoStock, RepuestoRequeridoPorTarea # Asegúrate de que este también esté importado
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
@@ -30,7 +30,7 @@ from .forms import (
     PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm, MovimientoStockForm
 
 )
-from django.utils import timezone # <-- Asegúrate de tener este import
+from django.utils import timezone 
 
 
 # --- Función de chequeo de rol ---
@@ -40,31 +40,24 @@ def es_supervisor_o_admin(user):
 
 # --- Vistas Principales de la Aplicación ---
 
-# Reemplaza tu función existente con esta versión
-# Reemplaza tu función dashboard_flota con esta versión
 @login_required
 def dashboard_flota(request):
     connection.set_tenant(request.tenant)
     
-    # === TU LÓGICA DE PARÁMETRO DE ALERTA (INTACTA) ===
     porcentaje_alerta = 90
 
-    # --- NUEVO: Lógica de Filtros (antes del bucle) ---
     vehiculos_qs = Vehiculo.objects.select_related('modelo', 'norma_euro').order_by('numero_interno')
     filtro_form = FiltroPizarraForm(request.GET or None)
     
-    # Aplicamos los filtros que se pueden hacer a nivel de base de datos
     if filtro_form.is_valid():
         if filtro_form.cleaned_data.get('modelo'):
             vehiculos_qs = vehiculos_qs.filter(modelo=filtro_form.cleaned_data['modelo'])
     
-    # 1. Calculamos los datos para TODOS los vehículos (o los pre-filtrados)
     data_flota_completa = []
     costo_total_acumulado = 0
     km_total_flota = 0
 
     for vehiculo in vehiculos_qs:
-        # === TU LÓGICA DE CÁLCULO PARA CADA VEHÍCULO (INTACTA) ===
         km_actual = vehiculo.kilometraje_actual
         estado = "NORMAL"
         pauta_obj, proximo_km_pauta, kms_faltantes, intervalo_km, fecha_prox_mant = None, None, None, None, None
@@ -95,7 +88,6 @@ def dashboard_flota(request):
             dias_para_pauta = kms_faltantes / km_prom_dia
             fecha_prox_mant = datetime.now().date() + timedelta(days=dias_para_pauta)
 
-        # NUEVO: Cálculo de KPIs por vehículo
         costo_vehiculo = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo, estado='FINALIZADA').aggregate(total=Sum('costo_total'))['total'] or 0
         costo_total_acumulado += costo_vehiculo
         km_total_flota += km_actual
@@ -108,7 +100,6 @@ def dashboard_flota(request):
             'km_acum_prox': kms_faltantes, 'ot_abierta': ot_abierta,
         })
 
-    # --- NUEVO: Filtrado post-cálculo ---
     data_flota_filtrada = data_flota_completa
     if filtro_form.is_valid():
         tipo_mant = filtro_form.cleaned_data.get('tipo_mantenimiento')
@@ -119,7 +110,6 @@ def dashboard_flota(request):
         if proximos_5000:
             data_flota_filtrada = [item for item in data_flota_filtrada if item['kms_faltantes'] is not None and item['kms_faltantes'] <= 5000]
 
-    # --- NUEVO: Cálculo de KPIs finales ---
     total_vehiculos_flota = len(data_flota_completa)
     total_vehiculos_filtrados = len(data_flota_filtrada)
     porcentaje_filtrado = (total_vehiculos_filtrados / total_vehiculos_flota * 100) if total_vehiculos_flota > 0 else 0
@@ -140,14 +130,12 @@ def dashboard_flota(request):
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
     
-    # Lógica para el método POST (sin cambios)
     if request.method == 'POST':
         form = OrdenDeTrabajoForm(request.POST)
         if form.is_valid():
             ot = form.save()
             HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CREACION', descripcion=f"OT #{ot.folio} creada con éxito.")
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
-            # Redirigimos a la pizarra si veníamos de allí
             if 'from_calendar' in request.GET:
                 return redirect('pizarra_programacion')
             return redirect('ot_list')
@@ -159,33 +147,26 @@ def orden_trabajo_list(request):
                     messages.error(request, f"Error en '{label}': {error}")
             return redirect('ot_list')
 
-    # Lógica para el método GET (AQUÍ ESTÁ EL CAMBIO)
     else:
         initial_data = {}
         
-        # Pre-rellenar si viene vehiculo_id
         vehiculo_id = request.GET.get('vehiculo_id')
         if vehiculo_id:
             initial_data['vehiculo'] = vehiculo_id
             initial_data['tipo'] = 'CORRECTIVA'
         
-        # --- LÓGICA NUEVA: LEER FECHA DEL CALENDARIO ---
         fecha_programada_str = request.GET.get('fecha_programada')
         if fecha_programada_str:
             try:
-                # Intentamos convertir la fecha y la añadimos a los datos iniciales
                 initial_data['fecha_programada'] = datetime.strptime(fecha_programada_str, '%Y-%m-%d').date()
             except (ValueError, TypeError):
-                # Si la fecha es inválida, simplemente la ignoramos
                 pass
         
         form = OrdenDeTrabajoForm(initial=initial_data)
 
-    # El resto de la lógica (filtros y paginación) sigue igual
     ordenes_list = OrdenDeTrabajo.objects.all().select_related('vehiculo').order_by('-fecha_creacion')
     filtro_form = OTFiltroForm(request.GET)
     if filtro_form.is_valid():
-        # ... (tu lógica de filtros)
         if filtro_form.cleaned_data['vehiculo']:
             ordenes_list = ordenes_list.filter(vehiculo=filtro_form.cleaned_data['vehiculo'])
         if filtro_form.cleaned_data['tipo']:
@@ -220,20 +201,40 @@ def ot_eventos_api(request):
     y permitiendo filtrado.
     """
     connection.set_tenant(request.tenant)
-    ordenes = OrdenDeTrabajo.objects.all().select_related('vehiculo', 'responsable')
+    
+    # Pre-fetch detalles_insumos_ot y repuesto_inventario para evitar consultas N+1
+    # Asegúrate de que prefetch_related apunte a 'tareas_realizadas__repuestos_requeridos__repuesto'
+    # para la lógica de disponibilidad, y a 'detalles_insumos_ot__repuesto_inventario'
+    # si quieres acceder a los repuestos consumidos.
+    ordenes_qs = OrdenDeTrabajo.objects.all().select_related('vehiculo', 'responsable').prefetch_related('tareas_realizadas__repuestos_requeridos__repuesto')
     
     # Lógica de filtros
     vehiculo_id = request.GET.get('vehiculo')
     estado = request.GET.get('estado')
     responsable_id = request.GET.get('responsable')
+    # NUEVO: Filtro por disponibilidad de repuestos
+    repuestos_disponibles_filter = request.GET.get('repuestos_disponibles')
 
-    if vehiculo_id: ordenes = ordenes.filter(vehiculo_id=vehiculo_id)
-    if estado: ordenes = ordenes.filter(estado=estado)
-    if responsable_id: ordenes = ordenes.filter(responsable_id=responsable_id)
+    if vehiculo_id:
+        ordenes_qs = ordenes_qs.filter(vehiculo_id=vehiculo_id)
+    if estado:
+        ordenes_qs = ordenes_qs.filter(estado=estado)
+    if responsable_id:
+        ordenes_qs = ordenes_qs.filter(responsable_id=responsable_id)
+
+    ordenes_filtradas_por_db = list(ordenes_qs) 
+
+    final_ordenes = []
+    if repuestos_disponibles_filter == 'true':
+        final_ordenes = [ot for ot in ordenes_filtradas_por_db if ot.has_all_parts_available()]
+    elif repuestos_disponibles_filter == 'false':
+        final_ordenes = [ot for ot in ordenes_filtradas_por_db if not ot.has_all_parts_available()]
+    else:
+        final_ordenes = ordenes_filtradas_por_db
+
 
     eventos = []
-    for ot in ordenes:
-        # Usar fecha_programada, si no, fecha_creacion
+    for ot in final_ordenes:
         fecha_inicio_evento = ot.fecha_programada if ot.fecha_programada else ot.fecha_creacion.date()
         
         color = {'PENDIENTE': '#dd6b20', 'EN_PROCESO': '#3182ce', 'PAUSADA': '#d69e2e', 'CERRADA_MECANICO': '#718096', 'FINALIZADA': '#2f855a'}.get(ot.estado, '#718096')
@@ -241,9 +242,9 @@ def ot_eventos_api(request):
         eventos.append({
             'id': ot.pk,
             'title': f"OT-{ot.folio or ot.pk} ({ot.vehiculo.numero_interno})",
-            'resourceId': ot.responsable_id, # Asocia el evento al ID del mecánico responsable
+            'resourceId': ot.responsable_id, 
             'start': fecha_inicio_evento.isoformat(),
-            'end': ot.fecha_cierre.isoformat() if ot.fecha_cierre else None, # Si hay fecha_cierre, también es un buen fin de evento
+            'end': ot.fecha_cierre.isoformat() if ot.fecha_cierre else None, 
             'url': reverse('ot_detail', args=[ot.pk]),
             'backgroundColor': color,
             'borderColor': color,
@@ -251,7 +252,8 @@ def ot_eventos_api(request):
                 'tipo': ot.get_tipo_display(),
                 'estado': ot.get_estado_display(),
                 'responsable': ot.responsable.username if ot.responsable else 'N/A',
-                'vehiculo_patente': ot.vehiculo.patente, # Añadir para el tooltip si es útil
+                'vehiculo_patente': ot.vehiculo.patente,
+                'hasAllPartsAvailable': ot.has_all_parts_available(), # <-- ¡NUEVO CAMPO EN LA API!
             }
         })
             
@@ -264,11 +266,12 @@ def orden_trabajo_detail(request, pk):
     es_admin_o_super = request.user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()
     
     # Inicialización de todos los formularios que usaremos
+    # Se inicializan con datos si es GET, o se usan las instancias vacías para el contexto
     asignar_form = AsignarPersonalOTForm(instance=ot)
     cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
     cambiar_estado_form = CambiarEstadoOTForm(instance=ot)
     manual_tarea_form = ManualTareaForm()
-    manual_insumo_form = ManualInsumoForm()
+    manual_insumo_form = ManualInsumoForm() # <<-- Se inicializa aquí para el contexto
     pausar_form = PausarOTForm(instance=ot)
     diagnostico_form = DiagnosticoEvaluacionForm(instance=ot)
 
@@ -286,7 +289,8 @@ def orden_trabajo_detail(request, pk):
                 messages.success(request, f"Tareas de la pauta '{ot.pauta_mantenimiento.nombre}' cargadas con éxito.")
             else:
                 messages.error(request, "Esta acción solo es válida para OTs Preventivas con una pauta asignada.")
-            return redirect('ot_detail', pk=ot.pk)
+            # Por lo tanto, si el POST falla, es mejor redirigir o re-renderizar todo.
+            return redirect('ot_detail', pk=ot.pk) # Redirige incluso si hay error para simplificar el flujo actual.
 
         # --- Lógica para Pausar la OT ---
         elif 'pausar_ot' in request.POST:
@@ -305,7 +309,10 @@ def orden_trabajo_detail(request, pk):
                     )
                     messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
                     return redirect('ot_detail', pk=ot.pk)
-
+                else:
+                    messages.error(request, 'Error al pausar la OT. Por favor, corrija los errores.')
+                    pausar_form = form # Pasa el formulario con errores de vuelta al contexto.
+        
         # --- Lógica para Guardar Diagnóstico (para OTs Evaluativas) ---
         elif 'guardar_diagnostico' in request.POST:
             form = DiagnosticoEvaluacionForm(request.POST, instance=ot)
@@ -317,6 +324,9 @@ def orden_trabajo_detail(request, pk):
                 )
                 messages.success(request, 'Diagnóstico guardado con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
+            else:
+                messages.error(request, 'Error al guardar el diagnóstico. Por favor, corrija los errores.')
+                diagnostico_form = form # Pasa el formulario con errores de vuelta al contexto.
         
         # --- Lógica para Añadir Tarea Manual (para OTs Correctivas/Evaluativas) ---
         elif 'add_manual_tarea' in request.POST:
@@ -331,44 +341,67 @@ def orden_trabajo_detail(request, pk):
                     ot.tareas_realizadas.add(tarea)
                     ot.save()
                     messages.success(request, f'Tarea "{descripcion}" añadida con éxito.')
-                return redirect('ot_detail', pk=ot.pk)
+                    return redirect('ot_detail', pk=ot.pk)
+                else:
+                    messages.error(request, 'Error al añadir tarea manual. Por favor, corrija los errores.')
+                    manual_tarea_form = form # Pasa el formulario con errores de vuelta al contexto.
             else:
                 messages.error(request, "No se pueden añadir tareas manuales a una OT Preventiva.")
-                return redirect('ot_detail', pk=ot.pk)
+            # Si hay un error y no se redirige, el código continúa y renderiza la página con los forms actualizados.
 
         # --- Lógica para Añadir Insumo Manual (para todas las OTs) ---
         elif 'add_manual_insumo' in request.POST:
-            form = ManualInsumoForm(request.POST)
+            form = ManualInsumoForm(request.POST) # <<-- Usa la versión ManualInsumoForm de forms.py
             if form.is_valid():
-                # ... (tu código original para añadir insumo, está perfecto)
                 nombre = form.cleaned_data['nombre']
-                insumo, created = Insumo.objects.update_or_create(
+                precio = form.cleaned_data['precio_unitario']
+                cantidad = form.cleaned_data['cantidad']
+
+                # Crea o actualiza el Insumo genérico
+                insumo, created = Insumo.objects.get_or_create(
                     nombre=nombre,
-                    defaults={'precio_unitario': form.cleaned_data['precio_unitario']}
+                    defaults={'precio_unitario': precio} 
                 )
-                DetalleInsumoOT.objects.create(orden_de_trabajo=ot, insumo=insumo, cantidad=form.cleaned_data['cantidad'])
-                ot.save()
-                messages.success(request, f'Insumo "{nombre}" añadido con éxito.')
-            return redirect('ot_detail', pk=ot.pk)
+                
+                # Crea el DetalleInsumoOT, vinculándolo al Insumo (repuesto_inventario=None por defecto)
+                DetalleInsumoOT.objects.create(
+                    orden_de_trabajo=ot, 
+                    insumo=insumo, 
+                    cantidad=cantidad,
+                    repuesto_inventario=None # Aseguramos que sea None para insumos manuales
+                )
+                ot.save() # Recalcula el costo total de la OT
+
+                messages.success(request, f'Insumo manual "{nombre}" añadido con éxito.')
+                return redirect('ot_detail', pk=ot.pk)
+            else:
+                messages.error(request, 'Error al añadir insumo manual. Por favor, revise los datos.')
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        label = form.fields[field].label if field in form.fields else field.capitalize()
+                        messages.error(request, f"Error en '{label}': {error}")
+                manual_insumo_form = form # <<-- Pasar el formulario con errores de vuelta al contexto
 
         # --- Lógica para Asignar Personal ---
         elif 'asignar_personal' in request.POST:
-            # ... (tu código original para asignar personal con la adición del historial)
             form = AsignarPersonalOTForm(request.POST, instance=ot)
             if form.is_valid():
                 form.save()
                 responsable = form.cleaned_data.get('responsable')
-                ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado')])
+                # Accede a los elementos del ManyToManyField a través de .all()
+                ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado').all()]) 
                 descripcion = f"Se asignó a {responsable.username if responsable else 'nadie'} como responsable. Ayudantes: {ayudantes or 'ninguno'}."
                 HistorialOT.objects.create(
                     orden_de_trabajo=ot, usuario=request.user, tipo_evento='ASIGNACION', descripcion=descripcion
                 )
                 messages.success(request, '¡Personal asignado con éxito!')
-            return redirect('ot_detail', pk=ot.pk)
+                return redirect('ot_detail', pk=ot.pk)
+            else:
+                messages.error(request, 'Error al asignar personal. Por favor, corrija los errores.')
+                asignar_form = form # Pasa el formulario con errores de vuelta al contexto.
         
         # --- Lógica para Cambiar Estado General ---
         elif 'cambiar_estado' in request.POST:
-            # ... (tu código original para cambiar estado con la adición del historial)
             form = CambiarEstadoOTForm(request.POST, instance=ot)
             if form.is_valid():
                 nuevo_estado = form.cleaned_data['estado']
@@ -387,24 +420,29 @@ def orden_trabajo_detail(request, pk):
                 ot.estado = nuevo_estado
                 ot.save()
                 messages.success(request, f"Estado de la OT actualizado a '{ot.get_estado_display()}'.")
-            return redirect('ot_detail', pk=ot.pk)
+                return redirect('ot_detail', pk=ot.pk)
+            else:
+                messages.error(request, 'Error al cambiar estado. Por favor, corrija los errores.')
+                cambiar_estado_form = form # Pasa el formulario con errores de vuelta al contexto.
             
         # --- Lógica para Cerrar por Mecánico ---
-        # He añadido esta sección que faltaba, basándome en tu código anterior.
         elif 'cerrar_mecanico' in request.POST:
             form = CerrarOtMecanicoForm(request.POST, instance=ot)
             if form.is_valid():
                 instancia = form.save(commit=False)
                 instancia.estado = 'CERRADA_MECANICO'
                 instancia.save()
-                # REGISTRAMOS EL EVENTO
                 HistorialOT.objects.create(
                     orden_de_trabajo=ot, usuario=request.user, tipo_evento='CIERRE_MECANICO',
                     descripcion=f"Cerrada por mecánico. Notas: {instancia.motivo_pendiente or 'N/A'}"
                 )
                 messages.info(request, f"OT #{ot.folio} marcada como 'Cerrada por Mecánico'.")
-            return redirect('ot_detail', pk=ot.pk)
+                return redirect('ot_detail', pk=ot.pk)
+            else:
+                messages.error(request, 'Error al cerrar por mecánico. Por favor, corrija los errores.')
+                cerrar_mecanico_form = form # Pasa el formulario con errores de vuelta al contexto.
 
+    # Si la petición es GET, o si algún POST no redirigió (porque hubo errores de formulario)
     context = {
         'ot': ot,
         'es_admin_o_super': es_admin_o_super,
@@ -412,15 +450,11 @@ def orden_trabajo_detail(request, pk):
         'cerrar_mecanico_form': cerrar_mecanico_form,
         'cambiar_estado_form': cambiar_estado_form,
         'manual_tarea_form': manual_tarea_form,
-        'manual_insumo_form': manual_insumo_form,
+        'manual_insumo_form': manual_insumo_form, # <<-- Importante: se usa la instancia que puede contener errores
         'pausar_form': pausar_form,
         'diagnostico_form': diagnostico_form,
     }
     return render(request, 'flota/orden_trabajo_detail.html', context)
-
-# ====================================================================
-#    FIN DEL BLOQUE PARA REEMPLAZAR
-# ====================================================================
 
 
 @login_required
@@ -431,31 +465,22 @@ def historial_vehiculo(request, pk):
     context = {'vehiculo': vehiculo, 'ordenes': ordenes}
     return render(request, 'flota/historial_vehiculo.html', context)
 
-# ====================================================================
-
-# En flota/views.py
 
 @login_required
 def pizarra_programacion(request):
-    """
-    Renderiza la plantilla del calendario y le pasa el formulario de filtros.
-    """
     connection.set_tenant(request.tenant)
     filtro_form = CalendarioFiltroForm(request.GET or None)
     
-    # También pasamos un formulario de creación vacío para el futuro modal si lo queremos.
-    # Por ahora, solo lo pasamos, aunque no lo usemos.
     form_creacion_ot = OrdenDeTrabajoForm() 
 
     context = {
         'filtro_form': filtro_form,
-        'form_creacion_ot': form_creacion_ot, # Pasamos el formulario de creación
+        'form_creacion_ot': form_creacion_ot,
     } 
     return render(request, 'flota/pizarra_programacion.html', context)
 
 
 @login_required
-
 def carga_masiva(request):
     connection.set_tenant(request.tenant)
     if request.method == 'POST':
@@ -636,7 +661,6 @@ def analisis_km_vehiculo(request, pk):
     connection.set_tenant(request.tenant)
     vehiculo = get_object_or_404(Vehiculo, pk=pk)
     
-    # --- Cálculo base (igual que en el dashboard) ---
     km_actual = vehiculo.kilometraje_actual
     proxima_pauta_agg = PautaMantenimiento.objects.filter(
         modelo_vehiculo=vehiculo.modelo,
@@ -648,20 +672,16 @@ def analisis_km_vehiculo(request, pk):
     if proximo_km_pauta:
         kms_faltantes = proximo_km_pauta - km_actual
     
-    # --- Cálculo del promedio de KM diario (usamos el aleatorio por ahora) ---
     km_prom_dia_actual = random.randint(150, 450)
     
-    # --- Variables para el resultado del pronóstico ---
     fecha_pronosticada = None
-    km_prom_usado = km_prom_dia_actual # Por defecto, usamos el promedio actual
+    km_prom_usado = km_prom_dia_actual 
 
-    # --- Procesar el formulario si se envía ---
     if request.method == 'POST':
         km_prom_input = request.POST.get('km_prom_diario')
         if km_prom_input and km_prom_input.isdigit():
             km_prom_usado = int(km_prom_input)
 
-    # --- Calcular la fecha pronosticada (con el promedio actual o el del usuario) ---
     if kms_faltantes is not None and kms_faltantes > 0 and km_prom_usado > 0:
         dias_para_pauta = kms_faltantes / km_prom_usado
         fecha_pronosticada = (datetime.now().date() + timedelta(days=dias_para_pauta)).strftime("%d de %B de %Y")
@@ -672,12 +692,11 @@ def analisis_km_vehiculo(request, pk):
         'proximo_km_pauta': proximo_km_pauta,
         'kms_faltantes': kms_faltantes,
         'fecha_pronosticada': fecha_pronosticada,
-        'km_prom_usado': km_prom_usado, # Enviamos el valor usado para mostrarlo en el input
+        'km_prom_usado': km_prom_usado, 
     }
     
     return render(request, 'flota/analisis_km.html', context)
 
-# En flota/views.py
 @login_required
 def eliminar_tarea_ot(request, ot_pk, tarea_pk):
     connection.set_tenant(request.tenant)
@@ -685,8 +704,7 @@ def eliminar_tarea_ot(request, ot_pk, tarea_pk):
     tarea = get_object_or_404(Tarea, pk=tarea_pk)
     if request.method == 'POST':
         ot.tareas_realizadas.remove(tarea)
-        ot.save() # Para recalcular costos
-        # --- CORREGIDO ---
+        ot.save() 
         messages.warning(request, f'Tarea "{tarea.descripcion}" eliminada de la OT.')
     return redirect('ot_detail', pk=ot_pk)
 
@@ -695,12 +713,31 @@ def eliminar_insumo_ot(request, ot_pk, detalle_pk):
     connection.set_tenant(request.tenant)
     ot = get_object_or_404(OrdenDeTrabajo, pk=ot_pk)
     detalle = get_object_or_404(DetalleInsumoOT, pk=detalle_pk)
+    
     if request.method == 'POST':
-        insumo_nombre = detalle.insumo.nombre
-        detalle.delete()
-        ot.save() # Para recalcular costos
-        # --- CORREGIDO ---
-        messages.warning(request, f'Insumo "{insumo_nombre}" eliminado de la OT.')
+        # Determinar el nombre del insumo/repuesto para el mensaje
+        if detalle.repuesto_inventario:
+            item_nombre = f"{detalle.repuesto_inventario.nombre} ({detalle.repuesto_inventario.numero_parte})"
+        elif detalle.insumo:
+            item_nombre = detalle.insumo.nombre
+        else:
+            item_nombre = "Insumo Desconocido" # En caso de que ambos sean None (aunque el CheckConstraint lo previene)
+
+        with transaction.atomic(): 
+            if detalle.repuesto_inventario:
+                MovimientoStock.objects.create(
+                    repuesto=detalle.repuesto_inventario,
+                    tipo_movimiento='AJUSTE_POSITIVO', # O 'ENTRADA' si prefieres esa clasificación
+                    cantidad=detalle.cantidad, # Cantidad positiva para devolver al stock
+                    usuario_responsable=request.user,
+                    orden_de_trabajo=ot, # Asociar al OT para trazabilidad
+                    notas=f"Devolución de stock por eliminación de insumo '{item_nombre}' de OT #{ot.folio}"
+                )
+
+            detalle.delete()
+            ot.save() # Para recalcular costos
+            messages.warning(request, f'"{item_nombre}" eliminado de la OT. Stock devuelto al inventario si aplica.')
+            
     return redirect('ot_detail', pk=ot_pk)
 
 @login_required
@@ -759,7 +796,6 @@ def repuesto_list(request):
     connection.set_tenant(request.tenant)
     query = request.GET.get('q', '')
     if query:
-        # Busca por nombre o número de parte
         repuestos = Repuesto.objects.filter(
             Q(nombre__icontains=query) | Q(numero_parte__icontains=query)
         ).order_by('nombre')
@@ -774,7 +810,6 @@ def repuesto_list(request):
 
 
 @login_required
-
 def repuesto_create(request):
     """
     Vista para crear un nuevo repuesto.
@@ -786,15 +821,27 @@ def repuesto_create(request):
             form.save()
             messages.success(request, 'Repuesto creado con éxito.')
             return redirect('repuesto_list')
-    else:
+        else:
+            # SI EL FORMULARIO NO ES VÁLIDO, AHORA MANEJAMOS LOS ERRORES
+            messages.error(request, 'Error al crear el repuesto. Por favor, corrija los errores.')
+            # Recorre los errores del formulario y los añade a los mensajes para el usuario
+            for field, errors in form.errors.items():
+                for error in errors:
+                    # Intenta obtener el label del campo, si no existe usa el nombre del campo capitalizado
+                    label = form.fields[field].label if field in form.fields else field.capitalize()
+                    messages.error(request, f"Error en '{label}': {error}")
+            # NO HACEMOS REDIRECCIÓN AQUÍ para que el formulario se re-renderice con los errores
+            # El código caerá al final de la función para renderizar la plantilla con el 'form' que contiene los errores.
+    else: # Si el método es GET, inicializamos un formulario vacío
         form = RepuestoForm()
     
-    context = {'form': form}
+    context = {
+        'form': form # El formulario se pasa al contexto, ya sea vacío o con errores
+    }
     return render(request, 'flota/repuesto_form.html', context)
 
 
 @login_required
-
 def repuesto_update(request, pk):
     """
     Vista para actualizar un repuesto existente.
@@ -815,8 +862,8 @@ def repuesto_update(request, pk):
         'repuesto': repuesto
     }
     return render(request, 'flota/repuesto_form.html', context)
-@login_required
 
+@login_required
 def registrar_movimiento(request, repuesto_pk):
     """
     Vista para registrar una entrada, salida o ajuste manual de stock
@@ -832,11 +879,10 @@ def registrar_movimiento(request, repuesto_pk):
             movimiento.repuesto = repuesto
             movimiento.usuario_responsable = request.user
             
-            # La lógica de actualizar el stock ya está en el .save() del modelo MovimientoStock
             movimiento.save() 
             
             messages.success(request, f'Movimiento de stock para "{repuesto.nombre}" registrado con éxito.')
-            return redirect('repuesto_detail', pk=repuesto.pk) # Redirigimos al detalle del repuesto
+            return redirect('repuesto_detail', pk=repuesto.pk) 
     else:
         form = MovimientoStockForm()
         
@@ -846,7 +892,6 @@ def registrar_movimiento(request, repuesto_pk):
     }
     return render(request, 'flota/movimiento_stock_form.html', context)
 
-# En flota/views.py, junto a las otras vistas de repuesto
 
 @login_required
 def repuesto_detail(request, pk):
@@ -855,7 +900,7 @@ def repuesto_detail(request, pk):
     """
     connection.set_tenant(request.tenant)
     repuesto = get_object_or_404(Repuesto, pk=pk)
-    movimientos = repuesto.movimientos.all() # Obtenemos todos los movimientos relacionados
+    movimientos = repuesto.movimientos.all() 
     
     context = {
         'repuesto': repuesto,
@@ -871,12 +916,12 @@ def repuesto_search_api(request):
     connection.set_tenant(request.tenant)
     query = request.GET.get('q', '')
     
-    if len(query) < 2: # No buscar si la consulta es muy corta
+    if len(query) < 2: 
         return JsonResponse([], safe=False)
         
     repuestos = Repuesto.objects.filter(
         Q(nombre__icontains=query) | Q(numero_parte__icontains=query)
-    )[:10] # Limitamos a 10 resultados para no sobrecargar
+    )[:10] 
     
     results = []
     for repuesto in repuestos:
@@ -916,27 +961,40 @@ def add_repuesto_a_ot_api(request):
             if repuesto.stock_actual < cantidad:
                 return JsonResponse({'status': 'error', 'message': f'Stock insuficiente. Stock actual: {repuesto.stock_actual}'}, status=400)
 
-            insumo_obj, created = Insumo.objects.get_or_create(
-                nombre=f"{repuesto.nombre} ({repuesto.numero_parte})",
-                defaults={'precio_unitario': 0}
-            )
-            
-            DetalleInsumoOT.objects.create(
-                orden_de_trabajo=ot,
-                insumo=insumo_obj,
-                cantidad=cantidad
-            )
+            # Verificar si ya existe un DetalleInsumoOT para este repuesto_inventario en esta OT.
+            # Si existe, actualizamos la cantidad en lugar de crear una nueva entrada.
+            detalle_existente = DetalleInsumoOT.objects.filter(
+                orden_de_trabajo=ot, repuesto_inventario=repuesto
+            ).first()
 
+            if detalle_existente:
+                detalle_existente.cantidad += cantidad
+                detalle_existente.save()
+                messages_info = f'Cantidad de "{repuesto.nombre}" actualizada en la OT. Total: {detalle_existente.cantidad}.'
+            else:
+                # Crear un nuevo DetalleInsumoOT vinculando directamente al Repuesto del inventario
+                DetalleInsumoOT.objects.create(
+                    orden_de_trabajo=ot,
+                    repuesto_inventario=repuesto, # <--- ¡Este es el cambio clave!
+                    insumo=None, # Asegúrate de que el campo 'insumo' quede vacío para los de inventario
+                    cantidad=cantidad
+                )
+                messages_info = f'Repuesto "{repuesto.nombre}" añadido a la OT con éxito.'
+
+            # Descontar el stock y registrar el movimiento de stock.
             MovimientoStock.objects.create(
                 repuesto=repuesto,
                 tipo_movimiento='SALIDA_OT',
-                cantidad=-cantidad,
+                cantidad=-cantidad, 
                 usuario_responsable=request.user,
                 orden_de_trabajo=ot,
                 notas=f"Salida automática para OT #{ot.folio}"
             )
+            
+            # Recalcular el costo total de la OT después de añadir el insumo
+            ot.save()
         
-        return JsonResponse({'status': 'ok', 'message': f'Repuesto "{repuesto.nombre}" añadido a la OT con éxito.'})
+        return JsonResponse({'status': 'ok', 'message': messages_info})
 
     except KeyError:
         return JsonResponse({'status': 'error', 'message': 'Faltan datos en la petición (ot_id, repuesto_id, cantidad).'}, status=400)
@@ -945,4 +1003,4 @@ def add_repuesto_a_ot_api(request):
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'message': 'JSON mal formado en el cuerpo de la petición.'}, status=400)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': 'Ha ocurrido un error inesperado en el servidor.'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Ha ocurrido un error inesperado en el servidor: {e}'}, status=500)

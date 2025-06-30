@@ -1,15 +1,14 @@
+# flota/forms.py
+
 from django import forms
 from django.contrib.auth.models import User  
 
 from .models import (
     OrdenDeTrabajo, BitacoraDiaria, Vehiculo, Tarea, Insumo, DetalleInsumoOT,
-    PautaMantenimiento, ModeloVehiculo, Repuesto, MovimientoStock
+    PautaMantenimiento, ModeloVehiculo, Repuesto, MovimientoStock, Personal # Asegúrate de que Personal esté aquí si lo usas en el futuro
 )
 
-# En flota/forms.py
-
 class OrdenDeTrabajoForm(forms.ModelForm):
-    # ...
     class Meta:
         model = OrdenDeTrabajo
         fields = [
@@ -18,9 +17,7 @@ class OrdenDeTrabajoForm(forms.ModelForm):
             'formato', 
             'kilometraje_apertura', 
             'fecha_programada',
-            # --- LÍNEA COMENTADA ---
-            'prioridad',
-            # ---------------------
+            'prioridad', 
             'pauta_mantenimiento',
             'tipo_falla',
             'observacion_inicial',
@@ -32,9 +29,7 @@ class OrdenDeTrabajoForm(forms.ModelForm):
             'formato': forms.Select(attrs={'class': 'form-control'}),
             'kilometraje_apertura': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'KM al abrir OT'}),
             'fecha_programada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            # --- LÍNEA COMENTADA ---
-            'prioridad': forms.Select(attrs={'class': 'form-control'}),
-            # ----------------------
+            'prioridad': forms.Select(attrs={'class': 'form-control'}), 
             'pauta_mantenimiento': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'tipo_falla': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'observacion_inicial': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones o motivo de la OT...'}),
@@ -47,11 +42,9 @@ class OrdenDeTrabajoForm(forms.ModelForm):
         self.fields['tipo_falla'].required = False
         self.fields['sintomas_reportados'].required = False
         self.fields['fecha_programada'].required = False
-        # El campo prioridad usará el 'default' del modelo, por lo que no es necesario
-        # marcarlo como no requerido aquí.
+        self.fields['prioridad'].required = False 
 
     def clean(self):
-        # La lógica de clean() no necesita cambios.
         cleaned_data = super().clean()
         
         tipo_ot = cleaned_data.get('tipo')
@@ -76,10 +69,6 @@ class OrdenDeTrabajoForm(forms.ModelForm):
 
 
 class CambiarEstadoOTForm(forms.ModelForm):
-    """
-    Formulario para que un Supervisor/Admin cambie el estado general de la OT.
-    Ahora incluye el estado 'PAUSADA', pero lo manejaremos con un form específico.
-    """
     class Meta:
         model = OrdenDeTrabajo
         fields = ['estado']
@@ -89,7 +78,6 @@ class CambiarEstadoOTForm(forms.ModelForm):
 
 
 class BitacoraDiariaForm(forms.ModelForm):
-    # Sin cambios en este formulario
     class Meta:
         model = BitacoraDiaria
         fields = '__all__'
@@ -99,16 +87,11 @@ class BitacoraDiariaForm(forms.ModelForm):
         }
 
 class CargaMasivaForm(forms.Form):
-    # Sin cambios en este formulario
     archivo_vehiculos = forms.FileField(label="Archivo Excel de Vehículos", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
     archivo_pautas = forms.FileField(label="Archivo Excel de Pautas", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
     archivo_historial = forms.FileField(label="Archivo Excel de Historial de Mantenimientos", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
 
 class CerrarOtMecanicoForm(forms.ModelForm):
-    """
-    Formulario para que el mecánico cierre su parte del trabajo.
-    Usa el campo 'motivo_pendiente' que ya existía.
-    """
     class Meta:
         model = OrdenDeTrabajo
         fields = ['kilometraje_cierre', 'motivo_pendiente']
@@ -116,20 +99,16 @@ class CerrarOtMecanicoForm(forms.ModelForm):
             'kilometraje_cierre': forms.NumberInput(attrs={'class': 'form-control'}),
             'motivo_pendiente': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
-        
-# En flota/forms.py
 
 class AsignarPersonalOTForm(forms.ModelForm):
     responsable = forms.ModelChoiceField(
         queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']),
-        # --- CAMBIO AQUÍ ---
         widget=forms.Select(attrs={'class': 'select2', 'style': 'width: 100%;'}), 
         label="Responsable Principal",
         required=False
     )
     personal_asignado = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor', 'Asistente']),
-        # --- CAMBIO AQUÍ ---
         widget=forms.SelectMultiple(attrs={'class': 'select2', 'style': 'width: 100%;'}),
         label="Personal de Apoyo (Ayudantes)",
         required=False
@@ -140,7 +119,6 @@ class AsignarPersonalOTForm(forms.ModelForm):
         fields = ['responsable', 'personal_asignado']
 
 class ManualTareaForm(forms.ModelForm):
-    # Sin cambios en este formulario
     class Meta:
         model = Tarea
         fields = ['descripcion', 'horas_hombre', 'costo_base']
@@ -150,32 +128,31 @@ class ManualTareaForm(forms.ModelForm):
             'costo_base': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
-class ManualInsumoForm(forms.ModelForm):
-    # Sin cambios en este formulario, pero añadimos el campo cantidad que faltaba
-    cantidad = forms.DecimalField(widget=forms.NumberInput(attrs={'class': 'form-control'}))
-    class Meta:
-        model = Insumo
-        fields = ['nombre', 'precio_unitario', 'cantidad']
-        widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control'}),
-        }
-
+class ManualInsumoForm(forms.Form): # <<-- CAMBIO AQUÍ: de forms.ModelForm a forms.Form
+    nombre = forms.CharField(
+        max_length=150, 
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Nombre del Insumo" # Añadido label para claridad
+    )
+    precio_unitario = forms.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        initial=0, 
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        label="Precio Unitario" # Añadido label para claridad
+    )
+    cantidad = forms.DecimalField(
+        min_value=0.01, # Asegura que la cantidad sea al menos un pequeño valor positivo
+        widget=forms.NumberInput(attrs={'class': 'form-control'}),
+        label="Cantidad" # Añadido label para claridad
+    )
 
 class FiltroPizarraForm(forms.Form):
-    # Sin cambios en este formulario
     modelo = forms.ModelChoiceField(queryset=ModeloVehiculo.objects.all(), required=False, label="Modelo", widget=forms.Select(attrs={'class': 'form-control'}))
     tipo_mantenimiento = forms.CharField(required=False, label="Tipo de Pauta", widget=forms.TextInput(attrs={'class': 'form-control'}))
     proximos_5000_km = forms.BooleanField(required=False, label="Próximos 5.000 KM", widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
-
-# --- NUEVOS FORMULARIOS ---
-
 class PausarOTForm(forms.ModelForm):
-    """
-    Formulario específico para gestionar la pausa de una OT.
-    Solo un Supervisor/Admin podrá usarlo.
-    """
     class Meta:
         model = OrdenDeTrabajo
         fields = ['motivo_pausa', 'notas_pausa']
@@ -185,9 +162,6 @@ class PausarOTForm(forms.ModelForm):
         }
         
 class DiagnosticoEvaluacionForm(forms.ModelForm):
-    """
-    Formulario para que el mecánico añada el diagnóstico a una OT Evaluativa.
-    """
     class Meta:
         model = OrdenDeTrabajo
         fields = ['diagnostico_evaluacion']
@@ -195,12 +169,7 @@ class DiagnosticoEvaluacionForm(forms.ModelForm):
             'diagnostico_evaluacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Ingrese el diagnóstico técnico aquí...'}),
         }
 
-# En flota/forms.py
-
-# ... (tus otros formularios) ...
-
 class OTFiltroForm(forms.Form):
-    # Usamos campos no requeridos (required=False) para que el filtro sea opcional
     vehiculo = forms.ModelChoiceField(
         queryset=Vehiculo.objects.all(), 
         required=False,
@@ -208,7 +177,7 @@ class OTFiltroForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control select2'})
     )
     tipo = forms.ChoiceField(
-        choices=[('', 'Todos los Tipos')] + OrdenDeTrabajo.TIPO_CHOICES, # Añadimos una opción "Todos"
+        choices=[('', 'Todos los Tipos')] + OrdenDeTrabajo.TIPO_CHOICES,
         required=False, 
         label="Tipo de OT",
         widget=forms.Select(attrs={'class': 'form-control'})
@@ -230,48 +199,35 @@ class OTFiltroForm(forms.Form):
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
 
-
 class CalendarioFiltroForm(forms.Form):
-    # Usamos campos no requeridos para que el filtro sea opcional
     vehiculo = forms.ModelChoiceField(
         queryset=Vehiculo.objects.all(), 
         required=False,
         label="Filtrar por Vehículo",
-        widget=forms.Select(attrs={'class': 'form-select select2'})
+        widget=forms.Select(attrs={'class': 'form-control select2'})
     )
     estado = forms.ChoiceField(
         choices=[('', 'Todos los Estados')] + OrdenDeTrabajo.ESTADO_CHOICES,
         required=False, 
         label="Filtrar por Estado",
-        widget=forms.Select(attrs={'class': 'form-select'})
-    )
-    responsable = forms.ModelChoiceField(
-        queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']),
-        required=False,
-        label="Filtrar por Responsable",
-        widget=forms.Select(attrs={'class': 'form-select select2'})
-    )
-
-class CalendarioFiltroForm(forms.Form):
-    # Usamos campos no requeridos (required=False) para que el filtro sea opcional
-    vehiculo = forms.ModelChoiceField(
-        queryset=Vehiculo.objects.all(), 
-        required=False,
-        label="Filtrar por Vehículo",
-        widget=forms.Select(attrs={'class': 'form-control select2'})
-    )
-    estado = forms.ChoiceField(
-        choices=[('', 'Todos los Estados')] + OrdenDeTrabajo.ESTADO_CHOICES, # Añadimos una opción "Todos"
-        required=False, 
-        label="Filtrar por Estado",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     responsable = forms.ModelChoiceField(
-        queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']).distinct(), # Filtramos por rol
+        queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']).distinct(),
         required=False,
         label="Filtrar por Responsable",
         widget=forms.Select(attrs={'class': 'form-control select2'})
     )    
+    repuestos_disponibles = forms.ChoiceField(
+        choices=[
+            ('', 'Todos los Repuestos'),
+            ('true', 'Con Repuestos Disponibles'),
+            ('false', 'Faltan Repuestos')
+        ],
+        required=False,
+        label='Disponibilidad de Repuestos',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
 class RepuestoForm(forms.ModelForm):
     class Meta:
@@ -283,7 +239,8 @@ class RepuestoForm(forms.ModelForm):
             'stock_actual',
             'stock_minimo',
             'ubicacion',
-            'proveedor_habitual'
+            'proveedor_habitual',
+            'precio_unitario' # ESTA LÍNEA DEBE EXISTIR SOLO SI YA SE MIGRÓ EL CAMPO EN models.py
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
@@ -293,12 +250,21 @@ class RepuestoForm(forms.ModelForm):
             'stock_minimo': forms.NumberInput(attrs={'class': 'form-control'}),
             'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
             'proveedor_habitual': forms.Select(attrs={'class': 'form-control select2'}),
+            'precio_unitario': forms.NumberInput(attrs={'class': 'form-control'}), # ESTA LÍNEA DEBE EXISTIR SOLO SI YA SE MIGRÓ EL CAMPO EN models.py
         }    
+    
+    # AÑADIR ESTE MÉTODO __init__ para manejar el campo precio_unitario
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hacemos que precio_unitario no sea un campo requerido a nivel de formulario,
+        # permitiendo que use el default=0 del modelo si se deja vacío.
+        if 'precio_unitario' in self.fields: # Asegura que el campo exista antes de intentar modificarlo
+            self.fields['precio_unitario'].required = False
+
 
 class MovimientoStockForm(forms.ModelForm):
     class Meta:
         model = MovimientoStock
-        # Excluimos los campos que se llenarán automáticamente en la vista
         exclude = ['usuario_responsable', 'orden_de_trabajo', 'repuesto']
         widgets = {
             'tipo_movimiento': forms.Select(attrs={'class': 'form-control'}),
@@ -307,7 +273,6 @@ class MovimientoStockForm(forms.ModelForm):
         }
 
     def clean_cantidad(self):
-        # Pequeña validación para asegurar que la cantidad no sea cero
         cantidad = self.cleaned_data.get('cantidad')
         if cantidad == 0:
             raise forms.ValidationError("La cantidad no puede ser cero.")

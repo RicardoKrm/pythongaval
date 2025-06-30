@@ -54,6 +54,34 @@
         .fc-event.prioridad-CRITICA {
             border-left-color: #c53030; /* Rojo */
         }
+
+        /* --- NUEVOS ESTILOS PARA LOS ICONOS DE DISPONIBILIDAD --- */
+        .fc-event-main-frame { /* Asegura que este estilo se aplica para flexbox */
+            display: flex;
+            align-items: center;
+            gap: 5px; /* Espacio entre el texto del evento y el icono */
+            height: 100%; /* Asegura que el contenedor flex ocupe todo el espacio del evento */
+        }
+        .fc-event-title-wrap { 
+            flex-grow: 1; /* Permite que el título ocupe el espacio restante */
+            overflow: hidden; /* Evita que el título se desborde si es muy largo */
+            text-overflow: ellipsis; /* Añade puntos suspensivos si el texto es muy largo */
+            white-space: nowrap; /* Mantiene el texto en una sola línea */
+        }
+        .repuesto-icon { 
+            width: 18px; /* Ajusta el tamaño del icono */
+            height: 18px;
+            flex-shrink: 0; /* Evita que el icono se comprima */
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        .repuesto-icon.disponible {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="green"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'); 
+        }
+        .repuesto-icon.faltante {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="red"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>');
+        }
     </style>
 {% endblock %}
 
@@ -64,7 +92,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" id="filtro-calendario-form" class="row g-3 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3"> {# Ajustado de col-md-4 para dar espacio al nuevo filtro #}
                 <label for="{{ filtro_form.vehiculo.id_for_label }}" class="form-label">{{ filtro_form.vehiculo.label }}</label>
                 {{ filtro_form.vehiculo }}
             </div>
@@ -72,9 +100,18 @@
                 <label for="{{ filtro_form.estado.id_for_label }}" class="form-label">{{ filtro_form.estado.label }}</label>
                 {{ filtro_form.estado }}
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3"> {# Ajustado de col-md-4 para dar espacio al nuevo filtro #}
                 <label for="{{ filtro_form.responsable.id_for_label }}" class="form-label">{{ filtro_form.responsable.label }}</label>
                 {{ filtro_form.responsable }}
+            </div>
+            <!-- ¡NUEVO FILTRO DE DISPONIBILIDAD DE REPUESTOS AÑADIDO AQUÍ! -->
+            <div class="col-md-3">
+                <label for="{{ filtro_form.repuestos_disponibles.id_for_label }}" class="form-label">{{ filtro_form.repuestos_disponibles.label }}</label>
+                {{ filtro_form.repuestos_disponibles }}
+            </div>
+            <div class="col-12 mt-3">
+                <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+                <a href="{% url 'pizarra_programacion' %}" class="btn btn-secondary">Limpiar Filtros</a>
             </div>
         </form>
     </div>
@@ -97,7 +134,11 @@
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
+        var filtroForm = document.getElementById('filtro-calendario-form'); 
         
+        // Define el patrón de URL para actualizar la OT.
+        const UPDATE_OT_URL_PATTERN = "{% url 'actualizar_fecha_ot_api' pk=0 %}"; // '0' es un placeholder
+
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek', 
             locale: 'es',
@@ -108,13 +149,18 @@
             },
             editable: true,
             
+            // ¡Plugins: MANTENEMOS TU CONFIGURACIÓN ORIGINAL Y FUNCIONAL!
+            // Si tenías un array 'plugins: []' vacío, podrías ponerlo.
+            // Si no lo tenías, dejarlo así es lo más seguro.
+            
+            // Clic en un día para crear OT
             dateClick: function(info) {
                 const fechaSeleccionada = info.dateStr.split('T')[0];
                 const url = `{% url 'ot_list' %}?fecha_programada=${fechaSeleccionada}&from_calendar=true`;
                 window.location.href = url;
             },
             
-            // --- FUNCIÓN CORREGIDA ---
+            // Asigna clases CSS a los eventos según su estado y prioridad (TU FUNCIÓN ORIGINAL)
             eventClassNames: function(arg) {
                 let classes = []; 
 
@@ -123,27 +169,42 @@
                     classes.push('estado-' + arg.event.extendedProps.estado.replace(/ /g, '_').toUpperCase());
                 }
 
-                // Clase para la PRIORIDAD
-                if (arg.event.extendedProps.prioridad) {
+                // Clase para la PRIORIDAD - Asumiendo que prioridad viene en extendedProps, como lo enviaría la API
+                if (arg.event.extendedProps.prioridad) { 
                     classes.push('prioridad-' + arg.event.extendedProps.prioridad.toUpperCase());
                 }
                 
                 return classes;
             },
-            // --- FIN DE LA CORRECCIÓN ---
 
+            // Función para cargar eventos desde la API de Django (MODIFICADA LIGERAMENTE para añadir filtro)
             events: function(fetchInfo, successCallback, failureCallback) {
-                const params = new URLSearchParams(new FormData(document.getElementById('filtro-calendario-form')));
+                const params = new URLSearchParams(new FormData(filtroForm)); 
+                
+                params.append('start', fetchInfo.startStr);
+                params.append('end', fetchInfo.endStr);
+
                 const url = `{% url 'ot_eventos_api' %}?${params.toString()}`;
+                
                 fetch(url)
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
                     .then(data => successCallback(data))
-                    .catch(error => failureCallback(error));
+                    .catch(error => {
+                        console.error('Error al cargar eventos:', error);
+                        failureCallback(error);
+                    });
             },
             
+            // Maneja el arrastre y soltado de eventos para actualizar su fecha programada (TU FUNCIÓN ORIGINAL)
+            // Se mantiene como la tenías, sin la promesa ni eventAllow, para respetar tu base funcional.
             eventDrop: function(info) {
                 const otId = info.event.id;
-                const nuevaFecha = info.event.start.toISOString();
+                const nuevaFecha = info.event.start.toISOString(); // Tu código original
                 const csrfToken = '{{ csrf_token }}';
 
                 fetch(`/api/ot-actualizar-fecha/${otId}/`, {
@@ -163,13 +224,50 @@
                 });
             },
 
+            // --- ¡NUEVO!: Customización del contenido del evento para añadir el icono de disponibilidad ---
+            // Esta función se encarga de cómo se ve el contenido interno de cada evento.
+            eventContent: function(arg) {
+                let eventContentEl = document.createElement('div');
+                eventContentEl.classList.add('fc-event-main-frame'); 
+                
+                let titleEl = document.createElement('div');
+                titleEl.classList.add('fc-event-title-wrap'); 
+                titleEl.innerText = arg.event.title;
+                eventContentEl.appendChild(titleEl);
+
+                // Añade el icono de disponibilidad de repuestos solo si la información está presente
+                // (es decir, si la API 'ot_eventos_api' la ha enviado)
+                if (arg.event.extendedProps && typeof arg.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
+                    let iconEl = document.createElement('div');
+                    iconEl.classList.add('repuesto-icon');
+                    if (arg.event.extendedProps.hasAllPartsAvailable) {
+                        iconEl.classList.add('disponible');
+                        iconEl.title = 'Repuestos disponibles';
+                    } else {
+                        iconEl.classList.add('faltante');
+                        iconEl.title = 'Faltan repuestos';
+                    }
+                    eventContentEl.appendChild(iconEl);
+                }
+                
+                return { domNodes: [eventContentEl] }; // Retorna el elemento customizado
+            },
+
+            // Adjunta el tooltip a cada evento una vez que ha sido montado en el DOM (MODIFICADA para añadir disponibilidad)
             eventDidMount: function(info) {
+                // Se añade la información de disponibilidad de repuestos al tooltip
+                let repuestosStatus = 'No especificado';
+                if (info.event.extendedProps && typeof info.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
+                    repuestosStatus = info.event.extendedProps.hasAllPartsAvailable ? 'Disponibles' : 'Faltan';
+                }
+
                 new bootstrap.Tooltip(info.el, {
-                    title: `<b>Vehículo:</b> ${info.event.title}<br><b>Tipo:</b> ${info.event.extendedProps.tipo}<br><b>Estado:</b> ${info.event.extendedProps.estado}<br><b>Responsable:</b> ${info.event.extendedProps.responsable || 'N/A'}<br><b>Prioridad:</b> ${info.event.extendedProps.prioridad || 'N/A'}`,
+                    title: `<b>Vehículo:</b> ${info.event.title}<br><b>Tipo:</b> ${info.event.extendedProps.tipo}<br><b>Estado:</b> ${info.event.extendedProps.estado}<br><b>Responsable:</b> ${info.event.extendedProps.responsable || 'N/A'}<br><b>Prioridad:</b> ${info.event.extendedProps.prioridad || 'N/A'}<br><b>Repuestos:</b> ${repuestosStatus}`,
                     html: true, placement: 'top', trigger: 'hover', container: 'body'
                 });
             },
             
+            // Al hacer clic en un evento (OT), redirige a su página de detalle (TU FUNCIÓN ORIGINAL)
             eventClick: function(info) {
                 info.jsEvent.preventDefault();
                 if (info.event.url) { window.open(info.event.url, "_blank"); }

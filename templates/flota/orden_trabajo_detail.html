@@ -142,7 +142,38 @@
 
         <div class="card mb-4"><div class="card-body">
             <h4 class="mb-3"><i class="fas fa-boxes"></i>Insumos Utilizados</h4>
-            {% if ot.detalleinsumoot_set.all %}<ul class="data-list">{% for detalle in ot.detalleinsumoot_set.all %}<li><span>{{ detalle.cantidad|floatformat }} x {{ detalle.insumo.nombre }}</span><span class="text-muted">${{ detalle.insumo.precio_unitario|floatformat:2 }} c/u<form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este insumo?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger ms-2 py-0 px-1"><i class="fas fa-trash-alt fa-xs"></i></button></form></span></li>{% endfor %}</ul>{% else %}<p class="text-muted">Aún no se han añadido insumos.</p>{% endif %}
+            {# MODIFICADO: Cambiando 'detalleinsumoot_set' a 'detalles_insumos_ot' para coincidir con related_name #}
+            {% if ot.detalles_insumos_ot.all %}
+            <ul class="data-list">
+                {% for detalle in ot.detalles_insumos_ot.all %}
+                <li>
+                    <span>
+                        {# Muestra el nombre del Repuesto de inventario o del Insumo genérico #}
+                        {{ detalle.cantidad|floatformat }} x 
+                        {% if detalle.repuesto_inventario %}
+                            {{ detalle.repuesto_inventario.nombre }} ({{ detalle.repuesto_inventario.numero_parte }})
+                        {% else %}
+                            {{ detalle.insumo.nombre }}
+                        {% endif %}
+                    </span>
+                    <span class="text-muted">
+                        {# Muestra el precio unitario del Repuesto de inventario o del Insumo genérico #}
+                        ${% if detalle.repuesto_inventario %}
+                            {{ detalle.repuesto_inventario.precio_unitario|floatformat:2 }}
+                        {% else %}
+                            {{ detalle.insumo.precio_unitario|floatformat:2 }}
+                        {% endif %} c/u
+                        <form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este insumo/repuesto?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger ms-2 py-0 px-1"><i class="fas fa-trash-alt fa-xs"></i></button>
+                        </form>
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-muted">Aún no se han añadido insumos o repuestos.</p>
+            {% endif %}
         </div></div>
 
         <div class="card"><div class="card-body">
