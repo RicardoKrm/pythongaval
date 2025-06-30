@@ -1,6 +1,5 @@
-<!-- Archivo nuevo: flota/templates/flota/repuesto_list.html -->
+<!-- Archivo: flota/templates/flota/repuesto_list.html -->
 {% extends "flota/base.html" %}
-{% load static %}
 
 {% block title %}Inventario de Repuestos{% endblock %}
 
@@ -40,7 +39,15 @@
                 <tbody>
                     {% for repuesto in repuestos %}
                     <tr class{% if repuesto.stock_actual <= repuesto.stock_minimo %} "table-danger" {% elif repuesto.stock_actual <= repuesto.stock_minimo|add:5 %} "table-warning" {% endif %}>
-                        <td>{{ repuesto.nombre }}</td>
+                        
+                        <!-- ===================== ESTA ES LA LÍNEA MODIFICADA ===================== -->
+                        <td>
+                            <a href="{% url 'repuesto_detail' pk=repuesto.pk %}">
+                                {{ repuesto.nombre }}
+                            </a>
+                        </td>
+                        <!-- ======================================================================= -->
+
                         <td>{{ repuesto.numero_parte }}</td>
                         <td>{{ repuesto.get_calidad_display }}</td>
                         <td class="text-center fw-bold">{{ repuesto.stock_actual }}</td>

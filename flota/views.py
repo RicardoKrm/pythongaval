@@ -26,7 +26,8 @@ from .models import (
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
     CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm,
-    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm
+    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm, MovimientoStockForm
+
 )
 from django.utils import timezone # <-- Asegúrate de tener este import
 
@@ -772,7 +773,7 @@ def repuesto_list(request):
 
 
 @login_required
-@user_passes_test(es_supervisor_o_admin) # Solo supervisores y admins pueden crear
+
 def repuesto_create(request):
     """
     Vista para crear un nuevo repuesto.
@@ -792,7 +793,7 @@ def repuesto_create(request):
 
 
 @login_required
-@user_passes_test(es_supervisor_o_admin) # Solo supervisores y admins pueden editar
+
 def repuesto_update(request, pk):
     """
     Vista para actualizar un repuesto existente.
@@ -813,3 +814,50 @@ def repuesto_update(request, pk):
         'repuesto': repuesto
     }
     return render(request, 'flota/repuesto_form.html', context)
+@login_required
+
+def registrar_movimiento(request, repuesto_pk):
+    """
+    Vista para registrar una entrada, salida o ajuste manual de stock
+    para un repuesto específico.
+    """
+    connection.set_tenant(request.tenant)
+    repuesto = get_object_or_404(Repuesto, pk=repuesto_pk)
+    
+    if request.method == 'POST':
+        form = MovimientoStockForm(request.POST)
+        if form.is_valid():
+            movimiento = form.save(commit=False)
+            movimiento.repuesto = repuesto
+            movimiento.usuario_responsable = request.user
+            
+            # La lógica de actualizar el stock ya está en el .save() del modelo MovimientoStock
+            movimiento.save() 
+            
+            messages.success(request, f'Movimiento de stock para "{repuesto.nombre}" registrado con éxito.')
+            return redirect('repuesto_detail', pk=repuesto.pk) # Redirigimos al detalle del repuesto
+    else:
+        form = MovimientoStockForm()
+        
+    context = {
+        'form': form,
+        'repuesto': repuesto
+    }
+    return render(request, 'flota/movimiento_stock_form.html', context)
+
+# En flota/views.py, junto a las otras vistas de repuesto
+
+@login_required
+def repuesto_detail(request, pk):
+    """
+    Vista para ver el detalle y el historial de movimientos de un repuesto.
+    """
+    connection.set_tenant(request.tenant)
+    repuesto = get_object_or_404(Repuesto, pk=pk)
+    movimientos = repuesto.movimientos.all() # Obtenemos todos los movimientos relacionados
+    
+    context = {
+        'repuesto': repuesto,
+        'movimientos': movimientos,
+    }
+    return render(request, 'flota/repuesto_detail.html', context)

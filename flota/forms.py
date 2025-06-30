@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 from .models import (
     OrdenDeTrabajo, BitacoraDiaria, Vehiculo, Tarea, Insumo, DetalleInsumoOT,
-    PautaMantenimiento, ModeloVehiculo, Repuesto
+    PautaMantenimiento, ModeloVehiculo, Repuesto, MovimientoStock
 )
 
 # En flota/forms.py
@@ -294,3 +294,21 @@ class RepuestoForm(forms.ModelForm):
             'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
             'proveedor_habitual': forms.Select(attrs={'class': 'form-control select2'}),
         }    
+
+class MovimientoStockForm(forms.ModelForm):
+    class Meta:
+        model = MovimientoStock
+        # Excluimos los campos que se llenarán automáticamente en la vista
+        exclude = ['usuario_responsable', 'orden_de_trabajo', 'repuesto']
+        widgets = {
+            'tipo_movimiento': forms.Select(attrs={'class': 'form-control'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 10 para entradas, -2 para salidas'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+    def clean_cantidad(self):
+        # Pequeña validación para asegurar que la cantidad no sea cero
+        cantidad = self.cleaned_data.get('cantidad')
+        if cantidad == 0:
+            raise forms.ValidationError("La cantidad no puede ser cero.")
+        return cantidad
