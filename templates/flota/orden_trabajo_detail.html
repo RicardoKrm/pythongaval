@@ -2,13 +2,17 @@
 
 {% block title %}Detalle OT #{{ ot.folio }}{% endblock %}
 
+<!-- ======================= BLOQUE ÚNICO Y CORREGIDO ======================= -->
 {% block extra_head %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    
     <style>
+        /* Estilos Generales */
         body { background-color: #1a202c !important; color: #cbd5e0 !important; }
         .container { max-width: 1200px; }
-        h1, h2, h4 { color: #e2e8f0; }
+        h1, h2, h4, h5 { color: #e2e8f0; }
         hr { border-color: #4a5568; }
         .grid-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
         @media (max-width: 992px) { .grid-container { grid-template-columns: 1fr; } }
@@ -33,14 +37,73 @@
         .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border: 1px solid #4a5568; }
         .form-control:focus, .form-select:focus { background-color: #1a202c; color: #cbd5e0; border-color: #3182ce; box-shadow: none; }
         .history-item-icon { width: 30px; text-align: center; }
+
+        /* Estilos CSS Revisados para Select2 */
+        .select2-container { width: 100% !important; box-sizing: border-box; }
+        .select2-container--default .select2-selection--single,
+        .select2-container--default .select2-selection--multiple {
+            background-color: #1a202c !important;
+            border: 1px solid #4a5568 !important;
+            border-radius: 0.375rem !important;
+            min-height: 38px !important;
+            padding: 5px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #cbd5e0 !important;
+            line-height: 26px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px !important;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #4a5568 !important;
+            border-color: #3182ce !important;
+            color: #e2e8f0 !important;
+            padding: 3px 6px !important;
+            margin: 2px !important;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: #cbd5e0 !important;
+            margin-right: 5px !important;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: #fff !important;
+        }
+        .select2-dropdown {
+            background-color: #2d3748 !important;
+            border: 1px solid #4a5568 !important;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            background-color: #1a202c !important;
+            color: #cbd5e0 !important;
+            border: 1px solid #4a5568 !important;
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #3182ce !important;
+        }
+        .select2-container--default .select2-results__option[aria-selected=true] {
+            background-color: #4a5568 !important;
+        }
     </style>
 {% endblock %}
 
 {% block content %}
+<!-- El contenido HTML del body no necesita cambios, usamos el de la versión anterior -->
+<!-- En orden_trabajo_detail.html -->
+
 <div class="ot-header">
     <div>
         <h1>Orden de Trabajo <span class="text-muted">#{{ ot.folio }}</span></h1>
-        <p class="h4 text-muted">{{ ot.vehiculo }}</p>
+        
+        <!-- === BLOQUE MEJORADO CON BOTÓN DE HISTORIAL === -->
+        <div class="d-flex align-items-center mt-2">
+            <p class="h4 text-muted mb-0 me-3">{{ ot.vehiculo }}</p>
+            <a href="{% url 'historial_vehiculo' pk=ot.vehiculo.pk %}" class="btn btn-sm btn-outline-info">
+                <i class="fas fa-history me-1"></i> Ver Historial del Vehículo
+            </a>
+        </div>
+        <!-- === FIN DEL BLOQUE MEJORADO === -->
+
     </div>
     <span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
 </div>
@@ -54,7 +117,7 @@
 
 <div class="mb-4">
     {% if es_admin_o_super and ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}<button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#pausarOTModal"><i class="fas fa-pause me-1"></i> Pausar OT</button>{% endif %}
-    {% if es_admin_o_super and ot.estado == 'PAUSADA' %}<form method="post" class="d-inline"><{% csrf_token %}<input type="hidden" name="estado" value="EN_PROCESO"><button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button></form>{% endif %}
+    {% if es_admin_o_super and ot.estado == 'PAUSADA' %}<form method="post" class="d-inline">{% csrf_token %}<input type="hidden" name="estado" value="EN_PROCESO"><button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button></form>{% endif %}
     {% if ot.tipo == 'EVALUATIVA' %}<button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#diagnosticoModal"><i class="fas fa-stethoscope me-1"></i> Añadir Diagnóstico</button>{% endif %}
 </div>
 
@@ -64,6 +127,7 @@
             <h4 class="mb-3"><i class="fas fa-info-circle"></i>Información General</h4>
             <ul class="data-list">
                 <li><strong>Tipo:</strong> <span>{{ ot.get_tipo_display }}</span></li>
+                <li><strong>Prioridad:</strong> <span>{{ ot.get_prioridad_display }}</span></li>
                 <li><strong>Fecha Creación:</strong> <span>{{ ot.fecha_creacion|date:"d M Y, H:i" }}</span></li>
                 <li><strong>KM Apertura:</strong> <span>{{ ot.kilometraje_apertura|floatformat:0 }}</span></li>
                 <li class="border-0"><strong>Costo Total:</strong> <strong class="fs-4 text-success">${{ ot.costo_total|floatformat:2 }}</strong></li>
@@ -108,17 +172,76 @@
             {% if ot.tipo == 'PREVENTIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePauta">Cargar Tareas de Pauta</button></h2><div id="collapsePauta" class="accordion-collapse collapse show" data-bs-parent="#accordionOT"><div class="accordion-body">{% if ot.pauta_mantenimiento %}<p>Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post"><{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn btn-success w-100">Cargar Tareas</button></form>{% else %}<p class="text-warning">No hay pauta asignada.</p>{% endif %}</div></div></div>{% endif %}
             {% if ot.tipo == 'CORRECTIVA' or ot.tipo == 'EVALUATIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTarea">Añadir Tarea Manual</button></h2><div id="collapseTarea" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ manual_tarea_form.as_p }}<button type="submit" name="add_manual_tarea" class="btn btn-success w-100">Guardar Tarea</button></form></div></div></div>{% endif %}
             <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsumo">Añadir Insumo</button></h2><div id="collapseInsumo" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ manual_insumo_form.as_p }}<button type="submit" name="add_manual_insumo" class="btn btn-success w-100">Guardar Insumo</button></form></div></div></div>
-            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button></h2><div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><h5>Personal Actual</h5>{% if ot.responsable or ot.personal_asignado.all %}<ul class="list-unstyled">{% if ot.responsable %}<li><span class="badge bg-warning text-dark">Responsable</span> {{ ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}<li><i class="fas fa-user-friends text-muted"></i> {{ ayudante.username }}</li>{% endfor %}</ul>{% else %}<p class="text-muted">No hay personal asignado.</p>{% endif %}<hr><h5 class="mt-3">Modificar Asignación</h5><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div class="mb-3"><label class="form-label">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-3">Guardar Asignación</button></form></div></div></div>
+            
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button>
+                </h2>
+                <div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT">
+                    <div class="accordion-body">
+                        <h5 class="mb-3"><i class="fas fa-users text-muted"></i> Personal Asignado Actualmente</h5>
+                        {% if ot.responsable or ot.personal_asignado.all %}
+                            <ul class="list-unstyled mb-4">
+                                {% if ot.responsable %}
+                                    <li class="mb-2">
+                                        <span class="badge bg-warning text-dark me-2">Responsable</span> 
+                                        <i class="fas fa-user-check"></i> {{ ot.responsable.get_full_name|default:ot.responsable.username }}
+                                    </li>
+                                {% endif %}
+                                {% for ayudante in ot.personal_asignado.all %}
+                                    {% if ayudante != ot.responsable %}
+                                        <li class="mb-1">
+                                            <span class="badge bg-secondary me-2">Ayudante</span> 
+                                            <i class="fas fa-user"></i> {{ ayudante.get_full_name|default:ayudante.username }}
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="alert alert-secondary border-0" style="background-color: #4a5568;">
+                                <i class="fas fa-info-circle me-1"></i> No hay personal asignado a esta OT.
+                            </div>
+                        {% endif %}
+                        <hr>
+                        <h5 class="mt-3 mb-3"><i class="fas fa-edit text-muted"></i> Modificar Asignación</h5>
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="{{ asignar_form.responsable.id_for_label }}" class="form-label">{{ asignar_form.responsable.label }}</label>
+                                {{ asignar_form.responsable }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ asignar_form.personal_asignado.id_for_label }}" class="form-label">{{ asignar_form.personal_asignado.label }}</label>
+                                {{ asignar_form.personal_asignado }}
+                            </div>
+                            <button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-2">
+                                <i class="fas fa-save me-2"></i>Guardar Asignación
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstado">Cambiar Estado</button></h2><div id="collapseEstado" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}{{ cambiar_estado_form.as_p }}<button type="submit" name="cambiar_estado" class="btn btn-success w-100">Actualizar Estado</button></form></div></div></div>
             <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFinalizar">Cerrar para Revisión</button></h2><div id="collapseFinalizar" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}<small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small></div><button type="submit" name="cerrar_mecanico" class="btn btn-success w-100">Marcar como Realizado</button></form></div></div></div>
         </div>
     </div>
 </div>
 
+<!-- Modales -->
 <div class="modal fade" id="pausarOTModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><form method="post"><{% csrf_token %}<div class="modal-header border-secondary"><h5 class="modal-title">Pausar OT #{{ ot.folio }}</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Especifique el motivo de la pausa.</p>{{ pausar_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="pausar_ot" class="btn btn-warning">Confirmar Pausa</button></div></form></div></div></div>
 <div class="modal fade" id="diagnosticoModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><form method="post"><{% csrf_token %}<div class="modal-header border-secondary"><h5 class="modal-title">Diagnóstico para OT #{{ ot.folio }}</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Añada el diagnóstico técnico.</p>{{ diagnostico_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="guardar_diagnostico" class="btn btn-primary">Guardar Diagnóstico</button></div></form></div></div></div>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    $(document).ready(function() {
+        $('.select2').select2({
+            dropdownParent: $('body')
+        });
+    });
+    </script>
 {% endblock %}

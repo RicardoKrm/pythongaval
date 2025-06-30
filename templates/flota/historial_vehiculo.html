@@ -1,46 +1,73 @@
-<!-- templates/flota/historial_vehiculo.html -->
+<!-- Archivo nuevo: flota/templates/flota/historial_vehiculo.html -->
+
 {% extends "flota/base.html" %}
 
 {% block title %}Historial de {{ vehiculo.numero_interno }}{% endblock %}
 
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .ot-status { padding: .25rem .75rem; border-radius: 9999px; font-weight: bold; color: white; font-size: 0.8em; }
+        .status-PENDIENTE { background-color: #dd6b20; }
+        .status-EN_PROCESO { background-color: #3182ce; }
+        .status-PAUSADA { background-color: #d69e2e; }
+        .status-CERRADA_MECANICO { background-color: #718096; }
+        .status-FINALIZADA { background-color: #2f855a; }
+        .table-hover tbody tr:hover { background-color: #3d485c; }
+    </style>
+{% endblock %}
+
 {% block content %}
-    <div style="margin-bottom: 1em;">
-        <a href="{% url 'dashboard' %}" class="btn-back">← Volver a la Pizarra</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1">Historial de Mantenimiento</h1>
+        <p class="h3 text-muted">Vehículo: {{ vehiculo.numero_interno }} ({{ vehiculo.patente }})</p>
     </div>
+    <a href="{{ request.META.HTTP_REFERER|default:request.get_full_path }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver
+    </a>
+</div>
 
-    <h1>Historial de Mantenimiento: Vehículo N° {{ vehiculo.numero_interno }}</h1>
-    
-    <div class="card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Folio</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th>Fecha Creación</th>
-                    <th>Observación</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ot in ordenes %}
-                <tr>
-                    <td>{{ ot.folio|default:"N/A" }}</td>
-                    <td>{{ ot.get_tipo_display }}</td>
-                    <td><span class="status-pill status-{{ ot.estado|lower }}">{{ ot.get_estado_display }}</span></td>
-                    <td>{{ ot.fecha_creacion|date:"d M, Y" }}</td>
-                    <td>{{ ot.observacion_inicial|truncatewords:10 }}</td>
-                    <td><a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-action">Ver Detalle</a></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 20px;">Este vehículo no tiene órdenes de trabajo registradas.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Folio</th>
+                        <th>Tipo</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th>Fecha Creación</th>
+                        <th>Fecha Cierre</th>
+                        <th>Costo Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ot in ordenes %}
+                    <tr>
+                        <td>{{ ot.folio }}</td>
+                        <td>{{ ot.get_tipo_display }}</td>
+                        <td>{{ ot.get_prioridad_display }}</td>
+                        <td><span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span></td>
+                        <td>{{ ot.fecha_creacion|date:"d/m/Y" }}</td>
+                        <td>{{ ot.fecha_cierre|date:"d/m/Y"|default:"--" }}</td>
+                        <td>${{ ot.costo_total|floatformat:2 }}</td>
+                        <td>
+                            <a href="{% url 'ot_detail' pk=ot.pk %}" class="btn btn-sm btn-info" title="Ver Detalle">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">Este vehículo no tiene órdenes de trabajo registradas.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
-    <!-- Reutilizamos los estilos de las píldoras de estado -->
-
+</div>
 {% endblock %}

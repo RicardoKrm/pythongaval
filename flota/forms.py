@@ -117,16 +117,21 @@ class CerrarOtMecanicoForm(forms.ModelForm):
             'motivo_pendiente': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
         
+# En flota/forms.py
+
 class AsignarPersonalOTForm(forms.ModelForm):
-    # Usamos ModelChoiceField para filtrar y mostrar solo usuarios que son mecánicos o supervisores.
     responsable = forms.ModelChoiceField(
         queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']),
-        widget=forms.Select(attrs={'class': 'form-control select2'}),
+        # --- CAMBIO AQUÍ ---
+        widget=forms.Select(attrs={'class': 'select2', 'style': 'width: 100%;'}), 
+        label="Responsable Principal",
         required=False
     )
     personal_asignado = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor', 'Asistente']),
-        widget=forms.SelectMultiple(attrs={'class': 'form-control select2'}),
+        # --- CAMBIO AQUÍ ---
+        widget=forms.SelectMultiple(attrs={'class': 'select2', 'style': 'width: 100%;'}),
+        label="Personal de Apoyo (Ayudantes)",
         required=False
     )
 
