@@ -244,7 +244,6 @@
 
 {% endblock content %}
 
-<!-- En orden_trabajo_detail.html -->
 {% block extra_scripts %}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
@@ -252,29 +251,26 @@
 
     <script>
     $(document).ready(function() {
-        // Inicializador de Select2 (como antes)
+        // Inicializador de Select2
         $('.select2').select2({
             dropdownParent: $('body')
         });
 
-        // ================== LÓGICA DEL BUSCADOR DE REPUESTOS ==================
+        // Lógica del buscador de repuestos
         const searchInput = $('#repuesto-search-input');
         const resultsContainer = $('#repuesto-search-results');
         const searchUrl = "{% url 'repuesto_search_api' %}";
 
-        // Función para renderizar los resultados de la búsqueda
         function renderResults(data) {
-            resultsContainer.empty(); // Limpiamos resultados anteriores
+            resultsContainer.empty();
             if (data.length === 0) {
                 resultsContainer.html('<p class="text-muted text-center">No se encontraron repuestos.</p>');
                 return;
             }
-
             const list = $('<ul class="list-group list-group-flush"></ul>');
             data.forEach(function(repuesto) {
                 const stockClass = repuesto.stock > 0 ? 'text-success' : 'text-danger';
                 const stockIcon = repuesto.stock > 0 ? 'fa-check-circle' : 'fa-times-circle';
-
                 const listItem = `
                     <li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center">
                         <div>
@@ -283,11 +279,11 @@
                         </div>
                         <div>
                             <div class="input-group">
-                                <input type="number" class="form-control form-control-sm" style="width: 70px;" value="1" min="1" id="cantidad-repuesto-${repuesto.id}">
+                                <input type="number" class="form-control form-control-sm" style="width: 70px;" value="1" min="1" max="${repuesto.stock}" id="cantidad-repuesto-${repuesto.id}">
                                 <button class="btn btn-sm btn-outline-primary" type="button" 
                                         data-repuesto-id="${repuesto.id}" 
                                         data-ot-id="{{ ot.pk }}"
-                                        onclick="addRepuesto(this)">
+                                        onclick="addRepuesto(this)" ${repuesto.stock <= 0 ? 'disabled' : ''}>
                                     Añadir
                                 </button>
                             </div>
@@ -299,39 +295,74 @@
             resultsContainer.append(list);
         }
 
-        // Evento que se dispara al escribir en el input de búsqueda (con un pequeño retraso)
         let searchTimeout;
         searchInput.on('keyup', function() {
             clearTimeout(searchTimeout);
             const query = $(this).val();
-
             if (query.length < 2) {
                 resultsContainer.html('<p class="text-muted text-center">Escriba al menos 2 letras para buscar.</p>');
                 return;
             }
-            
             resultsContainer.html('<p class="text-muted text-center">Buscando...</p>');
-
             searchTimeout = setTimeout(function() {
                 $.ajax({
                     url: searchUrl,
                     data: { 'q': query },
-                    success: function(data) {
-                        renderResults(data);
-                    },
-                    error: function() {
-                        resultsContainer.html('<p class="text-danger text-center">Error al realizar la búsqueda.</p>');
-                    }
+                    success: function(data) { renderResults(data); },
+                    error: function() { resultsContainer.html('<p class="text-danger text-center">Error al realizar la búsqueda.</p>'); }
                 });
-            }, 300); // 300ms de retraso para no saturar con peticiones
+            }, 300);
         });
         
-        // La función addRepuesto se definirá en el siguiente paso. Por ahora, la dejamos declarada.
+        // Función para añadir el repuesto a la OT
         window.addRepuesto = function(button) {
-            // Lógica para añadir el repuesto a la OT (siguiente paso)
-            alert("Función para añadir aún no implementada.");
+            const repuestoId = button.dataset.repuestoId;
+            const otId = button.dataset.otId;
+            const cantidadInput = document.getElementById(`cantidad-repuesto-${repuestoId}`);
+            const cantidad = cantidadInput.value;
+            const csrfToken = '{{ csrf_token }}';
+            const addUrl = "{% url 'add_repuesto_a_ot_api' %}";
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            fetch(addUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    ot_id: otId,
+                    repuesto_id: repuestoId,
+                    cantidad: cantidad
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message || 'Error desconocido del servidor.'); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'ok') {
+                    button.classList.remove('btn-outline-primary');
+                    button.classList.add('btn-success');
+                    button.innerHTML = '<i class="fas fa-check"></i> Añadido';
+                    setTimeout(() => { location.reload(); }, 1000);
+                } else {
+                    // Este caso es por si el status es 'error' pero la respuesta fue 200 OK
+                    throw new Error(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error en addRepuesto:', error);
+                alert(`Ocurrió un error: ${error.message}`);
+                button.disabled = false;
+                button.innerHTML = 'Añadir';
+            });
         }
-        // ====================================================================
     });
     </script>
 {% endblock %}

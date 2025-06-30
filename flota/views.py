@@ -21,7 +21,8 @@ from django.urls import reverse
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
-    Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto
+    Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto,
+    MovimientoStock
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
@@ -887,3 +888,61 @@ def repuesto_search_api(request):
         })
         
     return JsonResponse(results, safe=False)
+
+@login_required
+def add_repuesto_a_ot_api(request):
+    """
+    API para añadir un repuesto a una OT y descontar el stock.
+    Espera una petición POST con JSON.
+    """
+    connection.set_tenant(request.tenant)
+
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        ot_id = int(data.get('ot_id'))
+        repuesto_id = int(data.get('repuesto_id'))
+        cantidad = int(data.get('cantidad'))
+
+        if cantidad <= 0:
+            return JsonResponse({'status': 'error', 'message': 'La cantidad debe ser mayor que cero.'}, status=400)
+
+        with transaction.atomic():
+            ot = get_object_or_404(OrdenDeTrabajo, pk=ot_id)
+            repuesto = get_object_or_404(Repuesto, pk=repuesto_id)
+
+            if repuesto.stock_actual < cantidad:
+                return JsonResponse({'status': 'error', 'message': f'Stock insuficiente. Stock actual: {repuesto.stock_actual}'}, status=400)
+
+            insumo_obj, created = Insumo.objects.get_or_create(
+                nombre=f"{repuesto.nombre} ({repuesto.numero_parte})",
+                defaults={'precio_unitario': 0}
+            )
+            
+            DetalleInsumoOT.objects.create(
+                orden_de_trabajo=ot,
+                insumo=insumo_obj,
+                cantidad=cantidad
+            )
+
+            MovimientoStock.objects.create(
+                repuesto=repuesto,
+                tipo_movimiento='SALIDA_OT',
+                cantidad=-cantidad,
+                usuario_responsable=request.user,
+                orden_de_trabajo=ot,
+                notas=f"Salida automática para OT #{ot.folio}"
+            )
+        
+        return JsonResponse({'status': 'ok', 'message': f'Repuesto "{repuesto.nombre}" añadido a la OT con éxito.'})
+
+    except KeyError:
+        return JsonResponse({'status': 'error', 'message': 'Faltan datos en la petición (ot_id, repuesto_id, cantidad).'}, status=400)
+    except (ValueError, TypeError):
+        return JsonResponse({'status': 'error', 'message': 'Los IDs y la cantidad deben ser números enteros.'}, status=400)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'JSON mal formado en el cuerpo de la petición.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Ha ocurrido un error inesperado en el servidor.'}, status=500)
