@@ -21,12 +21,12 @@ from django.urls import reverse
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
-    Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT
+    Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
     CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm,
-    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm,
+    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm
 )
 from django.utils import timezone # <-- Asegúrate de tener este import
 
@@ -747,3 +747,69 @@ def actualizar_fecha_ot_api(request, pk):
             return JsonResponse({'status': 'error', 'message': f'Datos inválidos: {e}'}, status=400)
             
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
+
+@login_required
+def repuesto_list(request):
+    """
+    Vista para listar todos los repuestos en el inventario (la "Pizarra de Repuestos").
+    Incluye una funcionalidad de búsqueda simple.
+    """
+    connection.set_tenant(request.tenant)
+    query = request.GET.get('q', '')
+    if query:
+        # Busca por nombre o número de parte
+        repuestos = Repuesto.objects.filter(
+            Q(nombre__icontains=query) | Q(numero_parte__icontains=query)
+        ).order_by('nombre')
+    else:
+        repuestos = Repuesto.objects.all().order_by('nombre')
+    
+    context = {
+        'repuestos': repuestos,
+        'query': query,
+    }
+    return render(request, 'flota/repuesto_list.html', context)
+
+
+@login_required
+@user_passes_test(es_supervisor_o_admin) # Solo supervisores y admins pueden crear
+def repuesto_create(request):
+    """
+    Vista para crear un nuevo repuesto.
+    """
+    connection.set_tenant(request.tenant)
+    if request.method == 'POST':
+        form = RepuestoForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Repuesto creado con éxito.')
+            return redirect('repuesto_list')
+    else:
+        form = RepuestoForm()
+    
+    context = {'form': form}
+    return render(request, 'flota/repuesto_form.html', context)
+
+
+@login_required
+@user_passes_test(es_supervisor_o_admin) # Solo supervisores y admins pueden editar
+def repuesto_update(request, pk):
+    """
+    Vista para actualizar un repuesto existente.
+    """
+    connection.set_tenant(request.tenant)
+    repuesto = get_object_or_404(Repuesto, pk=pk)
+    if request.method == 'POST':
+        form = RepuestoForm(request.POST, instance=repuesto)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Repuesto actualizado con éxito.')
+            return redirect('repuesto_list')
+    else:
+        form = RepuestoForm(instance=repuesto)
+        
+    context = {
+        'form': form,
+        'repuesto': repuesto
+    }
+    return render(request, 'flota/repuesto_form.html', context)

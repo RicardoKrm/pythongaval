@@ -231,3 +231,90 @@ class HistorialOT(models.Model):
     def __str__(self):
         user_str = self.usuario.username if self.usuario else "Sistema"
         return f"{self.get_tipo_evento_display()} en OT-{self.orden_de_trabajo.folio} por {user_str}"    
+    
+
+# En flota/models.py
+
+# ... (tus modelos existentes: Vehiculo, Tarea, OrdenDeTrabajo, etc.) ...
+
+# ==============================================================================
+#                      NUEVOS MODELOS PARA INVENTARIO
+# ==============================================================================
+
+class Repuesto(models.Model):
+    """
+    Representa un tipo de repuesto específico en el inventario.
+    La combinación de 'numero_parte' y 'calidad' debería ser única.
+    """
+    CALIDAD_CHOICES = [
+        ('ORIGINAL', 'Original'),
+        ('OEM', 'Alternativo OEM'), # Fabricante de Equipo Original
+        ('GENERICO', 'Alternativo Genérico'),
+    ]
+
+    nombre = models.CharField(max_length=255, help_text="Nombre descriptivo del repuesto (ej: Filtro de Aceite Motor OM906)")
+    numero_parte = models.CharField(max_length=100, help_text="Número de parte o SKU del fabricante")
+    calidad = models.CharField(max_length=20, choices=CALIDAD_CHOICES, default='GENERICO')
+    
+    stock_actual = models.PositiveIntegerField(default=0, verbose_name="Stock Actual")
+    stock_minimo = models.PositiveIntegerField(default=1, verbose_name="Stock Mínimo de Alerta")
+    
+    ubicacion = models.CharField(max_length=100, blank=True, null=True, help_text="Ubicación en bodega (ej: Estante A, Casillero 3)")
+    proveedor_habitual = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Repuesto"
+        verbose_name_plural = "Repuestos"
+        # Asegura que no puedas tener el mismo número de parte con la misma calidad dos veces
+        unique_together = ('numero_parte', 'calidad')
+
+    def __str__(self):
+        return f"{self.nombre} ({self.numero_parte}) - {self.get_calidad_display()}"
+
+
+class MovimientoStock(models.Model):
+    """
+    Registra cada entrada, salida o ajuste de stock para un repuesto,
+    proporcionando trazabilidad completa.
+    """
+    TIPO_MOVIMIENTO_CHOICES = [
+        ('ENTRADA', 'Entrada (Compra/Recepción)'),
+        ('SALIDA_OT', 'Salida por OT'),
+        ('AJUSTE_POSITIVO', 'Ajuste de Inventario (Suma)'),
+        ('AJUSTE_NEGATIVO', 'Ajuste de Inventario (Resta)'),
+    ]
+
+    repuesto = models.ForeignKey(Repuesto, on_delete=models.CASCADE, related_name='movimientos')
+    tipo_movimiento = models.CharField(max_length=20, choices=TIPO_MOVIMIENTO_CHOICES)
+    cantidad = models.IntegerField(help_text="Cantidad del movimiento. Positivo para entradas/ajustes+, negativo para salidas/ajustes-.")
+    
+    fecha_movimiento = models.DateTimeField(auto_now_add=True)
+    usuario_responsable = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    orden_de_trabajo = models.ForeignKey(OrdenDeTrabajo, on_delete=models.SET_NULL, null=True, blank=True, help_text="OT asociada a la salida de stock")
+    notas = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Movimiento de Stock"
+        verbose_name_plural = "Movimientos de Stock"
+        ordering = ['-fecha_movimiento']
+
+    def __str__(self):
+        return f"{self.get_tipo_movimiento_display()}: {self.cantidad} x {self.repuesto.nombre}"
+
+    def save(self, *args, **kwargs):
+        # Lógica para actualizar el stock_actual del Repuesto al guardar un movimiento
+        # Usamos una transacción para asegurar la consistencia de los datos
+        from django.db import transaction
+
+        with transaction.atomic():
+            # Si el movimiento ya existe (es una actualización), primero revertimos su efecto
+            if self.pk:
+                movimiento_anterior = MovimientoStock.objects.get(pk=self.pk)
+                self.repuesto.stock_actual -= movimiento_anterior.cantidad
+            
+            # Aplicamos el nuevo efecto del movimiento
+            self.repuesto.stock_actual += self.cantidad
+            self.repuesto.save()
+            
+            # Guardamos el movimiento de stock
+            super().save(*args, **kwargs)

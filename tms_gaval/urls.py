@@ -10,7 +10,10 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='cuentas/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('', flota_views.dashboard_flota, name='dashboard'),
-     path('api/ot-eventos/', flota_views.ot_eventos_api, name='ot_eventos_api'),
+    path('api/ot-eventos/', flota_views.ot_eventos_api, name='ot_eventos_api'),
+    path('inventario/', flota_views.repuesto_list, name='repuesto_list'),
+    path('inventario/nuevo/', flota_views.repuesto_create, name='repuesto_create'),
+    path('inventario/<int:pk>/editar/', flota_views.repuesto_update, name='repuesto_update'),
     path('ordenes/', flota_views.orden_trabajo_list, name='ot_list'),
     path('ordenes/<int:pk>/', flota_views.orden_trabajo_detail, name='ot_detail'),
     path('ordenes/<int:pk>/cambiar-estado/', flota_views.cambiar_estado_ot, name='cambiar_estado_ot'),
@@ -28,6 +31,7 @@ urlpatterns = [
     path('orden-trabajo/<int:ot_pk>/eliminar-insumo/<int:detalle_pk>/', views.eliminar_insumo_ot, name='eliminar_insumo_ot'),
      path('api/mecanicos-recursos/', flota_views.mecanicos_recursos_api, name='mecanicos_recursos_api'),
     path('api/ot-actualizar-fecha/<int:pk>/', flota_views.actualizar_fecha_ot_api, name='actualizar_fecha_ot_api'),
+    
 
     
 ]

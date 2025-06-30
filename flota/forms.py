@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 
 from .models import (
     OrdenDeTrabajo, BitacoraDiaria, Vehiculo, Tarea, Insumo, DetalleInsumoOT,
-    PautaMantenimiento, ModeloVehiculo 
+    PautaMantenimiento, ModeloVehiculo, Repuesto
 )
 
 # En flota/forms.py
@@ -272,3 +272,25 @@ class CalendarioFiltroForm(forms.Form):
         label="Filtrar por Responsable",
         widget=forms.Select(attrs={'class': 'form-control select2'})
     )    
+
+class RepuestoForm(forms.ModelForm):
+    class Meta:
+        model = Repuesto
+        fields = [
+            'nombre',
+            'numero_parte',
+            'calidad',
+            'stock_actual',
+            'stock_minimo',
+            'ubicacion',
+            'proveedor_habitual'
+        ]
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'numero_parte': forms.TextInput(attrs={'class': 'form-control'}),
+            'calidad': forms.Select(attrs={'class': 'form-control'}),
+            'stock_actual': forms.NumberInput(attrs={'class': 'form-control'}),
+            'stock_minimo': forms.NumberInput(attrs={'class': 'form-control'}),
+            'ubicacion': forms.TextInput(attrs={'class': 'form-control'}),
+            'proveedor_habitual': forms.Select(attrs={'class': 'form-control select2'}),
+        }    
