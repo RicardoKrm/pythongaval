@@ -134,21 +134,20 @@ def dashboard_flota(request):
     }
     return render(request, 'flota/dashboard.html', context)
 
-# ====================================================================
-#    INICIO DEL BLOQUE PARA REEMPLAZAR la función orden_trabajo_list
-# ====================================================================
-
 @login_required
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
     
-    # Lógica para el método POST
+    # Lógica para el método POST (sin cambios)
     if request.method == 'POST':
         form = OrdenDeTrabajoForm(request.POST)
         if form.is_valid():
             ot = form.save()
             HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CREACION', descripcion=f"OT #{ot.folio} creada con éxito.")
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
+            # Redirigimos a la pizarra si veníamos de allí
+            if 'from_calendar' in request.GET:
+                return redirect('pizarra_programacion')
             return redirect('ot_list')
         else:
             messages.error(request, 'Por favor, corrija los errores en el formulario.')
@@ -158,7 +157,7 @@ def orden_trabajo_list(request):
                     messages.error(request, f"Error en '{label}': {error}")
             return redirect('ot_list')
 
-    # Lógica para el método GET
+    # Lógica para el método GET (AQUÍ ESTÁ EL CAMBIO)
     else:
         initial_data = {}
         
@@ -168,23 +167,23 @@ def orden_trabajo_list(request):
             initial_data['vehiculo'] = vehiculo_id
             initial_data['tipo'] = 'CORRECTIVA'
         
-        # ---> LÓGICA CORREGIDA <---
-        # Leer la fecha de la URL (si viene del calendario)
-        fecha_inicio = request.GET.get('fecha_inicio')
-        if fecha_inicio:
-            # Como discutimos, no podemos pre-rellenar 'fecha_creacion'.
-            # Pero si en el futuro añades 'fecha_programada', aquí iría la lógica:
-            # initial_data['fecha_programada'] = fecha_inicio
-            pass 
+        # --- LÓGICA NUEVA: LEER FECHA DEL CALENDARIO ---
+        fecha_programada_str = request.GET.get('fecha_programada')
+        if fecha_programada_str:
+            try:
+                # Intentamos convertir la fecha y la añadimos a los datos iniciales
+                initial_data['fecha_programada'] = datetime.strptime(fecha_programada_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                # Si la fecha es inválida, simplemente la ignoramos
+                pass
         
         form = OrdenDeTrabajoForm(initial=initial_data)
 
-    # El resto de la lógica (filtros y paginación) está fuera del if/else
-    # y se aplica siempre que se renderiza la página.
+    # El resto de la lógica (filtros y paginación) sigue igual
     ordenes_list = OrdenDeTrabajo.objects.all().select_related('vehiculo').order_by('-fecha_creacion')
-    
     filtro_form = OTFiltroForm(request.GET)
     if filtro_form.is_valid():
+        # ... (tu lógica de filtros)
         if filtro_form.cleaned_data['vehiculo']:
             ordenes_list = ordenes_list.filter(vehiculo=filtro_form.cleaned_data['vehiculo'])
         if filtro_form.cleaned_data['tipo']:

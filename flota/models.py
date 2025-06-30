@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import Group
+from django.contrib.auth.models import User
 
 
 # --- Catálogos Fundamentales ---
@@ -84,67 +85,85 @@ class PautaMantenimiento(models.Model):
     intervalo_km = models.PositiveIntegerField(default=10000, help_text="Intervalo en kilómetros para esta pauta (ej. 10000, 20000)")
     def __str__(self): return f"{self.nombre} ({self.modelo_vehiculo.nombre} - {self.kilometraje_pauta} KM)"
 
+# En flota/models.py
+
 class OrdenDeTrabajo(models.Model):
-    ESTADO_CHOICES = [('PENDIENTE', 'Pendiente'), ('EN_PROCESO', 'En Proceso'), ('PAUSADA', 'Pausada'), ('FINALIZADA', 'Finalizada'), ('CERRADA_MECANICO', 'Cerrada por Mecánico')]
-    TIPO_CHOICES = [('PREVENTIVA', 'Preventiva'), ('CORRECTIVA', 'Correctiva'), ('EVALUATIVA', 'Evaluativa')]
-    FORMATO_CHOICES = [('NORMAL', 'Mantenimiento Normal'), ('CONTRATO', 'Bajo Contrato')]
+    # --- CHOICES ---
+    ESTADO_CHOICES = [
+        ('PENDIENTE', 'Pendiente'),
+        ('EN_PROCESO', 'En Proceso'),
+        ('PAUSADA', 'Pausada'),
+        ('CERRADA_MECANICO', 'Cerrada por Mecánico'),
+        ('FINALIZADA', 'Finalizada'),
+    ]
+    TIPO_CHOICES = [
+        ('PREVENTIVA', 'Preventiva'),
+        ('CORRECTIVA', 'Correctiva'),
+        ('EVALUATIVA', 'Evaluativa'),
+    ]
+    FORMATO_CHOICES = [
+        ('INTERNO', 'Interno'),
+        ('EXTERNO', 'Externo'),
+    ]
+    MOTIVO_PAUSA_CHOICES = [
+        ('FALTA_REPUESTO', 'Falta de Repuesto'),
+        ('ESPERA_AUTORIZACION', 'Espera de Autorización'),
+        ('FALTA_PERSONAL', 'Falta de Personal'),
+        ('OTRO', 'Otro'),
+    ]
+    PRIORIDAD_CHOICES = [
+        ('BAJA', 'Baja'),
+        ('MEDIA', 'Media'),
+        ('ALTA', 'Alta'),
+        ('CRITICA', 'Crítica'),
+    ]
     
-    folio = models.CharField(max_length=50, unique=True, blank=True, null=True, editable=False)
-    vehiculo = models.ForeignKey('Vehiculo', on_delete=models.PROTECT, related_name='ordenes_trabajo')
+    # --- CAMPOS DEL MODELO ---
+    prioridad = models.CharField(
+        max_length=10,
+        choices=PRIORIDAD_CHOICES,
+        default='MEDIA',
+        verbose_name="Prioridad"
+    )
+    folio = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE, related_name='ordenes_de_trabajo')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='PENDIENTE')
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
-    formato = models.CharField(max_length=20, choices=FORMATO_CHOICES, default='NORMAL')
+    formato = models.CharField(max_length=10, choices=FORMATO_CHOICES, default='INTERNO')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_cierre = models.DateTimeField(null=True, blank=True)
-    
-    # --- CAMPO AÑADIDO: fecha_programada ---
-    fecha_programada = models.DateField(
-        null=True, 
-        blank=True, 
-        help_text="Fecha en la que se planea realizar la OT."
-    )
-    
-    kilometraje_apertura = models.PositiveIntegerField()
+    fecha_programada = models.DateField(null=True, blank=True)
+    kilometraje_apertura = models.PositiveIntegerField(null=True, blank=True)
     kilometraje_cierre = models.PositiveIntegerField(null=True, blank=True)
     observacion_inicial = models.TextField(blank=True, null=True)
-    costo_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    motivo_pendiente = models.TextField(blank=True, null=True, help_text="Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.")
-    tfs_minutos = models.PositiveIntegerField(default=0, verbose_name="Tiempo Fuera de Servicio (minutos)", help_text="Tiempo total en minutos que la unidad estuvo detenida por esta falla.")
-    tareas_realizadas = models.ManyToManyField('Tarea', blank=True)
-    insumos_utilizados = models.ManyToManyField('Insumo', through='DetalleInsumoOT', blank=True)
-    proveedor = models.ForeignKey('Proveedor', null=True, blank=True, on_delete=models.SET_NULL)
-    tipo_falla = models.ForeignKey('TipoFalla', null=True, blank=True, on_delete=models.SET_NULL, help_text="Solo para OTs correctivas")
-    pauta_mantenimiento = models.ForeignKey('PautaMantenimiento', on_delete=models.SET_NULL, null=True, blank=True, help_text="Pauta asociada, solo para OTs de tipo PREVENTIVA")
-    responsable = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='ots_responsable', help_text="Mecánico principal a cargo de la OT.")
-    personal_asignado = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='ots_ayudante', help_text="Equipo de ayudantes que participan en la OT.")
-    sintomas_reportados = models.TextField(blank=True, help_text="Descripción de síntomas (ruidos, luces, etc.) reportados por el conductor.")
-    diagnostico_evaluacion = models.TextField(blank=True, help_text="Conclusión técnica del mecánico tras la evaluación.")
-    MOTIVO_PAUSA_CHOICES = [('FALTA_REPUESTO', 'Falta de Repuesto'), ('ESPERA_AUTORIZACION', 'Espera de Autorización'), ('FALTA_HERRAMIENTA', 'Falta de Herramienta Especial'), ('OTRO', 'Otro (ver notas)')]
-    motivo_pausa = models.CharField(max_length=30, choices=MOTIVO_PAUSA_CHOICES, blank=True, null=True)
-    notas_pausa = models.TextField(blank=True, help_text="Detalles adicionales sobre el motivo de la pausa.")
+    costo_total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    motivo_pendiente = models.TextField(blank=True, null=True)
+    tfs_minutos = models.PositiveIntegerField(default=0, help_text="Tiempo Fuera de Servicio en minutos")
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True)
+    tipo_falla = models.ForeignKey(TipoFalla, on_delete=models.SET_NULL, null=True, blank=True)
+    pauta_mantenimiento = models.ForeignKey(PautaMantenimiento, on_delete=models.SET_NULL, null=True, blank=True)
+    responsable = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ots_responsable')
+    sintomas_reportados = models.TextField(blank=True, null=True)
+    diagnostico_evaluacion = models.TextField(blank=True, null=True)
+    motivo_pausa = models.CharField(max_length=50, choices=MOTIVO_PAUSA_CHOICES, blank=True, null=True)
+    notas_pausa = models.TextField(blank=True, null=True)
+    tareas_realizadas = models.ManyToManyField(Tarea, blank=True, related_name='ordenes_de_trabajo')
+    insumos_utilizados = models.ManyToManyField(Insumo, through='DetalleInsumoOT', blank=True)
+    personal_asignado = models.ManyToManyField(User, related_name='ots_asignadas', blank=True)
 
-    def __str__(self): return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
-    
-    def calcular_costo_total(self):
-        if not self.pk: return 0
-        costo_insumos = sum((detalle.insumo.precio_unitario * detalle.cantidad) for detalle in self.detalleinsumoot_set.all())
-        costo_tareas = sum(tarea.costo_base for tarea in self.tareas_realizadas.all())
-        return costo_insumos + costo_tareas
-
+    # --- MÉTODOS DEL MODELO ---
     def save(self, *args, **kwargs):
-        if not self.folio and not self.pk:
-            now = timezone.now()
-            last_ot = OrdenDeTrabajo.objects.all().order_by('pk').last()
-            next_id = (last_ot.pk + 1) if last_ot else 1
-            self.folio = f"OT-{now.year}{now.month:02d}-{next_id:04d}"
+        # SOLUCIÓN 2: INDENTACIÓN CORREGIDA
+        if not self.folio:
+            last_ot = OrdenDeTrabajo.objects.all().order_by('id').last()
+            new_id = (last_ot.id + 1) if last_ot else 1
+            self.folio = f'OT-{new_id:04d}'
         super().save(*args, **kwargs)
-        is_updating_fields = 'update_fields' in kwargs and kwargs['update_fields'] is not None
-        if not is_updating_fields or 'costo_total' not in kwargs['update_fields']:
-            nuevo_costo = self.calcular_costo_total()
-            if self.costo_total != nuevo_costo:
-                self.costo_total = nuevo_costo
-                super().save(update_fields=['costo_total'])
-                
+
+    def __str__(self):
+        # SOLUCIÓN 2: INDENTACIÓN CORREGIDA
+        return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
+
 class DetalleInsumoOT(models.Model):
     orden_de_trabajo = models.ForeignKey(OrdenDeTrabajo, on_delete=models.CASCADE)
     insumo = models.ForeignKey(Insumo, on_delete=models.PROTECT)

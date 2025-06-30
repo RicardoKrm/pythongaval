@@ -6,12 +6,10 @@ from .models import (
     PautaMantenimiento, ModeloVehiculo 
 )
 
-# --- FORMULARIOS EXISTENTES (MODIFICADOS Y CONSERVADOS) ---
+# En flota/forms.py
+
 class OrdenDeTrabajoForm(forms.ModelForm):
-    """
-    Formulario para la CREACIÓN de una nueva Orden de Trabajo.
-    Ahora incluye validación en el backend para las reglas de negocio.
-    """
+    # ...
     class Meta:
         model = OrdenDeTrabajo
         fields = [
@@ -19,6 +17,10 @@ class OrdenDeTrabajoForm(forms.ModelForm):
             'tipo', 
             'formato', 
             'kilometraje_apertura', 
+            'fecha_programada',
+            # --- LÍNEA COMENTADA ---
+            'prioridad',
+            # ---------------------
             'pauta_mantenimiento',
             'tipo_falla',
             'observacion_inicial',
@@ -29,6 +31,10 @@ class OrdenDeTrabajoForm(forms.ModelForm):
             'tipo': forms.Select(attrs={'class': 'form-control'}),
             'formato': forms.Select(attrs={'class': 'form-control'}),
             'kilometraje_apertura': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'KM al abrir OT'}),
+            'fecha_programada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            # --- LÍNEA COMENTADA ---
+            'prioridad': forms.Select(attrs={'class': 'form-control'}),
+            # ----------------------
             'pauta_mantenimiento': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'tipo_falla': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
             'observacion_inicial': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones o motivo de la OT...'}),
@@ -40,48 +46,32 @@ class OrdenDeTrabajoForm(forms.ModelForm):
         self.fields['pauta_mantenimiento'].required = False
         self.fields['tipo_falla'].required = False
         self.fields['sintomas_reportados'].required = False
+        self.fields['fecha_programada'].required = False
+        # El campo prioridad usará el 'default' del modelo, por lo que no es necesario
+        # marcarlo como no requerido aquí.
 
-    # ---> INICIO DEL BLOQUE NUEVO: MÉTODO CLEAN() <---
     def clean(self):
-        # Primero, obtenemos los datos "limpios" del formulario
+        # La lógica de clean() no necesita cambios.
         cleaned_data = super().clean()
         
-        # Obtenemos el tipo de OT seleccionado por el usuario
         tipo_ot = cleaned_data.get('tipo')
-        
-        # Obtenemos los campos que queremos validar
         pauta = cleaned_data.get('pauta_mantenimiento')
         tipo_falla = cleaned_data.get('tipo_falla')
         sintomas = cleaned_data.get('sintomas_reportados')
 
-        # --- REGLA 1: Pautas solo para OTs Preventivas ---
         if tipo_ot == 'PREVENTIVA' and not pauta:
-            # Si es PREVENTIVA, la pauta es OBLIGATORIA
             self.add_error('pauta_mantenimiento', 'Para una OT Preventiva, debe seleccionar una pauta.')
-        
         if tipo_ot != 'PREVENTIVA' and pauta:
-            # Si NO es PREVENTIVA, no debe tener pauta
             self.add_error('pauta_mantenimiento', 'Las pautas solo se pueden asignar a Órdenes de Trabajo de tipo PREVENTIVA.')
-
-        # --- REGLA 2: Tipo de Falla solo para OTs Correctivas/Evaluativas ---
         if tipo_ot in ['CORRECTIVA', 'EVALUATIVA'] and not tipo_falla:
-            # Si es CORRECTIVA o EVALUATIVA, el tipo de falla es OBLIGATORIO
             self.add_error('tipo_falla', 'Para este tipo de OT, debe especificar un tipo de falla.')
-
         if tipo_ot == 'PREVENTIVA' and tipo_falla:
-            # Si es PREVENTIVA, no debe tener tipo de falla
             self.add_error('tipo_falla', 'El tipo de falla solo se aplica a OTs Correctivas o Evaluativas.')
-
-        # --- REGLA 3: Síntomas solo para OTs Evaluativas ---
         if tipo_ot == 'EVALUATIVA' and not sintomas:
-            # Si es EVALUATIVA, los síntomas son OBLIGATORIOS
             self.add_error('sintomas_reportados', 'Para una OT Evaluativa, debe describir los síntomas reportados.')
-        
         if tipo_ot != 'EVALUATIVA' and sintomas:
-             # Si NO es EVALUATIVA, no debe tener síntomas
             self.add_error('sintomas_reportados', 'Los síntomas solo se aplican a Órdenes de Trabajo de tipo EVALUATIVA.')
 
-        # Devolvemos los datos limpios para que Django continúe el proceso
         return cleaned_data
 
 

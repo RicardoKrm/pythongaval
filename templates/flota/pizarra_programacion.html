@@ -11,10 +11,6 @@
     
     <!-- Estilos personalizados para el tema oscuro y el calendario -->
     <style>
-        /* ========================================================== */
-        /*                 ÚNICO CAMBIO REALIZADO AQUÍ                */
-        /* ========================================================== */
-        /* Forzamos el fondo oscuro para evitar que otras librerías lo sobreescriban */
         html, body { 
             background-color: #1a202c !important; 
             color: #cbd5e0 !important;
@@ -32,16 +28,32 @@
         .fc-day-today { background: #2d3748 !important; }
         .fc-button { background-color: #3182ce !important; border-color: #3182ce !important; box-shadow: none !important; }
         .fc-toolbar-title { color: #e2e8f0; }
-        .fc-event { cursor: grab; background-color: #dd6b20; border-color: #dd6b20; } /* Color base para eventos */
+        .fc-event { cursor: grab; }
         .fc-event:active { cursor: grabbing; }
 
-        /* Colores de eventos por estado (opcional, pero recomendado) */
+        /* Colores de fondo por ESTADO */
         .fc-event.estado-PENDIENTE { background-color: #dd6b20; border-color: #dd6b20; }
         .fc-event.estado-EN_PROCESO { background-color: #3182ce; border-color: #3182ce; }
         .fc-event.estado-PAUSADA { background-color: #d69e2e; border-color: #d69e2e; }
         .fc-event.estado-CERRADA_MECANICO { background-color: #718096; border-color: #718096; }
         .fc-event.estado-FINALIZADA { background-color: #2f855a; border-color: #2f855a; }
-
+        
+        /* Estilos de borde por PRIORIDAD */
+        .fc-event {
+            border-left: 5px solid transparent; /* Borde por defecto */
+        }
+        .fc-event.prioridad-BAJA {
+            border-left-color: #3182ce; /* Azul */
+        }
+        .fc-event.prioridad-MEDIA {
+            border-left-color: #718096; /* Gris */
+        }
+        .fc-event.prioridad-ALTA {
+            border-left-color: #dd6b20; /* Naranja */
+        }
+        .fc-event.prioridad-CRITICA {
+            border-left-color: #c53030; /* Rojo */
+        }
     </style>
 {% endblock %}
 
@@ -96,13 +108,29 @@
             },
             editable: true,
             
-            // Para colorear los eventos según su estado, necesitamos añadir una clase
-            eventClassNames: function(arg) {
-                if (arg.event.extendedProps.estado) {
-                    return [ 'estado-' + arg.event.extendedProps.estado.replace(' ', '_').toUpperCase() ];
-                }
-                return [];
+            dateClick: function(info) {
+                const fechaSeleccionada = info.dateStr.split('T')[0];
+                const url = `{% url 'ot_list' %}?fecha_programada=${fechaSeleccionada}&from_calendar=true`;
+                window.location.href = url;
             },
+            
+            // --- FUNCIÓN CORREGIDA ---
+            eventClassNames: function(arg) {
+                let classes = []; 
+
+                // Clase para el ESTADO
+                if (arg.event.extendedProps.estado) {
+                    classes.push('estado-' + arg.event.extendedProps.estado.replace(/ /g, '_').toUpperCase());
+                }
+
+                // Clase para la PRIORIDAD
+                if (arg.event.extendedProps.prioridad) {
+                    classes.push('prioridad-' + arg.event.extendedProps.prioridad.toUpperCase());
+                }
+                
+                return classes;
+            },
+            // --- FIN DE LA CORRECCIÓN ---
 
             events: function(fetchInfo, successCallback, failureCallback) {
                 const params = new URLSearchParams(new FormData(document.getElementById('filtro-calendario-form')));
@@ -137,7 +165,7 @@
 
             eventDidMount: function(info) {
                 new bootstrap.Tooltip(info.el, {
-                    title: `<b>Vehículo:</b> ${info.event.title}<br><b>Tipo:</b> ${info.event.extendedProps.tipo}<br><b>Estado:</b> ${info.event.extendedProps.estado}<br><b>Responsable:</b> ${info.event.extendedProps.responsable || 'N/A'}`,
+                    title: `<b>Vehículo:</b> ${info.event.title}<br><b>Tipo:</b> ${info.event.extendedProps.tipo}<br><b>Estado:</b> ${info.event.extendedProps.estado}<br><b>Responsable:</b> ${info.event.extendedProps.responsable || 'N/A'}<br><b>Prioridad:</b> ${info.event.extendedProps.prioridad || 'N/A'}`,
                     html: true, placement: 'top', trigger: 'hover', container: 'body'
                 });
             },
@@ -156,6 +184,3 @@
     });
     </script>
 {% endblock extra_scripts %}
-
-
-
