@@ -861,3 +861,29 @@ def repuesto_detail(request, pk):
         'movimientos': movimientos,
     }
     return render(request, 'flota/repuesto_detail.html', context)
+
+@login_required
+def repuesto_search_api(request):
+    """
+    API que busca repuestos por nombre o número de parte y los devuelve en JSON.
+    """
+    connection.set_tenant(request.tenant)
+    query = request.GET.get('q', '')
+    
+    if len(query) < 2: # No buscar si la consulta es muy corta
+        return JsonResponse([], safe=False)
+        
+    repuestos = Repuesto.objects.filter(
+        Q(nombre__icontains=query) | Q(numero_parte__icontains=query)
+    )[:10] # Limitamos a 10 resultados para no sobrecargar
+    
+    results = []
+    for repuesto in repuestos:
+        results.append({
+            'id': repuesto.id,
+            'text': f"{repuesto.nombre} ({repuesto.numero_parte})",
+            'stock': repuesto.stock_actual,
+            'calidad': repuesto.get_calidad_display(),
+        })
+        
+    return JsonResponse(results, safe=False)
