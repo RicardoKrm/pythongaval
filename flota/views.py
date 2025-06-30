@@ -15,6 +15,8 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import JsonResponse
+from django.urls import reverse
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
@@ -23,7 +25,7 @@ from .models import (
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
     CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm,
-    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm
+    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm,
 )
 from django.utils import timezone # <-- Asegúrate de tener este import
 
@@ -131,24 +133,15 @@ def dashboard_flota(request):
     }
     return render(request, 'flota/dashboard.html', context)
 
-
-# ==========================================================
-#    INICIO DEL BLOQUE PARA REEMPLAZAR orden_trabajo_list
-# =======================================================
-
 # ====================================================================
 #    INICIO DEL BLOQUE PARA REEMPLAZAR la función orden_trabajo_list
 # ====================================================================
-
-# Asegúrate de tener estos imports al principio de tu views.py
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from .forms import OTFiltroForm # Y los otros formularios que ya tenías
 
 @login_required
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
     
-    # Lógica para el método POST (cuando se envía el formulario de CREACIÓN)
+    # Lógica para el método POST
     if request.method == 'POST':
         form = OrdenDeTrabajoForm(request.POST)
         if form.is_valid():
@@ -162,23 +155,33 @@ def orden_trabajo_list(request):
                 for error in errors:
                     label = form.fields[field].label or field.capitalize()
                     messages.error(request, f"Error en '{label}': {error}")
-            # Aunque hay errores, redirigimos para limpiar el POST y mostramos errores como mensajes
             return redirect('ot_list')
 
-    # Lógica para el método GET (cargar la página, filtrar, paginar)
+    # Lógica para el método GET
     else:
-        # Tu lógica original para pre-rellenar el formulario
         initial_data = {}
+        
+        # Pre-rellenar si viene vehiculo_id
         vehiculo_id = request.GET.get('vehiculo_id')
         if vehiculo_id:
             initial_data['vehiculo'] = vehiculo_id
             initial_data['tipo'] = 'CORRECTIVA'
+        
+        # ---> LÓGICA CORREGIDA <---
+        # Leer la fecha de la URL (si viene del calendario)
+        fecha_inicio = request.GET.get('fecha_inicio')
+        if fecha_inicio:
+            # Como discutimos, no podemos pre-rellenar 'fecha_creacion'.
+            # Pero si en el futuro añades 'fecha_programada', aquí iría la lógica:
+            # initial_data['fecha_programada'] = fecha_inicio
+            pass 
+        
         form = OrdenDeTrabajoForm(initial=initial_data)
 
-    # 1. Obtenemos el queryset base
+    # El resto de la lógica (filtros y paginación) está fuera del if/else
+    # y se aplica siempre que se renderiza la página.
     ordenes_list = OrdenDeTrabajo.objects.all().select_related('vehiculo').order_by('-fecha_creacion')
     
-    # 2. Instanciamos y procesamos el formulario de filtros
     filtro_form = OTFiltroForm(request.GET)
     if filtro_form.is_valid():
         if filtro_form.cleaned_data['vehiculo']:
@@ -192,8 +195,7 @@ def orden_trabajo_list(request):
         if filtro_form.cleaned_data['fecha_hasta']:
             ordenes_list = ordenes_list.filter(fecha_creacion__date__lte=filtro_form.cleaned_data['fecha_hasta'])
 
-    # 3. Paginación
-    paginator = Paginator(ordenes_list, 10) # 20 OTs por página
+    paginator = Paginator(ordenes_list, 10)
     page = request.GET.get('page')
     try:
         ordenes_paginadas = paginator.page(page)
@@ -203,11 +205,58 @@ def orden_trabajo_list(request):
         ordenes_paginadas = paginator.page(paginator.num_pages)
     
     context = {
-        'ordenes': ordenes_paginadas,      # Pasamos el objeto paginado
-        'form': form,                      # Formulario de creación
-        'filtro_form': filtro_form,        # Formulario de filtros
+        'ordenes': ordenes_paginadas,
+        'form': form,
+        'filtro_form': filtro_form,
     }
     return render(request, 'flota/orden_trabajo_list.html', context)
+
+# ====================================================================
+#    FIN DEL BLOQUE
+# ====================================================================
+
+
+# En flota/views.py
+
+@login_required
+def ot_eventos_api(request):
+    """
+    Esta vista devuelve las OTs en formato JSON para FullCalendar,
+    AHORA ACEPTA PARÁMETROS DE FILTRADO.
+    """
+    connection.set_tenant(request.tenant)
+    
+    # Empezamos con todas las OTs
+    ordenes = OrdenDeTrabajo.objects.all().select_related('vehiculo', 'responsable')
+    
+    # Obtenemos los posibles filtros de la petición GET
+    vehiculo_id = request.GET.get('vehiculo')
+    estado = request.GET.get('estado')
+    responsable_id = request.GET.get('responsable')
+
+    # Aplicamos los filtros si existen
+    if vehiculo_id:
+        ordenes = ordenes.filter(vehiculo_id=vehiculo_id)
+    if estado:
+        ordenes = ordenes.filter(estado=estado)
+    if responsable_id:
+        ordenes = ordenes.filter(responsable_id=responsable_id)
+
+    # El resto de la función es igual
+    eventos = []
+    for ot in ordenes:
+        # ... (código para crear el diccionario del evento, sin cambios) ...
+        color = {'PENDIENTE': '#dd6b20', 'EN_PROCESO': '#3182ce', 'PAUSADA': '#d69e2e', 'CERRADA_MECANICO': '#718096', 'FINALIZADA': '#2f855a'}.get(ot.estado, '#718096')
+        eventos.append({
+            'id': ot.pk, 'title': f"OT-{ot.folio or ot.pk} ({ot.vehiculo.numero_interno})",
+            'start': ot.fecha_creacion.isoformat(),
+            'end': ot.fecha_cierre.isoformat() if ot.fecha_cierre else None,
+            'url': reverse('ot_detail', args=[ot.pk]),
+            'backgroundColor': color, 'borderColor': color,
+            'extendedProps': {'tipo': ot.get_tipo_display(), 'estado': ot.get_estado_display(), 'responsable': ot.responsable.username if ot.responsable else 'N/A'}
+        })
+            
+    return JsonResponse(eventos, safe=False)
 
 
 @login_required
@@ -384,25 +433,24 @@ def historial_vehiculo(request, pk):
     context = {'vehiculo': vehiculo, 'ordenes': ordenes}
     return render(request, 'flota/historial_vehiculo.html', context)
 
+# ====================================================================
+
+# En flota/views.py
 
 @login_required
-def bitacora_diaria_list(request):
+def pizarra_programacion(request):
+    """
+    Renderiza la plantilla del calendario Y le pasa un formulario de creación vacío
+    para que lo use el modal.
+    """
     connection.set_tenant(request.tenant)
-    if request.method == 'POST':
-        form = BitacoraDiariaForm(request.POST)
-        if form.is_valid():
-            BitacoraDiaria.objects.update_or_create(
-                vehiculo=form.cleaned_data['vehiculo'],
-                fecha=form.cleaned_data['fecha'],
-                defaults=form.cleaned_data
-            )
-            messages.success(request, f"Registro de bitácora para el vehículo {form.cleaned_data['vehiculo'].numero_interno} guardado.")
-            return redirect('bitacora_list')
-    else:
-        form = BitacoraDiariaForm()
-    bitacoras = BitacoraDiaria.objects.all().order_by('-fecha', 'vehiculo__numero_interno')[:50]
-    context = {'form': form, 'bitacoras': bitacoras}
-    return render(request, 'flota/bitacora_list.html', context)
+    form = OrdenDeTrabajoForm() # Creamos una instancia vacía
+    
+    context = {
+        'form': form 
+    } 
+    return render(request, 'flota/pizarra_programacion.html', context)
+
 
 
 @login_required

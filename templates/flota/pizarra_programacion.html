@@ -1,0 +1,70 @@
+{% extends "flota/base.html" %}
+
+{% block title %}Pizarra de Programación{% endblock %}
+
+{% block extra_head %}
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <style>
+        /* ... tus estilos ... */
+    </style>
+{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Pizarra de Programación</h1>
+
+<!-- Formulario de Filtros (sin cambios) -->
+<div class="card mb-4">
+    <!-- ... tu código del formulario de filtros ... -->
+</div>
+
+<!-- Contenedor del Calendario -->
+<div id='calendar-container' class="card p-4">
+    <div id='calendar'></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/interaction/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script> 
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            // ... (opciones de initialView, locale, headerToolbar, events, etc.) ...
+            selectable: true,
+
+             locale: 'es', // <-- AQUÍ ESTÁ LA LÍNEA CLAVE
+
+            selectable: true,
+            select: function(info) {
+                const fechaSeleccionada = info.startStr.split('T')[0];
+                const url = `{% url 'ot_list' %}?fecha_inicio=${fechaSeleccionada}#crear-ot-seccion`; // Añadimos el ancla
+                window.location.href = url;
+                 },
+
+            // ==========================================================
+            //           LÓGICA DE REDIRECCIÓN AL SELECCIONAR FECHA
+            // ==========================================================
+            select: function(info) {
+                // Obtenemos la fecha de inicio de la selección en formato YYYY-MM-DD
+                const fechaSeleccionada = info.startStr.split('T')[0];
+                
+                // Construimos la URL para la página de creación de OT, añadiendo la fecha como parámetro GET
+                const url = `{% url 'ot_list' %}?fecha_inicio=${fechaSeleccionada}`;
+                
+                // Redirigimos al usuario a esa URL
+                window.location.href = url;
+            },
+            
+            eventClick: function(info) { /* ... (sin cambios) ... */ },
+            eventDidMount: function(info) { /* ... (sin cambios) ... */ }
+        });
+
+        calendar.render();
+        
+        // ... (el JavaScript para los filtros se mantiene igual) ...
+    });
+    </script>
+{% endblock extra_scripts %}

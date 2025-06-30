@@ -74,7 +74,7 @@
         <div class="nav-links">
             <a href="{% url 'dashboard' %}">Pizarra de Mantenimiento</a>
             <a href="{% url 'ot_list' %}">Órdenes de Trabajo</a>
-            <a href="{% url 'bitacora_list' %}">Bitácora Diaria</a>
+            <a href="{% url 'pizarra_programacion' %}">Pizarra de Programación</a>
             <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
             <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
             <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
@@ -114,15 +114,15 @@
     <!-- Cargar Select2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!-- Script global para inicializar todos los Select2 de la página -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
         $(document).ready(function() {
             $('.select2').select2();
         });
     </script>
-    <!-- ========================================================== -->
-
-    {% block extra_scripts %}
-    {% endblock extra_scripts %}
+    
+    {% block extra_scripts %}{% endblock extra_scripts %}
 
 </body>
 </html>

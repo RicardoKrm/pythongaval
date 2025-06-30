@@ -234,3 +234,25 @@ class OTFiltroForm(forms.Form):
         label="Fecha Hasta",
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
+
+
+class CalendarioFiltroForm(forms.Form):
+    # Usamos campos no requeridos para que el filtro sea opcional
+    vehiculo = forms.ModelChoiceField(
+        queryset=Vehiculo.objects.all(), 
+        required=False,
+        label="Filtrar por Vehículo",
+        widget=forms.Select(attrs={'class': 'form-select select2'})
+    )
+    estado = forms.ChoiceField(
+        choices=[('', 'Todos los Estados')] + OrdenDeTrabajo.ESTADO_CHOICES,
+        required=False, 
+        label="Filtrar por Estado",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    responsable = forms.ModelChoiceField(
+        queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']),
+        required=False,
+        label="Filtrar por Responsable",
+        widget=forms.Select(attrs={'class': 'form-select select2'})
+    )
