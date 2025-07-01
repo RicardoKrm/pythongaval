@@ -245,7 +245,7 @@ class OrdenDeTrabajo(models.Model):
         ('ALTA', 'Alta'),
         ('CRITICA', 'Crítica'),
     ]
-    
+
     # --- CAMPOS DEL MODELO ---
     prioridad = models.CharField(
         max_length=10,
@@ -276,47 +276,79 @@ class OrdenDeTrabajo(models.Model):
     motivo_pausa = models.CharField(max_length=50, choices=MOTIVO_PAUSA_CHOICES, blank=True, null=True)
     notas_pausa = models.TextField(blank=True, null=True)
     tareas_realizadas = models.ManyToManyField(Tarea, blank=True, related_name='ordenes_de_trabajo')
-    
-    # CAMBIO AQUÍ: La relación ManyToMany `insumos_utilizados` se gestionará mejor
-    # a través del `related_name` de DetalleInsumoOT, ya no es necesaria aquí.
-    # Puedes comentar o eliminar esta línea:
-    # insumos_utilizados = models.ManyToManyField(Insumo, through='DetalleInsumoOT', blank=True)
-    
+
+    # Como mencionaste, la relación ManyToMany `insumos_utilizados` se gestiona a través de DetalleInsumoOT.
+    # No es necesario declararla explícitamente aquí si DetalleInsumoOT ya tiene un ForeignKey a OrdenDeTrabajo.
+    # Si DetalleInsumoOT tiene un ForeignKey a OrdenDeTrabajo, la relación inversa
+    # 'detalles_insumos_ot' (por defecto sería 'detalleinsumoots_set' si no hay related_name)
+    # ya existe y puedes usarla directamente. Si DetalleInsumoOT tiene un related_name como
+    # 'detalles_de_ot', entonces la usarías así: self.detalles_de_ot.all().
+    # Asumo que tienes un modelo DetalleInsumoOT con un ForeignKey a esta OrdenDeTrabajo
+    # y un related_name como 'detalles_insumos_ot'. Si no es así, por favor, avísame.
+
     personal_asignado = models.ManyToManyField(User, related_name='ots_asignadas', blank=True)
 
     # --- MÉTODOS DEL MODELO ---
     def save(self, *args, **kwargs):
+        # Generar el folio si es nuevo (antes de super().save() para que esté disponible si se necesita)
         if not self.folio:
+            # Obtener el último ID para generar el folio. Es preferible hacerlo antes de guardar,
+            # pero considera que si hay muchas inserciones concurrentes, podría haber duplicados.
+            # Una alternativa más robusta para folios únicos es usar un campo UUID.
             last_ot = OrdenDeTrabajo.objects.all().order_by('id').last()
             new_id = (last_ot.id + 1) if last_ot else 1
             self.folio = f'OT-{new_id:04d}'
-        
-        # Recalcular el costo total de la OT antes de guardar
+
+        # Llama primero al método save del padre para guardar la instancia en la DB
+        # y asegurarte de que tenga un primary key (ID).
+        super().save(*args, **kwargs)
+
+        # Ahora que la instancia OrdenDeTrabajo tiene un PK, puedes acceder a sus relaciones inversas.
+        # Recalcular el costo total de la OT después de que los detalles de insumos puedan ser relacionados
+        # (especialmente útil si los detalles se guardan en la misma transacción o inmediatamente después).
+        # Si los DetalleInsumoOT se agregan DESPUÉS de guardar la OT inicial, este cálculo
+        # debería hacerse en otro lugar (ej. en la vista, después de guardar ambos).
+        # Sin embargo, si estás creando la OT y los DetalleInsumoOT al mismo tiempo,
+        # y los DetalleInsumoOT se guardan en el mismo `save()` (lo cual es menos común
+        # si se manejan con un Formset), esta lógica tiene sentido.
+        #
+        # Si estás creando una nueva OT y los detalles NO están guardados aún,
+        # self.detalles_insumos_ot.all() estará vacío en la primera pasada de save().
+        # Una solución común es actualizar el costo total en una segunda pasada,
+        # o cuando se guarden los detalles del insumo.
+        #
+        # Para el propósito de arreglar el `ValueError`, movemos esto aquí.
+        # Si los detalles NO se guardan junto con la OT, este costo será 0 inicialmente.
         costo_insumos = 0
-        # ¡IMPORTANTE! Usamos el nuevo related_name 'detalles_insumos_ot'
-        for detalle in self.detalles_insumos_ot.all():
-            if detalle.repuesto_inventario: # Si es un repuesto del inventario
-                # Asegúrate de que Repuesto.precio_unitario esté definido
+        for detalle in self.detalles_insumos_ot.all(): # Ahora esto no dará ValueError
+            if detalle.repuesto_inventario:
                 costo_insumos += detalle.cantidad * detalle.repuesto_inventario.precio_unitario
-            elif detalle.insumo: # Si es un insumo genérico (no de inventario)
+            elif detalle.insumo:
                 costo_insumos += detalle.cantidad * detalle.insumo.precio_unitario
-        
+
+        # Si tareas_realizadas ya está establecido (ej. a través de un ManyToManyField en el formulario),
+        # esto funcionará. De lo contrario, también podría ser 0 en la primera pasada.
         costo_tareas = self.tareas_realizadas.aggregate(total=Sum('costo_base'))['total'] or 0
         self.costo_total = costo_insumos + costo_tareas
-        
-        super().save(*args, **kwargs)
+
+        # Si el costo_total se ha actualizado, debemos guardarlo de nuevo.
+        # Esto resultará en una segunda llamada a save(), lo cual es aceptable
+        # para asegurar que el costo_total se actualice correctamente.
+        # Si quieres evitar la segunda llamada, considera un trigger de DB
+        # o un signal post_save, o calcula el costo_total en tu vista.
+        if self.has_changed('costo_total'): # Solo guarda de nuevo si el costo ha cambiado
+             super().save(update_fields=['costo_total'])
+
 
     def __str__(self):
         return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
 
-    # --- ¡NUEVO MÉTODO PARA LA DISPONIBILIDAD DE REPUESTOS PLANIFICADOS! ---
+    # --- MÉTODO ADICIONAL PARA LA DISPONIBILIDAD DE REPUESTOS ---
     def has_all_parts_available(self):
         """
         Verifica si todos los repuestos *planificados* (requeridos por las tareas asociadas)
         para esta Orden de Trabajo están disponibles en el stock actual.
         """
-        # Obtener todas las relaciones RepuestoRequeridoPorTarea para las tareas de esta OT
-        # Usamos .values() y .annotate() para agrupar por repuesto y sumar las cantidades requeridas
         required_parts_data = RepuestoRequeridoPorTarea.objects.filter(
             tarea__in=self.tareas_realizadas.all()
         ).values('repuesto__id', 'repuesto__stock_actual').annotate(
@@ -335,6 +367,13 @@ class OrdenDeTrabajo(models.Model):
                 return False # En cuanto encuentra un repuesto faltante, retorna False
 
         return True # Si revisó todos y todos están disponibles, retorna True
+
+    # Método auxiliar para verificar si un campo ha cambiado antes de un segundo save
+    def has_changed(self, field_name):
+        if not self.pk: # Si no ha sido guardado, todo es nuevo
+            return True
+        old_value = self.__class__._default_manager.filter(pk=self.pk).values_list(field_name, flat=True).get()
+        return getattr(self, field_name) != old_value
 
 
 class DetalleInsumoOT(models.Model):
