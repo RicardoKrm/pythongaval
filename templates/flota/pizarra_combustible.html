@@ -1,0 +1,107 @@
+{% extends "flota/base.html" %}
+
+{% block title %}Análisis de Rendimiento y Combustible{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .layout-container { display: flex; gap: 1.5rem; }
+        .sidebar-menu { flex: 0 0 280px; background-color: #2d3748; padding: 1rem; border-radius: 8px; height: calc(100vh - 120px); overflow-y: auto; }
+        .main-content { flex-grow: 1; }
+        .sidebar-menu h4 { border-bottom: 1px solid #4a5568; padding-bottom: 0.5rem; }
+        .vehicle-list { list-style: none; padding: 0; }
+        .vehicle-list a { display: block; padding: 0.75rem 1rem; color: #cbd5e0; text-decoration: none; border-radius: 6px; }
+        .vehicle-list a:hover { background-color: #4a5568; }
+        .vehicle-list a.active { background-color: #3182ce; color: white; font-weight: bold; }
+        .card { background-color: #2d3748; border: 1px solid #4a5568; }
+        .form-label { font-weight: 600; }
+        .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border-color: #4a5568; }
+        .select2-container--default .select2-selection--single { background-color: #1a202c !important; border-color: #4a5568 !important; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { color: #cbd5e0 !important; }
+        .table-sm th, .table-sm td { padding: 0.5rem; }
+        .kpi-box { background-color: #1a202c; padding: 1rem; border-radius: 8px; text-align: center; }
+        .kpi-box .label { font-size: 0.9em; color: #a0aec0; }
+        .kpi-box .value { font-size: 1.75em; font-weight: bold; }
+        .prediction-result { border-left: 4px solid #3182ce; padding: 1rem; background-color: #1a202c; margin-top: 1rem; }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Análisis de Rendimiento y Combustible</h1>
+    <a href="{% url 'registrar_carga_combustible' %}" class="btn btn-primary"><i class="fas fa-plus-circle me-2"></i>Registrar Nueva Carga</a>
+</div>
+
+<div class="layout-container">
+    <!-- Columna Izquierda: Menú de Vehículos -->
+    <aside class="sidebar-menu">
+        <h4 class="text-light mb-3">Flota de Vehículos</h4>
+        <ul class="vehicle-list">
+            {% for v in todos_los_vehiculos %}
+            <li><a href="?vehiculo_id={{ v.pk }}" class="{% if vehiculo_seleccionado.pk == v.pk %}active{% endif %}">{{ v.numero_interno }} - {{ v.patente }}</a></li>
+            {% empty %}
+            <li><p class="text-muted">No hay vehículos.</p></li>
+            {% endfor %}
+        </ul>
+    </aside>
+
+    <!-- Columna Derecha: Contenido Principal -->
+    <main class="main-content">
+        {% if vehiculo_seleccionado %}
+            <div class="card p-4">
+                <h3 class="mb-4">Análisis del Vehículo: {{ vehiculo_seleccionado.numero_interno }}</h3>
+                <div class="row mb-4">
+                    <div class="col-md-4"><div class="kpi-box"><div class="label">Rendimiento Promedio</div><div class="value">{{ analisis.rendimiento_general|floatformat:2|default:"N/A" }} <small>Km/L</small></div></div></div>
+                    <div class="col-md-4"><div class="kpi-box"><div class="label">Total Cargas</div><div class="value">{{ analisis.historial_cargas.count }}</div></div></div>
+                    <div class="col-md-4"><div class="kpi-box"><div class="label">Último KM Registrado</div><div class="value">{{ vehiculo_seleccionado.kilometraje_actual|floatformat:0 }}</div></div></div>
+                </div>
+
+                <!-- Predicción de Consumo (MODIFICADO) -->
+                <div class="card mb-4" style="background-color:#1a202c"><div class="card-body">
+                    <h5 class="mb-3">Predicción de Consumo</h5>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="vehiculo_prediccion" value="{{ vehiculo_seleccionado.pk }}">
+                        <div class="row align-items-end">
+                            <div class="col-md-4 mb-3"><label for="origen_prediccion" class="form-label">Origen</label><input type="text" name="origen_prediccion" class="form-control" placeholder="Ej: Calama"></div>
+                            <div class="col-md-4 mb-3"><label for="destino_prediccion" class="form-label">Destino</label><input type="text" name="destino_prediccion" class="form-control" placeholder="Ej: Antofagasta"></div>
+                            <div class="col-md-4 mb-3"><label for="distancia_prediccion" class="form-label">Distancia (Km)</label><input type="number" step="0.01" name="distancia_prediccion" class="form-control" required></div>
+                        </div>
+                        <button type="submit" name="predecir_consumo" class="btn btn-info w-100 mt-2">Predecir Consumo</button>
+                    </form>
+                    {% if resultado_prediccion %}
+                    <div class="prediction-result mt-3">
+                        {% if resultado_prediccion.error %}<p class="text-danger mb-0">{{ resultado_prediccion.error }}</p>{% else %}<p class="mb-1">Consumo estimado para <strong>{{ resultado_prediccion.distancia_utilizada|floatformat:2 }} km</strong>:</p><p class="fs-3 fw-bold text-info mb-2">{{ resultado_prediccion.consumo_predicho_litros|floatformat:2 }} Litros</p><small class="text-muted">Basado en el rendimiento promedio del vehículo ({{ resultado_prediccion.rendimiento_base_kml|floatformat:2 }} Km/L).</small>{% endif %}
+                    </div>
+                    {% endif %}
+                </div></div>
+
+                <!-- Tablas de Desglose (sin cambios) -->
+                <div class="row">
+                    <div class="col-md-6"><h5 class="mb-3">Rendimiento por Ruta</h5><table class="table table-dark table-sm"><thead><tr><th>Ruta</th><th>Rendimiento Prom.</th></tr></thead><tbody>{% for item in analisis.analisis_por_ruta %}<tr><td>{{ item.ruta__nombre }}</td><td><strong>{{ item.promedio_ruta|floatformat:2 }} Km/L</strong></td></tr>{% empty %}<tr><td colspan="2" class="text-center">Sin datos</td></tr>{% endfor %}</tbody></table></div>
+                    <div class="col-md-6"><h5 class="mb-3">Rendimiento por Conductor</h5><table class="table table-dark table-sm"><thead><tr><th>Conductor</th><th>Rendimiento Prom.</th></tr></thead><tbody>{% for item in analisis.analisis_por_conductor %}<tr><td>{{ item.conductor__username }}</td><td><strong>{{ item.promedio_conductor|floatformat:2 }} Km/L</strong></td></tr>{% empty %}<tr><td colspan="2" class="text-center">Sin datos</td></tr>{% endfor %}</tbody></table></div>
+                </div>
+
+                <!-- Historial de Cargas (sin cambios) -->
+                <h5 class="mt-4 mb-3">Historial de Cargas</h5>
+                <div class="table-responsive" style="max-height: 400px;"><table class="table table-dark table-striped table-sm"><thead><tr><th>Fecha</th><th>KM</th><th>Litros</th><th>Costo Total</th><th>Rendimiento Tramo</th></tr></thead><tbody>{% for carga in analisis.historial_cargas %}<tr><td>{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td><td>{{ carga.kilometraje_en_carga|floatformat:0 }}</td><td>{{ carga.litros_cargados|floatformat:2 }}</td><td>${{ carga.costo_total_carga|floatformat:0|default:"0" }}</td><td>{% if carga.rendimiento_calculado_kml %}<strong class="text-success">{{ carga.rendimiento_calculado_kml|floatformat:2 }} Km/L</strong>{% else %}<span class="text-muted small">Pendiente</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+            </div>
+        {% else %}
+            <div class="card p-5 text-center"><h3><i class="fas fa-arrow-left me-3"></i>Seleccione un Vehículo</h3><p class="text-muted">Por favor, seleccione un vehículo del menú de la izquierda para ver su análisis de rendimiento detallado.</p></div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // El JavaScript para el modal de registro de carga ya no es necesario aquí,
+    // ya que está en su propia página. El resto del JS se mantiene simple.
+});
+</script>
+{% endblock %}

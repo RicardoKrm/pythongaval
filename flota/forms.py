@@ -5,7 +5,8 @@ from django.contrib.auth.models import User
 
 from .models import (
     OrdenDeTrabajo, BitacoraDiaria, Vehiculo, Tarea, Insumo, DetalleInsumoOT,
-    PautaMantenimiento, ModeloVehiculo, Repuesto, MovimientoStock, Personal # Asegúrate de que Personal esté aquí si lo usas en el futuro
+    PautaMantenimiento, ModeloVehiculo, Repuesto, MovimientoStock, Personal,
+    Ruta, CondicionAmbiental, CargaCombustible # <-- ASEGÚRATE DE QUE ESTÉ AQUÍ
 )
 
 class OrdenDeTrabajoForm(forms.ModelForm):
@@ -316,3 +317,61 @@ class MovimientoStockForm(forms.ModelForm):
         if cantidad == 0:
             raise forms.ValidationError("La cantidad no puede ser cero.")
         return cantidad
+    
+class CargaCombustibleForm(forms.ModelForm):
+    # Campos adicionales para crear un objeto CondicionAmbiental sobre la marcha
+    temperatura_celsius = forms.IntegerField(
+        label="Temperatura (°C)", 
+        initial=15,
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    condicion_climatica = forms.ChoiceField(
+        choices=CondicionAmbiental.CLIMA_CHOICES, 
+        label="Condición Climática",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    nivel_trafico = forms.ChoiceField(
+        choices=CondicionAmbiental.TRAFICO_CHOICES,
+        label="Nivel de Tráfico",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    class Meta:
+        model = CargaCombustible
+        fields = [
+            'vehiculo', 
+            'conductor', 
+            'ruta', 
+            'fecha_carga', 
+            'kilometraje_en_carga', 
+            'litros_cargados',
+            'costo_por_litro',
+            'costo_total_carga',
+            'es_tanque_lleno',
+            # Los campos de CondicionAmbiental se añaden arriba
+        ]
+        widgets = {
+            'vehiculo': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'conductor': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'ruta': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
+            'fecha_carga': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'kilometraje_en_carga': forms.NumberInput(attrs={'class': 'form-control'}),
+            'litros_cargados': forms.NumberInput(attrs={'class': 'form-control'}),
+            'costo_por_litro': forms.NumberInput(attrs={'class': 'form-control'}),
+            'costo_total_carga': forms.NumberInput(attrs={'class': 'form-control'}),
+            'es_tanque_lleno': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hacemos que el conductor y la ruta no sean obligatorios
+        self.fields['conductor'].required = False
+        self.fields['ruta'].required = False
+        self.fields['costo_por_litro'].required = False
+        self.fields['costo_total_carga'].required = False
+        
+        # Filtrar el queryset del campo 'conductor' para mostrar solo usuarios activos en grupos relevantes
+        self.fields['conductor'].queryset = User.objects.filter(
+            is_active=True, 
+            groups__name__in=['Mecánico', 'Supervisor', 'Administrador']
+        ).distinct()    

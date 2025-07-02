@@ -34,7 +34,9 @@ urlpatterns = [
     path('api/mecanicos-recursos/', flota_views.mecanicos_recursos_api, name='mecanicos_recursos_api'),
     path('api/ot-actualizar-fecha/<int:pk>/', flota_views.actualizar_fecha_ot_api, name='actualizar_fecha_ot_api'),
     path('api/repuestos/search/', flota_views.repuesto_search_api, name='repuesto_search_api'),
-     path('api/ots/add-repuesto/', flota_views.add_repuesto_a_ot_api, name='add_repuesto_a_ot_api'),
+    path('api/ots/add-repuesto/', flota_views.add_repuesto_a_ot_api, name='add_repuesto_a_ot_api'),
+    path('pizarra-combustible/', flota_views.pizarra_combustible, name='pizarra_combustible'),
+    path('combustible/registrar/', flota_views.registrar_carga_combustible, name='registrar_carga_combustible'),
     
 
     

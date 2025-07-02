@@ -19,16 +19,20 @@ from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse
 from django.urls import reverse
+from django.db.models import Min, Sum, Count, F, Q, Avg
+from django.db.models import OuterRef, Subquery, Avg
+
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
     Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto,
-    MovimientoStock, RepuestoRequeridoPorTarea 
+    MovimientoStock, RepuestoRequeridoPorTarea,
+    Ruta, CondicionAmbiental, CargaCombustible # <-- ASEGÚRATE DE QUE ESTÉ AQUÍ
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
     CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm, AsignarTareaForm,
-    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm, MovimientoStockForm
+    PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm, MovimientoStockForm, CargaCombustibleForm
 
 )
 from django.utils import timezone 
@@ -1040,3 +1044,170 @@ def add_repuesto_a_ot_api(request):
         return JsonResponse({'status': 'error', 'message': 'JSON mal formado en el cuerpo de la petición.'}, status=400)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': f'Ha ocurrido un error inesperado en el servidor: {e}'}, status=500)
+    
+
+
+def predecir_consumo_para_ruta(vehiculo, ruta, distancia_personalizada=None):
+    if distancia_personalizada:
+        try:
+            distancia_a_recorrer = float(distancia_personalizada)
+        except (ValueError, TypeError):
+            return {'error': 'La distancia personalizada debe ser un número válido.'}
+    else:
+        distancia_a_recorrer = float(ruta.distancia_km)
+
+    rendimiento_en_ruta = CargaCombustible.objects.filter(
+        vehiculo=vehiculo, ruta=ruta, rendimiento_calculado_kml__isnull=False
+    ).aggregate(promedio=Avg('rendimiento_calculado_kml'))['promedio']
+
+    if not rendimiento_en_ruta:
+        rendimiento_general = CargaCombustible.objects.filter(
+            vehiculo=vehiculo, rendimiento_calculado_kml__isnull=False
+        ).aggregate(promedio=Avg('rendimiento_calculado_kml'))['promedio']
+        if not rendimiento_general:
+            return {'error': 'No hay suficientes datos de rendimiento para este vehículo.'}
+        rendimiento_base = float(rendimiento_general)
+        fuente_rendimiento = "promedio general del vehículo"
+    else:
+        rendimiento_base = float(rendimiento_en_ruta)
+        fuente_rendimiento = f"histórico en la ruta '{ruta.nombre}'"
+
+    rendimiento_ajustado = rendimiento_base
+    if rendimiento_ajustado <= 0:
+        return {'error': 'El rendimiento calculado es cero o negativo, no se puede predecir.'}
+        
+    consumo_predicho_litros = distancia_a_recorrer / rendimiento_ajustado
+
+    return {
+        'error': None, 'vehiculo': vehiculo, 'ruta': ruta, 'distancia_utilizada': distancia_a_recorrer,
+        'rendimiento_base_kml': rendimiento_base, 'fuente_del_rendimiento': fuente_rendimiento,
+        'consumo_predicho_litros': consumo_predicho_litros
+    }
+
+@login_required
+def registrar_carga_combustible(request):
+    connection.set_tenant(request.tenant)
+    if request.method == 'POST':
+        form = CargaCombustibleForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                condicion, created = CondicionAmbiental.objects.get_or_create(
+                    fecha_medicion=form.cleaned_data['fecha_carga'].date(),
+                    defaults={
+                        'temperatura_celsius': form.cleaned_data['temperatura_celsius'],
+                        'condicion_climatica': form.cleaned_data['condicion_climatica'],
+                        'nivel_trafico': form.cleaned_data['nivel_trafico'],
+                    }
+                )
+                nueva_carga = form.save(commit=False)
+                nueva_carga.condicion_ambiental = condicion
+                nueva_carga.save()
+            messages.success(request, f"Carga de combustible para {nueva_carga.vehiculo.numero_interno} registrada con éxito.")
+            return redirect('pizarra_combustible')
+        else:
+            messages.error(request, "Error al registrar la carga. Por favor, corrija los errores.")
+    else:
+        form = CargaCombustibleForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'flota/registrar_carga_combustible.html', context)
+
+
+@login_required
+def pizarra_combustible(request):
+    connection.set_tenant(request.tenant)
+    form = CargaCombustibleForm()
+    resultado_prediccion = None
+    vehiculo_seleccionado = None
+    analisis_vehiculo_seleccionado = None
+
+    # --- Lógica de Procesamiento de Formularios (POST) ---
+    if request.method == 'POST':
+        # Formulario para registrar una nueva carga de combustible
+        if 'registrar_carga' in request.POST:
+            form = CargaCombustibleForm(request.POST)
+            if form.is_valid():
+                with transaction.atomic():
+                    # (Lógica de guardado de carga, sin cambios)
+                    condicion, _ = CondicionAmbiental.objects.get_or_create(
+                        fecha_medicion=form.cleaned_data['fecha_carga'].date(),
+                        defaults={
+                            'temperatura_celsius': form.cleaned_data['temperatura_celsius'],
+                            'condicion_climatica': form.cleaned_data['condicion_climatica'],
+                            'nivel_trafico': form.cleaned_data['nivel_trafico'],
+                        }
+                    )
+                    nueva_carga = form.save(commit=False)
+                    nueva_carga.condicion_ambiental = condicion
+                    nueva_carga.save()
+                messages.success(request, f"Carga de combustible para {nueva_carga.vehiculo.numero_interno} registrada.")
+                return redirect('pizarra_combustible')
+            else:
+                messages.error(request, "Error al registrar la carga. Por favor, corrija los errores.")
+
+        # Formulario para predecir el consumo basado en distancia
+        elif 'predecir_consumo' in request.POST:
+            try:
+                vehiculo_id = request.POST.get('vehiculo_prediccion')
+                distancia_str = request.POST.get('distancia_prediccion')
+                
+                if not (vehiculo_id and distancia_str):
+                    raise ValueError("Debe seleccionar un vehículo e ingresar una distancia.")
+
+                vehiculo = get_object_or_404(Vehiculo, pk=vehiculo_id)
+                distancia = float(distancia_str)
+                
+                # Lógica de predicción simplificada
+                rendimiento_general = CargaCombustible.objects.filter(
+                    vehiculo=vehiculo, rendimiento_calculado_kml__isnull=False
+                ).aggregate(promedio=Avg('rendimiento_calculado_kml'))['promedio']
+
+                if not rendimiento_general:
+                    resultado_prediccion = {'error': 'No hay suficientes datos de rendimiento para este vehículo.'}
+                elif rendimiento_general <= 0:
+                    resultado_prediccion = {'error': 'El rendimiento promedio es cero o negativo, no se puede predecir.'}
+                else:
+                    consumo_predicho = distancia / float(rendimiento_general)
+                    resultado_prediccion = {
+                        'error': None,
+                        'distancia_utilizada': distancia,
+                        'rendimiento_base_kml': float(rendimiento_general),
+                        'consumo_predicho_litros': consumo_predicho
+                    }
+            except (ValueError, TypeError):
+                messages.error(request, "Por favor, ingrese un vehículo y una distancia válidos.")
+            except Exception as e:
+                messages.error(request, f"Ocurrió un error al predecir: {e}")
+
+    # --- Lógica para mostrar los datos (GET) ---
+    todos_los_vehiculos = Vehiculo.objects.all().order_by('numero_interno')
+    vehiculo_id_seleccionado = request.GET.get('vehiculo_id')
+    
+    if vehiculo_id_seleccionado:
+        # (Lógica para obtener análisis del vehículo seleccionado, sin cambios)
+        try:
+            vehiculo_seleccionado = get_object_or_404(Vehiculo, pk=vehiculo_id_seleccionado)
+            # ... (el resto de la lógica de análisis que ya teníamos)
+            rendimiento_general = CargaCombustible.objects.filter(vehiculo=vehiculo_seleccionado, rendimiento_calculado_kml__isnull=False).aggregate(promedio=Avg('rendimiento_calculado_kml'))['promedio']
+            rendimiento_por_ruta = CargaCombustible.objects.filter(vehiculo=vehiculo_seleccionado, rendimiento_calculado_kml__isnull=False).values('ruta__nombre').annotate(promedio_ruta=Avg('rendimiento_calculado_kml')).order_by('-promedio_ruta')
+            rendimiento_por_conductor = CargaCombustible.objects.filter(vehiculo=vehiculo_seleccionado, rendimiento_calculado_kml__isnull=False).values('conductor__username').annotate(promedio_conductor=Avg('rendimiento_calculado_kml')).order_by('-promedio_conductor')
+            historial_cargas = CargaCombustible.objects.filter(vehiculo=vehiculo_seleccionado)
+            analisis_vehiculo_seleccionado = {
+                'vehiculo': vehiculo_seleccionado, 'rendimiento_general': rendimiento_general,
+                'analisis_por_ruta': list(rendimiento_por_ruta),
+                'analisis_por_conductor': list(rendimiento_por_conductor),
+                'historial_cargas': historial_cargas,
+            }
+        except (ValueError, TypeError):
+            messages.error(request, "El ID del vehículo seleccionado no es válido.")
+
+    context = {
+        'form': form,
+        'todos_los_vehiculos': todos_los_vehiculos,
+        'vehiculo_seleccionado': vehiculo_seleccionado,
+        'analisis': analisis_vehiculo_seleccionado,
+        'resultado_prediccion': resultado_prediccion,
+    }
+    return render(request, 'flota/pizarra_combustible.html', context)

@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.contrib.auth.models import Group, User
 from django.db import transaction
 from django.db.models import Sum, F, Q # Asegúrate de que Sum, F y Q estén aquí
+from django.db.models import Avg
 
 
 # ==============================================================================
@@ -458,3 +459,117 @@ class HistorialOT(models.Model):
     def __str__(self):
         user_str = self.usuario.username if self.usuario else "Sistema"
         return f"{self.get_tipo_evento_display()} en OT-{self.orden_de_trabajo.folio} por {user_str}"
+    
+# pégalo al final de tu archivo flota/models.py
+
+# ==============================================================================
+#                      MODELOS DE CONTROL DE COMBUSTIBLE
+# ==============================================================================
+
+class Ruta(models.Model):
+    TOPOGRAFIA_CHOICES = [
+        ('PLANO', 'Plano'),
+        ('MIXTO', 'Mixto'),
+        ('MONTANOSO', 'Montañoso'),
+    ]
+    PAVIMENTO_CHOICES = [
+        ('ASFALTO', 'Asfalto'),
+        ('TIERRA', 'Tierra'),
+        ('MIXTO', 'Mixto'),
+    ]
+    
+    nombre = models.CharField(max_length=255, unique=True, help_text="Ej: Calama - Antofagasta")
+    distancia_km = models.DecimalField(max_digits=10, decimal_places=2, help_text="Distancia estándar de la ruta en kilómetros")
+    topografia = models.CharField(max_length=20, choices=TOPOGRAFIA_CHOICES, default='MIXTO')
+    tipo_pavimento = models.CharField(max_length=20, choices=PAVIMENTO_CHOICES, default='ASFALTO')
+    
+    class Meta:
+        verbose_name = "Ruta"
+        verbose_name_plural = "Rutas"
+
+    def __str__(self):
+        return self.nombre
+
+class CondicionAmbiental(models.Model):
+    CLIMA_CHOICES = [
+        ('DESPEJADO', 'Despejado'),
+        ('LLUVIA', 'Lluvia'),
+        ('VIENTO', 'Viento Fuerte'),
+        ('NIEVE', 'Nieve'),
+    ]
+    TRAFICO_CHOICES = [
+        ('BAJO', 'Bajo'),
+        ('MODERADO', 'Moderado'),
+        ('ALTO', 'Alto'),
+    ]
+    
+    fecha_medicion = models.DateField()
+    temperatura_celsius = models.IntegerField(default=15)
+    condicion_climatica = models.CharField(max_length=20, choices=CLIMA_CHOICES, default='DESPEJADO')
+    nivel_trafico = models.CharField(max_length=20, choices=TRAFICO_CHOICES, default='BAJO')
+
+    class Meta:
+        verbose_name = "Condición Ambiental"
+        verbose_name_plural = "Condiciones Ambientales"
+    
+    def __str__(self):
+        return f"{self.fecha_medicion}: {self.temperatura_celsius}°C, {self.get_condicion_climatica_display()}"
+
+
+class CargaCombustible(models.Model):
+    vehiculo = models.ForeignKey(Vehiculo, on_delete=models.CASCADE, related_name='cargas_combustible')
+    conductor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cargas_realizadas')
+    ruta = models.ForeignKey(Ruta, on_delete=models.SET_NULL, null=True, blank=True)
+    condicion_ambiental = models.ForeignKey(CondicionAmbiental, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    fecha_carga = models.DateTimeField(default=timezone.now)
+    kilometraje_en_carga = models.PositiveIntegerField(help_text="Odómetro del vehículo al momento de la carga")
+    litros_cargados = models.DecimalField(max_digits=10, decimal_places=2)
+    costo_por_litro = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    costo_total_carga = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    es_tanque_lleno = models.BooleanField(default=True, help_text="Marcar si la carga fue para llenar el tanque")
+    rendimiento_calculado_kml = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True, 
+        verbose_name="Rendimiento del Tramo Anterior (Km/L)",
+        help_text="Calculado automáticamente al registrar la siguiente carga."
+    )
+
+    class Meta:
+        verbose_name = "Carga de Combustible"
+        verbose_name_plural = "Cargas de Combustible"
+        ordering = ['-fecha_carga']
+
+    def __str__(self):
+        return f"Carga de {self.litros_cargados} Lts para {self.vehiculo.numero_interno} el {self.fecha_carga.strftime('%d/%m/%Y')}"
+
+    def save(self, *args, **kwargs):
+        # Primero, guarda la instancia actual para asegurar que tiene un ID.
+        # Esto es importante para que la lógica de búsqueda del registro anterior funcione correctamente.
+        super().save(*args, **kwargs)
+
+        # Busca el registro de carga inmediatamente anterior para el mismo vehículo.
+        # Se excluye el objeto actual (self) de la búsqueda.
+        carga_anterior = CargaCombustible.objects.filter(
+            vehiculo=self.vehiculo,
+            pk__lt=self.pk # Busca registros con un ID menor al actual
+        ).order_by('-pk').first() # Ordena por ID descendente y toma el primero
+        
+        if carga_anterior:
+            # Calcula la distancia recorrida desde la última carga
+            distancia_recorrida = self.kilometraje_en_carga - carga_anterior.kilometraje_en_carga
+            
+            # Asegúrate de que los valores son positivos y lógicos para evitar errores
+            if distancia_recorrida > 0 and carga_anterior.litros_cargados > 0:
+                # Calcula el rendimiento del tramo anterior
+                rendimiento = distancia_recorrida / carga_anterior.litros_cargados
+                
+                # Actualiza el campo de rendimiento en el registro ANTERIOR
+                carga_anterior.rendimiento_calculado_kml = rendimiento
+                # Usamos update_fields para ser eficientes y evitar recursion infinita de save()
+                carga_anterior.save(update_fields=['rendimiento_calculado_kml'])
+
+        # También actualiza el kilometraje del vehículo principal
+        if self.vehiculo.kilometraje_actual < self.kilometraje_en_carga:
+            self.vehiculo.kilometraje_actual = self.kilometraje_en_carga
+            self.vehiculo.save(update_fields=['kilometraje_actual'])

@@ -32,7 +32,11 @@
         table { width: 100%; border-collapse: collapse; margin-top: 1em; font-size: 0.9em; }
         th, td { padding: 12px; border: 1px solid #2d3748; text-align: left; }
         thead { background-color: #2d3748; color: #a0aec0; }
-        form { background-color: #2d3748; padding: 20px; border-radius: 8px; }
+        .form-card {
+    background-color: #2d3748;
+    padding: 20px;
+    border-radius: 8px;
+}
         form p { margin-bottom: 15px; }
         form label { display: block; margin-bottom: 5px; color: #a0aec0; }
         form input, form select, form textarea { width: 100%; padding: 10px; background-color: #1a202c; border: 1px solid #4a5568; color: white; border-radius: 4px; box-sizing: border-box; }
@@ -75,6 +79,7 @@
             <a href="{% url 'dashboard' %}">Pizarra de Mantenimiento</a>
             <a href="{% url 'ot_list' %}">Órdenes de Trabajo</a>
             <a href="{% url 'pizarra_programacion' %}">Pizarra de Programación</a>
+             <a href="{% url 'pizarra_combustible' %}">Control de Combustible</a>
             <a href="{% url 'repuesto_list' %}">Inventario</a>
             <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
             <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>

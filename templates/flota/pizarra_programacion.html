@@ -6,279 +6,985 @@
     <!-- CSS de FullCalendar -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
 
-    <!-- CSS de Bootstrap 5 (para estilizar los componentes) -->
+    <!-- CSS de Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Estilos personalizados para el tema oscuro y el calendario -->
+    <!-- Font Awesome para íconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts - Cambiado a Inter para una apariencia más moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        html, body { 
-            background-color: #1a202c !important; 
-            color: #cbd5e0 !important;
+        /* Variables CSS optimizadas para un tema oscuro profesional */
+        :root {
+            --dark-bg: #0F172A; /* Azul oscuro muy profundo para el fondo principal */
+            --card-bg: #1E293B; /* Un poco más claro que el fondo para las tarjetas y contenedores */
+            --accent-color: #3B82F6; /* Azul brillante, tu color de acento principal */
+            --accent-color-dark: #2563EB; /* Variante más oscura del acento para estados hover/active */
+            --text-primary: #F8FAFC; /* Blanco suave para texto principal, mejor legibilidad */
+            --text-secondary: #94A3B8; /* Gris azulado para texto secundario o descripciones */
+            --border-color: #334155; /* Borde sutil entre elementos, más oscuro */
+            --header-gradient-start: #1E40AF; /* Inicio del degradado para el encabezado */
+            --header-gradient-end: #172554; /* Fin del degradado para el encabezado */
+            --sidebar-width: 350px; /* Ancho fijo para el sidebar en pantallas grandes */
+            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
+            --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
+            --shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.4); /* Sombra al pasar el ratón */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente moderna y legible */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            margin: 0; /* Eliminar margen predeterminado del body */
+            padding: 0; /* Eliminar padding predeterminado del body */
+        }
+        
+        /* Contenedor principal para centrar el contenido */
+        .container-fluid {
+            padding-left: 1rem;
+            padding-right: 1rem;
         }
 
-        .card { background-color: #2d3748; border: 1px solid #4a5568; }
-        .form-label { font-weight: bold; }
-        .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border-color: #4a5568; }
-        .form-control:focus, .form-select:focus { background-color: #2d3748; border-color: #3182ce; box-shadow: none; color: #cbd5e0;}
-        .select2-container--default .select2-selection--single { background-color: #1a202c !important; border: 1px solid #4a5568 !important; height: calc(1.5em + .75rem + 2px) !important; }
-        .select2-container--default .select2-selection--single .select2-selection__rendered { color: #cbd5e0 !important; line-height: calc(1.5em + .75rem) !important; }
+        /* Contenedor del dashboard con flexbox para la distribución de paneles */
+        .dashboard-container {
+            display: flex;
+            min-height: calc(100vh - 2rem); /* Altura mínima para ocupar la mayor parte de la pantalla */
+            gap: 1.5rem; /* Espacio entre el sidebar y el contenido principal */
+            padding: 1rem 0; /* Padding vertical */
+        }
         
-        #calendar { max-width: 100%; margin: 0 auto; }
-        .fc-daygrid-day-number, .fc-col-header-cell-cushion { color: #a0aec0; text-decoration: none; }
-        .fc-day-today { background: #2d3748 !important; }
-        .fc-button { background-color: #3182ce !important; border-color: #3182ce !important; box-shadow: none !important; }
-        .fc-toolbar-title { color: #e2e8f0; }
-        .fc-event { cursor: grab; }
-        .fc-event:active { cursor: grabbing; }
+        /* Estilos del panel lateral (sidebar) */
+        .sidebar {
+            width: var(--sidebar-width);
+            flex-shrink: 0; /* Evita que el sidebar se encoja */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Espacio entre las tarjetas del sidebar */
+        }
+        
+        /* Estilos del contenido principal */
+        .main-content {
+            flex-grow: 1; /* Permite que el contenido principal ocupe el espacio restante */
+            min-width: 0; /* Importante para que el contenido se ajuste en pantallas pequeñas */
+        }
+        
+        /* Encabezado del dashboard */
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem; /* Más padding para un look premium */
+            border-radius: 0.75rem; /* Bordes más redondeados */
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            color: #E0E7FF; /* Un blanco azulado para el texto del header */
+            position: relative;
+            overflow: hidden; /* Para el pseudo-elemento de efecto visual */
+        }
 
-        /* Colores de fondo por ESTADO */
-        .fc-event.estado-PENDIENTE { background-color: #dd6b20; border-color: #dd6b20; }
-        .fc-event.estado-EN_PROCESO { background-color: #3182ce; border-color: #3182ce; }
-        .fc-event.estado-PAUSADA { background-color: #d69e2e; border-color: #d69e2e; }
-        .fc-event.estado-CERRADA_MECANICO { background-color: #718096; border-color: #718096; }
-        .fc-event.estado-FINALIZADA { background-color: #2f855a; border-color: #2f855a; }
+        /* Pseudo-elemento para un efecto sutil en el header */
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top left, rgba(255,255,255,0.05) 0%, transparent 70%);
+            pointer-events: none; /* Asegura que no interfiera con interacciones */
+        }
+        
+        /* Título principal del dashboard */
+        .dashboard-title {
+            font-weight: 700;
+            font-size: 2rem; /* Título más grande */
+            margin-bottom: 0.5rem; /* Espacio debajo del título */
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* Espacio entre el icono y el texto */
+        }
+        
+        /* Subtítulo del dashboard */
+        .dashboard-subtitle {
+            color: rgba(255, 255, 255, 0.85); /* Texto ligeramente transparente */
+            font-weight: 400;
+            font-size: 1rem; /* Tamaño de fuente ligeramente aumentado */
+            margin: 0;
+        }
+        
+        /* Estilos generales para las tarjetas (card) */
+        .card {
+            background-color: var(--card-bg);
+            border: none; /* Eliminar borde predeterminado de Bootstrap */
+            border-radius: 0.75rem; /* Bordes más redondeados */
+            box-shadow: var(--shadow-light); /* Sombra sutil */
+            transition: transform 0.2s ease, box-shadow 0.2s ease; /* Transición suave para hover */
+        }
+
+        /* Encabezado de las tarjetas */
+        .card-header {
+            background-color: #1A202C; /* Fondo ligeramente más oscuro para el header de la tarjeta */
+            border-bottom: 1px solid var(--border-color); /* Borde inferior sutil */
+            padding: 1.25rem 1.5rem; /* Más padding */
+            border-radius: 0.75rem 0.75rem 0 0; /* Bordes superiores redondeados */
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* Espacio entre el icono y el título */
+            color: var(--text-primary);
+        }
+        
+        /* Título de las tarjetas */
+        .card-title {
+            font-weight: 600;
+            margin: 0;
+            font-size: 1.2rem; /* Título de tarjeta ligeramente más grande */
+        }
+        
+        /* Cuerpo de las tarjetas */
+        .card-body {
+            padding: 1.5rem; /* Padding consistente */
+        }
+        
+        /* Etiquetas de formulario */
+        .form-label {
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem; /* Tamaño de fuente ligeramente mayor */
+        }
+        
+        /* Controles de formulario (input, select) */
+        .form-control, .form-select {
+            background-color: var(--dark-bg); /* Fondo más oscuro para los inputs */
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 1rem; /* Más padding para mejor usabilidad */
+            border-radius: 0.5rem; /* Bordes más redondeados */
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Transiciones suaves */
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.3); /* Sombra de enfoque más visible */
+            background-color: #1A202C; /* Ligeramente más claro al enfocar */
+        }
+
+        /* Estilos para los botones */
+        .btn {
+            font-weight: 500;
+            border-radius: 0.5rem; /* Bordes más redondeados */
+            transition: all 0.2s ease; /* Transición suave para todos los cambios */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center; /* Centrar contenido del botón */
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.5rem; /* Más padding para botones */
+            text-decoration: none; /* Asegurar que no haya subrayado en enlaces */
+        }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+            color: white; /* Asegurar texto blanco */
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-2px); /* Efecto de "levantamiento" */
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2); /* Sombra al pasar el ratón */
+            color: white; /* Asegurar texto blanco al pasar el ratón */
+        }
+        
+        .btn-secondary {
+            background-color: #475569; /* Gris azulado para secundario */
+            border: none;
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #334155; /* Gris más oscuro al pasar el ratón */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+        }
+        
+        /* Panel de Órdenes de Trabajo (OT) */
+        .ot-panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .ot-list {
+            flex-grow: 1;
+            overflow-y: auto; /* Scroll si hay muchas OT */
+            padding: 1rem;
+            display: grid;
+            gap: 1rem; /* Espacio entre elementos de la lista */
+            -webkit-overflow-scrolling: touch; /* Suavizar el scroll en iOS */
+        }
+        
+        /* Elemento individual de OT */
+        .ot-item {
+            background-color: #1A202C; /* Fondo ligeramente más oscuro que la tarjeta */
+            border-left: 5px solid var(--accent-color); /* Borde izquierdo más pronunciado */
+            border-radius: 0.6rem; /* Bordes redondeados */
+            padding: 1.2rem; /* Más padding */
+            cursor: grab; /* Cursor para indicar arrastrable */
+            transition: all 0.25s ease; /* Transición más larga para hover */
+            position: relative;
+            box-shadow: var(--shadow-light);
+        }
+        
+        .ot-item:active {
+            cursor: grabbing; /* Cursor al arrastrar */
+        }
+        
+        .ot-item:hover {
+            transform: translateY(-5px); /* Efecto de "levantamiento" más pronunciado */
+            box-shadow: var(--shadow-hover); /* Sombra más grande al pasar el ratón */
+        }
+        
+        .ot-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Alinear verticalmente */
+            margin-bottom: 0.75rem;
+        }
+        
+        .ot-item-title {
+            font-weight: 600;
+            font-size: 1.05rem; /* Título de OT ligeramente más grande */
+            margin: 0;
+            color: var(--text-primary);
+        }
+        
+        .ot-item-priority {
+            font-size: 0.7rem; /* Tamaño de fuente para la prioridad */
+            padding: 0.3rem 0.6rem; /* Más padding */
+            border-radius: 0.3rem; /* Bordes redondeados */
+            font-weight: 700; /* Más negrita */
+            text-transform: uppercase;
+            letter-spacing: 0.05em; /* Espaciado entre letras */
+            min-width: 60px; /* Ancho mínimo para consistencia */
+            text-align: center;
+        }
+        
+        /* Colores de prioridad */
+        .priority-CRITICA { background-color: #EF4444; color: white; } /* Rojo */
+        .priority-ALTA { background-color: #F59E0B; color: #1A202C; } /* Naranja */
+        .priority-MEDIA { background-color: #64748B; color: white; } /* Gris medio */
+        .priority-BAJA { background-color: #3B82F6; color: white; } /* Azul */
+        
+        .ot-item-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.5rem; /* Espacio horizontal y vertical entre detalles */
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .ot-item-detail {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .ot-item-detail i {
+            width: 18px; /* Tamaño fijo para iconos */
+            text-align: center;
+            color: var(--accent-color); /* Color de acento para los iconos */
+        }
+        
+        /* Estilos para FullCalendar */
+        #calendar {
+            background-color: var(--card-bg);
+            border-radius: 0.75rem; /* Bordes más redondeados */
+            padding: 1rem; /* Padding interno para el calendario */
+            height: calc(100vh - 200px); /* Altura dinámica */
+            box-shadow: var(--shadow-light);
+        }
+        
+        /* Encabezado de la barra de herramientas de FullCalendar */
+        .fc-toolbar-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1.4rem; /* Título del calendario más grande */
+        }
+        
+        /* Celdas del encabezado de columna (días de la semana) */
+        .fc-col-header-cell {
+            background-color: #1A202C; /* Fondo oscuro para los días de la semana */
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .fc-col-header-cell-cushion {
+            color: var(--text-primary);
+            padding: 0.75rem; /* Más padding */
+            font-size: 1rem; /* Tamaño de fuente ligeramente mayor */
+            font-weight: 600;
+        }
+        
+        /* Números de día en el calendario */
+        .fc-daygrid-day-number {
+            color: var(--text-secondary); /* Color secundario para los números de día */
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        /* Celdas de día en la cuadrícula */
+        .fc-daygrid-day {
+            background-color: var(--card-bg); /* Fondo de las celdas de día */
+            border: 1px solid var(--border-color); /* Borde entre celdas */
+        }
+        
+        /* Día actual resaltado */
+        .fc-day-today {
+            background-color: rgba(59, 130, 246, 0.15) !important; /* Resaltado sutil del día actual */
+            border: 1px solid var(--accent-color) !important; /* Borde de acento para el día actual */
+        }
+        
+        /* Botones de FullCalendar */
+        .fc-button {
+            background-color: #334155 !important; /* Fondo de botón oscuro */
+            border: none !important;
+            padding: 0.5rem 1rem !important; /* Más padding */
+            font-size: 0.95rem !important;
+            border-radius: 0.4rem !important;
+            color: var(--text-primary) !important;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        
+        .fc-button:hover {
+            background-color: #475569 !important; /* Fondo más claro al pasar el ratón */
+            transform: translateY(-1px);
+        }
+        
+        .fc-button-active {
+            background-color: var(--accent-color) !important; /* Color de acento para el botón activo */
+            color: white !important;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+        
+        /* Estilos para eventos en el calendario */
+        .fc-event {
+            border: none !important;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); /* Sombra más sutil para eventos */
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-radius: 0.3rem; /* Bordes redondeados para eventos */
+            margin-bottom: 2px; /* Espacio entre eventos */
+            color: white; /* Asegurar texto blanco para eventos */
+        }
+        
+        /* Colores de fondo por ESTADO (se mantienen los colores originales pero se refinan) */
+        .fc-event.estado-PENDIENTE { background-color: #F59E0B; } /* Naranja */
+        .fc-event.estado-EN_PROCESO { background-color: #3B82F6; } /* Azul */
+        .fc-event.estado-PAUSADA { background-color: #F97316; } /* Naranja oscuro */
+        .fc-event.estado-CERRADA_MECANICO { background-color: #64748B; } /* Gris medio */
+        .fc-event.estado-FINALIZADA { background-color: #10B981; } /* Verde */
         
         /* Estilos de borde por PRIORIDAD */
         .fc-event {
-            border-left: 5px solid transparent; /* Borde por defecto */
+            border-left: 5px solid transparent !important; /* Borde izquierdo más grueso */
         }
-        .fc-event.prioridad-BAJA {
-            border-left-color: #3182ce; /* Azul */
-        }
-        .fc-event.prioridad-MEDIA {
-            border-left-color: #718096; /* Gris */
-        }
-        .fc-event.prioridad-ALTA {
-            border-left-color: #dd6b20; /* Naranja */
-        }
-        .fc-event.prioridad-CRITICA {
-            border-left-color: #c53030; /* Rojo */
-        }
-
-        /* --- NUEVOS ESTILOS PARA LOS ICONOS DE DISPONIBILIDAD --- */
-        .fc-event-main-frame { /* Asegura que este estilo se aplica para flexbox */
+        
+        .fc-event.prioridad-BAJA { border-left-color: #3B82F6 !important; }
+        .fc-event.prioridad-MEDIA { border-left-color: #64748B !important; }
+        .fc-event.prioridad-ALTA { border-left-color: #F59E0B !important; }
+        .fc-event.prioridad-CRITICA { border-left-color: #EF4444 !important; }
+        
+        /* Estilos para el contenido del evento (iconos y título) */
+        .fc-event-main-frame { 
             display: flex;
             align-items: center;
-            gap: 5px; /* Espacio entre el texto del evento y el icono */
-            height: 100%; /* Asegura que el contenedor flex ocupe todo el espacio del evento */
+            gap: 6px;
+            height: 100%;
+            padding: 0.3rem 0.5rem;
         }
-        .fc-event-title-wrap { 
-            flex-grow: 1; /* Permite que el título ocupe el espacio restante */
-            overflow: hidden; /* Evita que el título se desborde si es muy largo */
-            text-overflow: ellipsis; /* Añade puntos suspensivos si el texto es muy largo */
-            white-space: nowrap; /* Mantiene el texto en una sola línea */
+        
+        .fc-event-title-wrap {
+            flex-grow: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-        .repuesto-icon { 
-            width: 18px; /* Ajusta el tamaño del icono */
-            height: 18px;
-            flex-shrink: 0; /* Evita que el icono se comprima */
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-position: center;
+        
+        .repuesto-icon {
+            font-size: 0.9rem;
+            flex-shrink: 0; /* Evitar que el icono se encoja */
         }
-        .repuesto-icon.disponible {
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="green"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>'); 
+        
+        /* Estilos para el área de drop en FullCalendar */
+        .fc-highlight {
+            background: rgba(59, 130, 246, 0.2) !important; /* Resaltado más visible */
+            opacity: 0.7;
         }
-        .repuesto-icon.faltante {
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="red"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>');
+        
+        /* Clase para el elemento arrastrado */
+        .dragged-ot {
+            opacity: 0.7; /* Ligeramente más transparente */
+            transform: scale(1.02); /* Escala sutil */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Sombra más grande al arrastrar */
+            z-index: 1000;
+        }
+        
+        /* Tooltip personalizado de Bootstrap para eventos */
+        .tooltip-inner {
+            background-color: var(--card-bg); /* Fondo del tooltip */
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-light);
+            font-size: 0.875rem;
+        }
+        .tooltip.bs-tooltip-auto[x-placement^=top] .tooltip-arrow::before, 
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: var(--border-color);
+        }
+        /* Ajuste para el color de la flecha del tooltip */
+        .tooltip.bs-tooltip-auto[x-placement^=top] .tooltip-arrow::before,
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: var(--card-bg); /* Color de la flecha igual al fondo del tooltip */
+        }
+        .tooltip-arrow {
+            color: var(--card-bg); /* Asegura que la flecha coincida con el fondo */
+        }
+
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            :root {
+                --sidebar-width: 280px; /* Sidebar un poco más estrecho en pantallas medianas */
+            }
+            .dashboard-title {
+                font-size: 1.75rem;
+            }
+            .dashboard-subtitle {
+                font-size: 0.9rem;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .dashboard-container {
+                flex-direction: column; /* Apilar en pantallas más pequeñas */
+                padding: 1rem;
+            }
+            
+            .sidebar {
+                width: 100%; /* Sidebar ocupa todo el ancho */
+                flex-direction: row; /* Elementos del sidebar en fila */
+                flex-wrap: wrap; /* Permite que los elementos se envuelvan */
+                gap: 1rem;
+            }
+
+            .sidebar .card {
+                flex: 1 1 calc(50% - 0.5rem); /* Dos columnas para las tarjetas del sidebar */
+            }
+            
+            .ot-panel {
+                height: auto; /* Altura automática para el panel de OT */
+                min-height: 250px; /* Altura mínima para que no se vea muy pequeño */
+            }
+            
+            #calendar {
+                height: 650px; /* Altura fija para el calendario en tabletas */
+            }
+            
+            .fc-toolbar {
+                flex-direction: column; /* Botones de la barra de herramientas apilados */
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .fc-toolbar .fc-toolbar-chunk {
+                width: 100%; /* Asegurar que los chunks ocupen todo el ancho */
+                display: flex;
+                justify-content: center; /* Centrar los botones */
+                gap: 0.5rem;
+                flex-wrap: wrap;
+            }
+            .fc-toolbar .fc-toolbar-chunk:first-child { /* Botones prev, next, today */
+                justify-content: flex-start;
+            }
+            .fc-toolbar .fc-toolbar-chunk:last-child { /* Botones de vista */
+                justify-content: flex-end;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .ot-item-details {
+                flex-direction: column; /* Detalles de OT apilados */
+                gap: 0.5rem;
+            }
+            .sidebar .card {
+                flex: 1 1 100%; /* Una columna para las tarjetas del sidebar */
+            }
+            #calendar {
+                height: 500px; /* Altura ajustada para móviles */
+            }
+            .dashboard-header {
+                padding: 1.5rem;
+            }
+            .dashboard-title {
+                font-size: 1.5rem;
+            }
+            .dashboard-subtitle {
+                font-size: 0.85rem;
+            }
+            .fc-toolbar .fc-toolbar-chunk {
+                flex-direction: column; /* Apilar botones individuales */
+                align-items: stretch; /* Estirar botones */
+            }
+            .fc-toolbar .fc-toolbar-chunk .fc-button-group {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
+            .fc-toolbar .fc-toolbar-chunk .fc-button {
+                flex-grow: 1; /* Estirar botones dentro del grupo */
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .filter-form .col-12 { /* Cambiado de col-md-3 a col-12 */
+                width: 100%; /* Cada filtro ocupa todo el ancho */
+            }
+            
+            .filter-buttons {
+                flex-direction: column;
+                gap: 0.75rem; /* Espacio entre botones de filtro */
+            }
+            
+            .filter-buttons .btn {
+                width: 100%; /* Botones de filtro ocupan todo el ancho */
+            }
+            .ot-list {
+                padding: 0.75rem;
+            }
+            .ot-item {
+                padding: 1rem;
+            }
         }
     </style>
 {% endblock %}
 
 {% block content %}
-<h1 class="mb-4">Pizarra de Programación</h1>
+<div class="container-fluid">
+    <div class="dashboard-container">
+        <!-- Panel lateral para OT nuevas -->
+        <aside class="sidebar">
+            <div class="card ot-panel">
+                <div class="card-header">
+                    <i class="fas fa-plus-circle"></i>
+                    <h5 class="card-title">Órdenes de Trabajo Pendientes</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="ot-list" id="ot-pendientes">
+                        <!-- Ejemplo de OT pendiente - Esto debería generarse dinámicamente desde tu backend -->
+                        <div class="ot-item" draggable="true" data-ot-id="1" data-ot-title="OT-001 - Cambio de aceite" data-ot-duration="2" data-ot-priority="MEDIA" data-ot-estado="PENDIENTE">
+                            <div class="ot-item-header">
+                                <h5 class="ot-item-title">OT-001 - Cambio de aceite</h5>
+                                <span class="ot-item-priority priority-MEDIA">MEDIA</span>
+                            </div>
+                            <div class="ot-item-details">
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-car"></i>
+                                    <span>Camioneta 123</span>
+                                </div>
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-clock"></i>
+                                    <span>2 horas</span>
+                                </div>
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span>Mecánico A</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ot-item" draggable="true" data-ot-id="2" data-ot-title="OT-002 - Revisión frenos" data-ot-duration="4" data-ot-priority="ALTA" data-ot-estado="PENDIENTE">
+                            <div class="ot-item-header">
+                                <h5 class="ot-item-title">OT-002 - Revisión frenos</h5>
+                                <span class="ot-item-priority priority-ALTA">ALTA</span>
+                            </div>
+                            <div class="ot-item-details">
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-car"></i>
+                                    <span>Camion 456</span>
+                                </div>
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-clock"></i>
+                                    <span>4 horas</span>
+                                </div>
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span>Mecánico B</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ot-item" draggable="true" data-ot-id="3" data-ot-title="OT-003 - Cambio llantas" data-ot-duration="3" data-ot-priority="BAJA" data-ot-estado="PENDIENTE">
+                            <div class="ot-item-header">
+                                <h5 class="ot-item-title">OT-003 - Cambio llantas</h5>
+                                <span class="ot-item-priority priority-BAJA">BAJA</span>
+                            </div>
+                            <div class="ot-item-details">
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-car"></i>
+                                    <span>Furgón 789</span>
+                                </div>
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-clock"></i>
+                                    <span>3 horas</span>
+                                </div>
+                                <div class="ot-item-detail">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span>Mecánico C</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filtros en versión compacta para el sidebar -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-sliders-h"></i>
+                    <h5 class="card-title">Filtros</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filtro-calendario-form" class="row g-3"> <!-- Cambiado a g-3 para más espacio vertical -->
+                        <div class="col-12">
+                            <label for="{{ filtro_form.vehiculo.id_for_label }}" class="form-label">Vehículo</label>
+                            {{ filtro_form.vehiculo }}
+                        </div>
+                        <div class="col-12">
+                            <label for="{{ filtro_form.estado.id_for_label }}" class="form-label">Estado</label>
+                            {{ filtro_form.estado }}
+                        </div>
+                        <div class="col-12">
+                            <label for="{{ filtro_form.responsable.id_for_label }}" class="form-label">Responsable</label>
+                            {{ filtro_form.responsable }}
+                        </div>
+                        <div class="col-12">
+                            <label for="{{ filtro_form.repuestos_disponibles.id_for_label }}" class="form-label">Repuestos</label>
+                            {{ filtro_form.repuestos_disponibles }}
+                        </div>
+                        <div class="col-12 mt-3 filter-buttons d-flex justify-content-end gap-2"> <!-- Ajuste de margen y justificación -->
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Aplicar
+                            </button>
+                            <a href="{% url 'pizarra_programacion' %}" class="btn btn-secondary">
+                                <i class="fas fa-broom"></i> Limpiar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Contenido principal -->
+        <main class="main-content">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">
+                    <i class="fas fa-calendar-alt me-2"></i>Pizarra de Programación
+                </h1>
+                <p class="dashboard-subtitle">
+                    Arrastra las OT desde el panel izquierdo al calendario para asignarlas
+                </p>
+            </div>
 
-<!-- Formulario de Filtros -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" id="filtro-calendario-form" class="row g-3 align-items-end">
-            <div class="col-md-3"> {# Ajustado de col-md-4 para dar espacio al nuevo filtro #}
-                <label for="{{ filtro_form.vehiculo.id_for_label }}" class="form-label">{{ filtro_form.vehiculo.label }}</label>
-                {{ filtro_form.vehiculo }}
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-calendar-days"></i>
+                    <h5 class="card-title">Programación de Órdenes de Trabajo</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id='calendar'></div>
+                </div>
             </div>
-            <div class="col-md-3">
-                <label for="{{ filtro_form.estado.id_for_label }}" class="form-label">{{ filtro_form.estado.label }}</label>
-                {{ filtro_form.estado }}
-            </div>
-            <div class="col-md-3"> {# Ajustado de col-md-4 para dar espacio al nuevo filtro #}
-                <label for="{{ filtro_form.responsable.id_for_label }}" class="form-label">{{ filtro_form.responsable.label }}</label>
-                {{ filtro_form.responsable }}
-            </div>
-            <!-- ¡NUEVO FILTRO DE DISPONIBILIDAD DE REPUESTOS AÑADIDO AQUÍ! -->
-            <div class="col-md-3">
-                <label for="{{ filtro_form.repuestos_disponibles.id_for_label }}" class="form-label">{{ filtro_form.repuestos_disponibles.label }}</label>
-                {{ filtro_form.repuestos_disponibles }}
-            </div>
-            <div class="col-12 mt-3">
-                <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
-                <a href="{% url 'pizarra_programacion' %}" class="btn btn-secondary">Limpiar Filtros</a>
-            </div>
-        </form>
+        </main>
     </div>
-</div>
-
-<!-- Contenedor del Calendario -->
-<div class="card p-4">
-    <div id='calendar'></div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
     <!-- JS de FullCalendar y sus plugins GRATUITOS -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@5.11.3/main.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@5.11.3/main.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@5.11.3/main.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
+
+
+    <!-- Bootstrap Bundle JS (incluye Popper para tooltips) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var calendarEl = document.getElementById('calendar');
-        var filtroForm = document.getElementById('filtro-calendario-form'); 
-        
-        // Define el patrón de URL para actualizar la OT.
-        const UPDATE_OT_URL_PATTERN = "{% url 'actualizar_fecha_ot_api' pk=0 %}"; // '0' es un placeholder
+        // Define las URLs de Django en variables JavaScript para que puedan ser utilizadas por el script
+        const otEventsApiUrl = "{% url 'ot_eventos_api' %}";
+        const otUpdateDateUrl = "/api/ot-actualizar-fecha/"; // URL base para la actualización de fecha
 
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek', 
-            locale: 'es',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'timeGridWeek,timeGridDay,dayGridMonth'
-            },
-            editable: true,
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var filtroForm = document.getElementById('filtro-calendario-form');
+            var otList = document.getElementById('ot-pendientes');
             
-            // ¡Plugins: MANTENEMOS TU CONFIGURACIÓN ORIGINAL Y FUNCIONAL!
-            // Si tenías un array 'plugins: []' vacío, podrías ponerlo.
-            // Si no lo tenías, dejarlo así es lo más seguro.
+            // Variable para el elemento que se está arrastrando
+            var draggedItem = null;
             
-            // Clic en un día para crear OT
-            dateClick: function(info) {
-                const fechaSeleccionada = info.dateStr.split('T')[0];
-                const url = `{% url 'ot_list' %}?fecha_programada=${fechaSeleccionada}&from_calendar=true`;
-                window.location.href = url;
-            },
-            
-            // Asigna clases CSS a los eventos según su estado y prioridad (TU FUNCIÓN ORIGINAL)
-            eventClassNames: function(arg) {
-                let classes = []; 
-
-                // Clase para el ESTADO
-                if (arg.event.extendedProps.estado) {
-                    classes.push('estado-' + arg.event.extendedProps.estado.replace(/ /g, '_').toUpperCase());
-                }
-
-                // Clase para la PRIORIDAD - Asumiendo que prioridad viene en extendedProps, como lo enviaría la API
-                if (arg.event.extendedProps.prioridad) { 
-                    classes.push('prioridad-' + arg.event.extendedProps.prioridad.toUpperCase());
-                }
-                
-                return classes;
-            },
-
-            // Función para cargar eventos desde la API de Django (MODIFICADA LIGERAMENTE para añadir filtro)
-            events: function(fetchInfo, successCallback, failureCallback) {
-                const params = new URLSearchParams(new FormData(filtroForm)); 
-                
-                params.append('start', fetchInfo.startStr);
-                params.append('end', fetchInfo.endStr);
-
-                const url = `{% url 'ot_eventos_api' %}?${params.toString()}`;
-                
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => successCallback(data))
-                    .catch(error => {
-                        console.error('Error al cargar eventos:', error);
-                        failureCallback(error);
-                    });
-            },
-            
-            // Maneja el arrastre y soltado de eventos para actualizar su fecha programada (TU FUNCIÓN ORIGINAL)
-            // Se mantiene como la tenías, sin la promesa ni eventAllow, para respetar tu base funcional.
-            eventDrop: function(info) {
-                const otId = info.event.id;
-                const nuevaFecha = info.event.start.toISOString(); // Tu código original
-                const csrfToken = '{{ csrf_token }}';
-
-                fetch(`/api/ot-actualizar-fecha/${otId}/`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
-                    body: JSON.stringify({ fecha_programada: nuevaFecha })
-                })
-                .then(response => {
-                    if (!response.ok) { info.revert(); alert('Error al reprogramar la OT.'); return Promise.reject('Respuesta no OK'); }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status !== 'ok') { info.revert(); alert('Error: ' + data.message); }
-                })
-                .catch(error => { 
-                    if (error !== 'Respuesta no OK') { info.revert(); alert('Ocurrió un error de conexión.'); }
+            // Configurar eventos de arrastre para las OT pendientes
+            document.querySelectorAll('.ot-item').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    // Almacenar todos los datos relevantes del dataset para el evento
+                    e.dataTransfer.setData('text/plain', JSON.stringify(this.dataset));
+                    this.classList.add('dragged-ot');
                 });
-            },
-
-            // --- ¡NUEVO!: Customización del contenido del evento para añadir el icono de disponibilidad ---
-            // Esta función se encarga de cómo se ve el contenido interno de cada evento.
-            eventContent: function(arg) {
-                let eventContentEl = document.createElement('div');
-                eventContentEl.classList.add('fc-event-main-frame'); 
                 
-                let titleEl = document.createElement('div');
-                titleEl.classList.add('fc-event-title-wrap'); 
-                titleEl.innerText = arg.event.title;
-                eventContentEl.appendChild(titleEl);
+                item.addEventListener('dragend', function() {
+                    this.classList.remove('dragged-ot');
+                });
+            });
 
-                // Añade el icono de disponibilidad de repuestos solo si la información está presente
-                // (es decir, si la API 'ot_eventos_api' la ha enviado)
-                if (arg.event.extendedProps && typeof arg.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
-                    let iconEl = document.createElement('div');
-                    iconEl.classList.add('repuesto-icon');
-                    if (arg.event.extendedProps.hasAllPartsAvailable) {
-                        iconEl.classList.add('disponible');
-                        iconEl.title = 'Repuestos disponibles';
-                    } else {
-                        iconEl.classList.add('faltante');
-                        iconEl.title = 'Faltan repuestos';
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                locale: 'es',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'timeGridWeek,timeGridDay,dayGridMonth'
+                },
+                firstDay: 1, // Lunes como primer día de la semana
+                slotMinTime: "07:00:00", // Hora de inicio de la vista de tiempo
+                slotMaxTime: "21:00:00", // Hora de fin de la vista de tiempo
+                allDaySlot: false, // Ocultar la sección de "todo el día"
+                navLinks: true, // Permitir navegar haciendo clic en los nombres de los días/semanas
+                editable: true, // Permite redimensionar y arrastrar eventos existentes
+                droppable: true, // Habilita el arrastre de elementos externos al calendario
+                dayMaxEvents: true, // Limitar el número de eventos por día para no desbordar
+                height: 'auto', // Altura automática para el calendario
+                eventTimeFormat: { 
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false // Formato de 24 horas
+                },
+                
+                // Permite activar zonas donde se puede soltar
+                eventAllow: function(dropInfo, draggedEvent) {
+                    return true; // Permitir soltar en cualquier zona del calendario
+                },
+                
+                // Resaltar zonas donde se puede soltar
+                drop: function(info) {
+                    // Asegurarse de que tenemos un elemento arrastrado
+                    if (!draggedItem) return;
+                    
+                    // Obtener los datos del elemento arrastrado
+                    const otData = JSON.parse(info.dataTransfer.getData('text/plain'));
+
+                    // Crear el nuevo evento basado en la OT arrastrada
+                    var newEvent = {
+                        title: otData.otTitle,
+                        start: info.date,
+                        duration: { hours: parseInt(otData.otDuration) || 2 },
+                        extendedProps: {
+                            estado: otData.otEstado || 'PENDIENTE',
+                            prioridad: otData.otPriority || 'MEDIA',
+                            // Se asume que el responsable se obtiene de forma similar a como se hizo en el HTML original para el tooltip
+                            responsable: draggedItem.querySelector('.ot-item-detail:nth-child(3) span')?.textContent || 'N/A',
+                            tipo: 'Programada',
+                            hasAllPartsAvailable: true // Asumimos true por defecto al arrastrar
+                        },
+                        className: 'prioridad-' + (otData.otPriority || 'MEDIA') + ' estado-' + (otData.otEstado || 'PENDIENTE').replace(/ /g, '_').toUpperCase()
+                    };
+                    
+                    // Aquí deberías hacer una llamada a tu API para guardar la programación
+                    // Por ahora simulamos la creación del evento
+                    calendar.addEvent(newEvent);
+                    
+                    // Opcional: Eliminar la OT del panel pendiente después de arrastrarla
+                    draggedItem.remove();
+                    
+                    // Limpiar la referencia
+                    draggedItem = null;
+                    
+                    // Limpiar los estilos de highlight
+                    info.draggedEl.classList.remove('fc-highlight'); // Eliminar highlight del elemento arrastrado
+                },
+                
+                // Manejar clic en una fecha (para navegar a la lista de OT de ese día)
+                dateClick: function(info) {
+                    const fechaSeleccionada = info.dateStr.split('T')[0];
+                    const url = `{% url 'ot_list' %}?fecha_programada=${fechaSeleccionada}&from_calendar=true`;
+                    window.location.href = url;
+                },
+                
+                // Asignar clases CSS a los eventos según sus propiedades extendidas
+                eventClassNames: function(arg) {
+                    let classes = []; 
+
+                    if (arg.event.extendedProps.estado) {
+                        classes.push('estado-' + arg.event.extendedProps.estado.replace(/ /g, '_').toUpperCase());
                     }
-                    eventContentEl.appendChild(iconEl);
-                }
+
+                    if (arg.event.extendedProps.prioridad) { 
+                        classes.push('prioridad-' + arg.event.extendedProps.prioridad.toUpperCase());
+                    }
+                    
+                    return classes;
+                },
+
+                // Función para cargar eventos desde tu API
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    const params = new URLSearchParams(new FormData(filtroForm)); 
+                    
+                    params.append('start', fetchInfo.startStr);
+                    params.append('end', fetchInfo.endStr);
+
+                    // Usa la variable JavaScript para la URL
+                    const url = `${otEventsApiUrl}?${params.toString()}`;
+                    
+                    fetch(url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => successCallback(data))
+                        .catch(error => {
+                            console.error('Error al cargar eventos:', error);
+                            failureCallback(error);
+                        });
+                },
                 
-                return { domNodes: [eventContentEl] }; // Retorna el elemento customizado
-            },
+                // Manejar el arrastre y soltado de eventos existentes en el calendario
+                eventDrop: function(info) {
+                    const otId = info.event.id;
+                    const nuevaFecha = info.event.start.toISOString();
+                    const csrfToken = '{{ csrf_token }}';
 
-            // Adjunta el tooltip a cada evento una vez que ha sido montado en el DOM (MODIFICADA para añadir disponibilidad)
-            eventDidMount: function(info) {
-                // Se añade la información de disponibilidad de repuestos al tooltip
-                let repuestosStatus = 'No especificado';
-                if (info.event.extendedProps && typeof info.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
-                    repuestosStatus = info.event.extendedProps.hasAllPartsAvailable ? 'Disponibles' : 'Faltan';
+                    // Construye la URL dinámicamente usando la variable base y el ID
+                    fetch(`${otUpdateDateUrl}${otId}/`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify({ fecha_programada: nuevaFecha })
+                    }).catch(error => {
+                        console.error('Error al actualizar la fecha de la OT:', error);
+                        info.revert(); // Revertir el evento si hay un error en la API
+                    });
+                },
+
+                // Personalizar el contenido de cada evento en el calendario
+                eventContent: function(arg) {
+                    let eventContentEl = document.createElement('div');
+                    eventContentEl.classList.add('fc-event-main-frame'); 
+                    
+                    let titleEl = document.createElement('div');
+                    titleEl.classList.add('fc-event-title-wrap');
+                    
+                    const prioridad = arg.event.extendedProps?.prioridad;
+                    let prioridadIcon = '';
+                    
+                    // Añadir icono de exclamación para prioridad ALTA o CRÍTICA
+                    if (prioridad === 'ALTA' || prioridad === 'CRITICA') {
+                        prioridadIcon = '<i class="fas fa-exclamation-circle me-1"></i>';
+                    }
+                    
+                    titleEl.innerHTML = prioridadIcon + arg.event.title;
+                    eventContentEl.appendChild(titleEl);
+
+                    // Añadir icono de repuestos disponibles/faltantes
+                    if (arg.event.extendedProps && typeof arg.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
+                        let iconEl = document.createElement('i');
+                        iconEl.classList.add('repuesto-icon', 'ms-2'); // ms-2 para un pequeño margen a la izquierda
+                        
+                        if (arg.event.extendedProps.hasAllPartsAvailable) {
+                            iconEl.classList.add('fas', 'fa-check-circle', 'text-success');
+                            iconEl.title = 'Repuestos disponibles';
+                        } else {
+                            iconEl.classList.add('fas', 'fa-exclamation-triangle', 'text-warning');
+                            iconEl.title = 'Faltan repuestos';
+                        }
+                        eventContentEl.appendChild(iconEl);
+                    }
+                    
+                    return { domNodes: [eventContentEl] };
+                },
+
+                // Montar el tooltip de Bootstrap después de que el evento se haya renderizado
+                eventDidMount: function(info) {
+                    let repuestosStatus = 'No especificado';
+                    if (info.event.extendedProps && typeof info.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
+                        repuestosStatus = info.event.extendedProps.hasAllPartsAvailable ? 
+                            '<span class="text-success">Disponibles</span>' : 
+                            '<span class="text-danger">Faltan</span>';
+                    }
+
+                    // Contenido HTML para el tooltip
+                    const tooltipContent = `
+                        <div class="p-2">
+                            <div class="mb-2 border-bottom pb-2">
+                                <h6 class="fw-bold mb-1">${info.event.title}</h6>
+                                <small class="text-muted">${info.event.extendedProps.tipo || 'N/A'}</small>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Estado:</span>
+                                <span class="fw-bold">${info.event.extendedProps.estado || 'N/A'}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Responsable:</span>
+                                <span>${info.event.extendedProps.responsable || 'N/A'}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Prioridad:</span>
+                                <span>${info.event.extendedProps.prioridad || 'N/A'}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Repuestos:</span>
+                                ${repuestosStatus}
+                            </div>
+                        </div>
+                    `;
+
+                    // Inicializar el tooltip de Bootstrap
+                    new bootstrap.Tooltip(info.el, {
+                        html: true, // Permite contenido HTML en el tooltip
+                        placement: 'top', // Posición del tooltip
+                        trigger: 'hover', // Se activa al pasar el ratón
+                        container: 'body', // Adjuntar el tooltip al body para evitar problemas de z-index
+                        title: tooltipContent // Contenido del tooltip
+                    });
+                },
+                
+                // Manejar el clic en un evento del calendario
+                eventClick: function(info) {
+                    info.jsEvent.preventDefault(); // Prevenir el comportamiento predeterminado del navegador
+                    if (info.event.url) { 
+                        window.open(info.event.url, "_blank"); // Abrir el enlace en una nueva pestaña
+                    }
                 }
+            });
 
-                new bootstrap.Tooltip(info.el, {
-                    title: `<b>Vehículo:</b> ${info.event.title}<br><b>Tipo:</b> ${info.event.extendedProps.tipo}<br><b>Estado:</b> ${info.event.extendedProps.estado}<br><b>Responsable:</b> ${info.event.extendedProps.responsable || 'N/A'}<br><b>Prioridad:</b> ${info.event.extendedProps.prioridad || 'N/A'}<br><b>Repuestos:</b> ${repuestosStatus}`,
-                    html: true, placement: 'top', trigger: 'hover', container: 'body'
-                });
-            },
+            calendar.render(); // Renderizar el calendario
+
+            // Actualizar calendario al cambiar filtros en el formulario
+            filtroForm.addEventListener('change', function() {
+                calendar.refetchEvents(); // Volver a cargar los eventos del calendario
+            });
             
-            // Al hacer clic en un evento (OT), redirige a su página de detalle (TU FUNCIÓN ORIGINAL)
-            eventClick: function(info) {
-                info.jsEvent.preventDefault();
-                if (info.event.url) { window.open(info.event.url, "_blank"); }
-            }
+            // Configurar el calendario para aceptar elementos arrastrables con la clase 'ot-item'
+            calendar.setOption('dropAccept', '.ot-item');
         });
-
-        calendar.render();
-
-        document.getElementById('filtro-calendario-form').addEventListener('change', function() {
-            calendar.refetchEvents();
-        });
-    });
     </script>
 {% endblock extra_scripts %}
