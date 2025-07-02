@@ -1,5 +1,5 @@
-<!-- templates/flota/carga_masiva.html -->
 {% extends "flota/base.html" %}
+{% load static %} {# <-- ¡IMPORTANTE! Añade esta línea al principio #}
 
 {% block title %}Carga Masiva de Datos{% endblock %}
 
@@ -9,9 +9,9 @@
     <div class="card">
         <h2>Subir Archivos</h2>
         <p>Selecciona los archivos Excel para cargar los catálogos. Las columnas deben coincidir con la plantilla.</p>
-        <!-- 'enctype' es CRUCIAL para que la subida de archivos funcione -->
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
+            <!-- El formulario se renderiza automáticamente como antes -->
             {{ form.as_p }}
             <br>
             <button type="submit" class="btn-submit">Iniciar Carga</button>
@@ -22,9 +22,10 @@
         <h2>Instrucciones y Plantillas</h2>
         <p>Asegúrate de que tus archivos Excel sigan el formato correcto. Puedes descargar las plantillas aquí:</p>
         <ul>
-            <li><a href="#">Descargar Plantilla de Vehículos</a></li>
-            <li><a href="#">Descargar Plantilla de Tareas</a></li>
-            <li><a href="#">Descargar Plantilla de Insumos</a></li>
+            <!-- ¡CAMBIO CLAVE! Los enlaces ahora usan el tag 'static' -->
+            <li><a href="{% static 'plantillas/plantilla_vehiculos.xlsx' %}">Descargar Plantilla de Vehículos</a></li>
+            <li><a href="{% static 'plantillas/plantilla_tareas.xlsx' %}">Descargar Plantilla de Tareas</a></li>
+            <li><a href="{% static 'plantillas/plantilla_inventario_repuestos.xlsx' %}">Descargar Plantilla de Inventario</a></li>
         </ul>
     </div>
 {% endblock %}

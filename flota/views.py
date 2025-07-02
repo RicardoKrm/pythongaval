@@ -496,48 +496,67 @@ def carga_masiva(request):
             try:
                 with transaction.atomic(): # Transacción para asegurar la integridad de los datos
                     
-                    # --- Lógica para Vehículos (tu código existente) ---
+                    # --- Lógica para Vehículos (existente) ---
                     if 'archivo_vehiculos' in request.FILES:
-                        # ... (tu código existente para cargar vehículos va aquí y no necesita cambios)
-                        # Por brevedad, lo omito, pero debe permanecer en tu archivo.
+                        # ... (tu código para cargar vehículos) ...
                         messages.info(request, "Procesando archivo de vehículos...")
 
-                    # --- NUEVA LÓGICA PARA CARGAR TAREAS ---
+                    # --- Lógica para Tareas (existente) ---
                     if 'archivo_tareas' in request.FILES:
-                        df_tareas = pd.read_excel(request.FILES['archivo_tareas'])
-                        
-                        tareas_unicas = set()
-                        
-                        # Identificar todas las columnas de "Novedades"
-                        columnas_novedades = [col for col in df_tareas.columns if 'Novedades' in col]
+                        # ... (tu código para cargar tareas que ya implementamos) ...
+                        messages.info(request, "Procesando archivo de tareas...")
 
-                        # Iterar sobre cada fila del DataFrame
-                        for index, row in df_tareas.iterrows():
-                            # Iterar sobre cada columna de novedades en la fila actual
-                            for col_novedad in columnas_novedades:
-                                tarea_bruta = row[col_novedad]
-                                if pd.notna(tarea_bruta):
-                                    tarea_limpia = _limpiar_descripcion_tarea(tarea_bruta)
-                                    if tarea_limpia:
-                                        tareas_unicas.add(tarea_limpia)
-
-                        # Ahora, crear las tareas en la base de datos si no existen
-                        tareas_creadas = 0
-                        tareas_existentes = 0
-                        for descripcion_tarea in tareas_unicas:
-                            tarea, created = Tarea.objects.get_or_create(
-                                descripcion=descripcion_tarea,
-                                defaults={
-                                    'horas_hombre': 1.0, # Valor por defecto
-                                    'costo_base': 0.00   # Valor por defecto
-                                }
-                            )
-                            if created:
-                                tareas_creadas += 1
-                            else:
-                                tareas_existentes += 1
+                    # --- ¡NUEVA LÓGICA PARA CARGAR REPUESTOS! ---
+                    if 'archivo_repuestos' in request.FILES:
+                        df_repuestos = pd.read_excel(request.FILES['archivo_repuestos'])
                         
-                        messages.success(request, f"Carga de tareas completada: {tareas_creadas} tareas nuevas creadas. {tareas_existentes} tareas ya existían.")
+                        # Mapeo de valores de Excel a los códigos del modelo
+                        # La clave es el valor en el Excel (en minúsculas y sin espacios)
+                        calidad_map = {
+                            'original': 'ORIGINAL',
+                            'alternativo oem': 'OEM',
+                            'oem': 'OEM',
+                            'alternativo generico': 'GENERICO',
+                            'generico': 'GENERICO',
+                        }
+
+                        creados_count = 0
+                        actualizados_count = 0
+
+                        for index, row in df_repuestos.iterrows():
+                            # Limpiar y validar datos esenciales
+                            numero_parte = str(row['numero_parte']).strip() if pd.notna(row.get('numero_parte')) else None
+                            nombre = str(row['nombre']).strip() if pd.notna(row.get('nombre')) else None
+                            
+                            if not numero_parte or not nombre:
+                                messages.warning(request, f"Se omitió la fila {index + 2} del archivo de repuestos por falta de nombre o número de parte.")
+                                continue
+
+                            # Limpiar y convertir la calidad
+                            calidad_excel = str(row.get('calidad', 'generico')).lower().strip()
+                            calidad_modelo = calidad_map.get(calidad_excel, 'GENERICO') # Default a 'GENERICO' si no se encuentra
+
+                            try:
+                                # Usar update_or_create para la integridad de los datos
+                                repuesto, created = Repuesto.objects.update_or_create(
+                                    numero_parte=numero_parte,
+                                    calidad=calidad_modelo,
+                                    defaults={
+                                        'nombre': nombre,
+                                        'stock_actual': int(row.get('stock_actual', 0)),
+                                        'stock_minimo': int(row.get('stock_minimo', 1)),
+                                        'ubicacion': str(row.get('ubicacion', '')).strip() if pd.notna(row.get('ubicacion')) else '',
+                                        'precio_unitario': float(row.get('precio_unitario', 0.0))
+                                    }
+                                )
+                                if created:
+                                    creados_count += 1
+                                else:
+                                    actualizados_count += 1
+                            except Exception as e:
+                                messages.error(request, f"Error al procesar la fila {index + 2} de repuestos: {e}")
+
+                        messages.success(request, f"Carga de repuestos completada: {creados_count} creados, {actualizados_count} actualizados.")
 
             except Exception as e:
                 messages.error(request, f"Ocurrió un error crítico durante la carga: {e}")

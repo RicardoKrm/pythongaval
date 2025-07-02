@@ -10,10 +10,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Font Awesome para íconos -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel='stylesheet'>
     
-    <!-- Google Fonts - Cambiado a Inter para una apariencia más moderna y limpia -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel='stylesheet'>
     
     <style>
         /* Variables CSS optimizadas para un tema oscuro profesional */
@@ -31,6 +31,9 @@
             --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
             --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
             --shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.4); /* Sombra al pasar el ratón */
+            --success-color: #10B981; /* Verde para éxito */
+            --warning-color: #F59E0B; /* Naranja para advertencia */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro */
         }
         
         /* Estilos generales del cuerpo */
@@ -46,8 +49,8 @@
         
         /* Contenedor principal para centrar el contenido */
         .container-fluid {
-            padding-left: 1rem;
-            padding-right: 1rem;
+            padding-left: 1.5rem; /* Aumento ligero del padding horizontal */
+            padding-right: 1.5rem;
         }
 
         /* Contenedor del dashboard con flexbox para la distribución de paneles */
@@ -55,7 +58,7 @@
             display: flex;
             min-height: calc(100vh - 2rem); /* Altura mínima para ocupar la mayor parte de la pantalla */
             gap: 1.5rem; /* Espacio entre el sidebar y el contenido principal */
-            padding: 1rem 0; /* Padding vertical */
+            padding: 1.5rem 0; /* Padding vertical, aumentado */
         }
         
         /* Estilos del panel lateral (sidebar) */
@@ -83,6 +86,7 @@
             color: #E0E7FF; /* Un blanco azulado para el texto del header */
             position: relative;
             overflow: hidden; /* Para el pseudo-elemento de efecto visual */
+            /* backdrop-filter: blur(5px); */ /* Opcional: efecto de desenfoque sutil, puede impactar el rendimiento */
         }
 
         /* Pseudo-elemento para un efecto sutil en el header */
@@ -164,7 +168,7 @@
             padding: 0.6rem 1rem; /* Más padding para mejor usabilidad */
             border-radius: 0.5rem; /* Bordes más redondeados */
             font-size: 0.95rem;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Transiciones suaves */
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease; /* Transiciones suaves */
         }
         
         .form-control:focus, .form-select:focus {
@@ -276,10 +280,10 @@
         }
         
         /* Colores de prioridad */
-        .priority-CRITICA { background-color: #EF4444; color: white; } /* Rojo */
-        .priority-ALTA { background-color: #F59E0B; color: #1A202C; } /* Naranja */
+        .priority-CRITICA { background-color: var(--danger-color); color: white; } /* Rojo */
+        .priority-ALTA { background-color: var(--warning-color); color: #1A202C; } /* Naranja */
         .priority-MEDIA { background-color: #64748B; color: white; } /* Gris medio */
-        .priority-BAJA { background-color: #3B82F6; color: white; } /* Azul */
+        .priority-BAJA { background-color: var(--accent-color); color: white; } /* Azul */
         
         .ot-item-details {
             display: flex;
@@ -306,7 +310,8 @@
             background-color: var(--card-bg);
             border-radius: 0.75rem; /* Bordes más redondeados */
             padding: 1rem; /* Padding interno para el calendario */
-            height: calc(100vh - 200px); /* Altura dinámica */
+            /* Altura fija para el calendario, ajustada para que se vea bien en la vista de mes */
+            height: 750px; /* Ajuste manual para que se vea bien en la vista de mes y sea consistente */
             box-shadow: var(--shadow-light);
         }
         
@@ -385,21 +390,21 @@
         }
         
         /* Colores de fondo por ESTADO (se mantienen los colores originales pero se refinan) */
-        .fc-event.estado-PENDIENTE { background-color: #F59E0B; } /* Naranja */
-        .fc-event.estado-EN_PROCESO { background-color: #3B82F6; } /* Azul */
+        .fc-event.estado-PENDIENTE { background-color: var(--warning-color); } /* Naranja */
+        .fc-event.estado-EN_PROCESO { background-color: var(--accent-color); } /* Azul */
         .fc-event.estado-PAUSADA { background-color: #F97316; } /* Naranja oscuro */
         .fc-event.estado-CERRADA_MECANICO { background-color: #64748B; } /* Gris medio */
-        .fc-event.estado-FINALIZADA { background-color: #10B981; } /* Verde */
+        .fc-event.estado-FINALIZADA { background-color: var(--success-color); } /* Verde */
         
         /* Estilos de borde por PRIORIDAD */
         .fc-event {
             border-left: 5px solid transparent !important; /* Borde izquierdo más grueso */
         }
         
-        .fc-event.prioridad-BAJA { border-left-color: #3B82F6 !important; }
+        .fc-event.prioridad-BAJA { border-left-color: var(--accent-color) !important; }
         .fc-event.prioridad-MEDIA { border-left-color: #64748B !important; }
-        .fc-event.prioridad-ALTA { border-left-color: #F59E0B !important; }
-        .fc-event.prioridad-CRITICA { border-left-color: #EF4444 !important; }
+        .fc-event.prioridad-ALTA { border-left-color: var(--warning-color) !important; }
+        .fc-event.prioridad-CRITICA { border-left-color: var(--danger-color) !important; }
         
         /* Estilos para el contenido del evento (iconos y título) */
         .fc-event-main-frame { 
@@ -446,10 +451,6 @@
             box-shadow: var(--shadow-light);
             font-size: 0.875rem;
         }
-        .tooltip.bs-tooltip-auto[x-placement^=top] .tooltip-arrow::before, 
-        .tooltip.bs-tooltip-top .tooltip-arrow::before {
-            border-top-color: var(--border-color);
-        }
         /* Ajuste para el color de la flecha del tooltip */
         .tooltip.bs-tooltip-auto[x-placement^=top] .tooltip-arrow::before,
         .tooltip.bs-tooltip-top .tooltip-arrow::before {
@@ -470,6 +471,9 @@
             }
             .dashboard-subtitle {
                 font-size: 0.9rem;
+            }
+            #calendar {
+                height: 700px; /* Ajuste para pantallas medianas */
             }
         }
         
@@ -589,7 +593,7 @@
                 <div class="card-body p-0">
                     <div class="ot-list" id="ot-pendientes">
                         <!-- Ejemplo de OT pendiente - Esto debería generarse dinámicamente desde tu backend -->
-                        <div class="ot-item" draggable="true" data-ot-id="1" data-ot-title="OT-001 - Cambio de aceite" data-ot-duration="2" data-ot-priority="MEDIA" data-ot-estado="PENDIENTE">
+                        <div class="ot-item" draggable="true" data-ot-id="1" data-ot-title="OT-001 - Cambio de aceite" data-ot-duration="2" data-ot-priority="MEDIA" data-ot-estado="PENDIENTE" data-ot-vehiculo="Camioneta 123" data-ot-responsable="Mecánico A">
                             <div class="ot-item-header">
                                 <h5 class="ot-item-title">OT-001 - Cambio de aceite</h5>
                                 <span class="ot-item-priority priority-MEDIA">MEDIA</span>
@@ -610,7 +614,7 @@
                             </div>
                         </div>
                         
-                        <div class="ot-item" draggable="true" data-ot-id="2" data-ot-title="OT-002 - Revisión frenos" data-ot-duration="4" data-ot-priority="ALTA" data-ot-estado="PENDIENTE">
+                        <div class="ot-item" draggable="true" data-ot-id="2" data-ot-title="OT-002 - Revisión frenos" data-ot-duration="4" data-ot-priority="ALTA" data-ot-estado="PENDIENTE" data-ot-vehiculo="Camion 456" data-ot-responsable="Mecánico B">
                             <div class="ot-item-header">
                                 <h5 class="ot-item-title">OT-002 - Revisión frenos</h5>
                                 <span class="ot-item-priority priority-ALTA">ALTA</span>
@@ -631,7 +635,7 @@
                             </div>
                         </div>
                         
-                        <div class="ot-item" draggable="true" data-ot-id="3" data-ot-title="OT-003 - Cambio llantas" data-ot-duration="3" data-ot-priority="BAJA" data-ot-estado="PENDIENTE">
+                        <div class="ot-item" draggable="true" data-ot-id="3" data-ot-title="OT-003 - Cambio llantas" data-ot-duration="3" data-ot-priority="BAJA" data-ot-estado="PENDIENTE" data-ot-vehiculo="Furgón 789" data-ot-responsable="Mecánico C">
                             <div class="ot-item-header">
                                 <h5 class="ot-item-title">OT-003 - Cambio llantas</h5>
                                 <span class="ot-item-priority priority-BAJA">BAJA</span>
@@ -725,7 +729,6 @@
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@5.11.3/main.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
 
-
     <!-- Bootstrap Bundle JS (incluye Popper para tooltips) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -772,7 +775,7 @@
                 editable: true, // Permite redimensionar y arrastrar eventos existentes
                 droppable: true, // Habilita el arrastre de elementos externos al calendario
                 dayMaxEvents: true, // Limitar el número de eventos por día para no desbordar
-                height: 'auto', // Altura automática para el calendario
+                // Eliminamos 'height: auto' aquí para que el CSS controle la altura
                 eventTimeFormat: { 
                     hour: '2-digit',
                     minute: '2-digit',
