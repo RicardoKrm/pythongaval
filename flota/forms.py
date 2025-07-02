@@ -87,9 +87,33 @@ class BitacoraDiariaForm(forms.ModelForm):
         }
 
 class CargaMasivaForm(forms.Form):
-    archivo_vehiculos = forms.FileField(label="Archivo Excel de Vehículos", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
-    archivo_pautas = forms.FileField(label="Archivo Excel de Pautas", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
-    archivo_historial = forms.FileField(label="Archivo Excel de Historial de Mantenimientos", required=False, widget=forms.ClearableFileInput(attrs={'class': 'form-control'}))
+    archivo_vehiculos = forms.FileField(
+        label="Archivo Excel de Vehículos", 
+        required=False, 
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+    archivo_pautas = forms.FileField(
+        label="Archivo Excel de Pautas", 
+        required=False, 
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+    archivo_historial = forms.FileField(
+        label="Archivo Excel de Historial de Mantenimientos", 
+        required=False, 
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+    # --- Nuevos campos añadidos ---
+    archivo_tipos_falla = forms.FileField(
+        label="Archivo Excel de Tipos de Falla (Pareto)", 
+        required=False, 
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+    archivo_tareas = forms.FileField(
+        label="Archivo Excel de Tareas (Bitácoras)", 
+        required=False, 
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+
 
 class CerrarOtMecanicoForm(forms.ModelForm):
     class Meta:

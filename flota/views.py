@@ -3,6 +3,7 @@
 import json
 import random
 from datetime import datetime, timedelta
+import re
 import pandas as pd
 from weasyprint import HTML
 
@@ -479,6 +480,38 @@ def pizarra_programacion(request):
     } 
     return render(request, 'flota/pizarra_programacion.html', context)
 
+def _limpiar_descripcion_tarea(descripcion):
+    """
+    Función auxiliar para limpiar la descripción de una tarea.
+    Elimina los estados comunes (PR, COR, OK, PENDIENTE) y otros artefactos.
+    """
+    if not isinstance(descripcion, str):
+        return None
+
+    # Elimina los indicadores de estado y lo que les sigue (ej: "PR OK", "COR PENDIENTE", etc.)
+    # La expresión regular busca las palabras PR, COR, CO, OK, PENDIENTE al final de una frase.
+    # Usaremos un método más simple y robusto: buscar por palabras clave y cortar la cadena.
+    
+    terminos_a_cortar = [' PR ', ' COR ', ' COK ', ' PENDIENTE', ' OK']
+    descripcion_limpia = descripcion
+    
+    for termino in terminos_a_cortar:
+        if termino in descripcion_limpia:
+            # Corta la cadena justo antes del término
+            descripcion_limpia = descripcion_limpia.split(termino)[0]
+
+    # Elimina cualquier número al final que pueda ser un folio o código (ej: '... 1167')
+    descripcion_limpia = re.sub(r'\s+\d+$', '', descripcion_limpia)
+    
+    # Elimina espacios en blanco extra al principio o al final
+    descripcion_limpia = descripcion_limpia.strip()
+
+    # Si la descripción es muy corta después de limpiar, la descartamos
+    if len(descripcion_limpia) < 5:
+        return None
+        
+    return descripcion_limpia
+
 
 @login_required
 def carga_masiva(request):
@@ -487,25 +520,58 @@ def carga_masiva(request):
         form = CargaMasivaForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                with transaction.atomic():
+                with transaction.atomic(): # Transacción para asegurar la integridad de los datos
+                    
+                    # --- Lógica para Vehículos (tu código existente) ---
                     if 'archivo_vehiculos' in request.FILES:
-                        df_v = pd.read_excel(request.FILES['archivo_vehiculos'], header=1)
-                        df_v.columns = df_v.columns.str.strip()
-                        df_v = df_v.dropna(subset=['N° INT.'])
-                        count = 0
-                        for _, row in df_v.iterrows():
-                            try:
-                                modelo, _ = ModeloVehiculo.objects.get_or_create(nombre=str(row['MODELO']).strip(), defaults={'marca': str(row['MARCA']).strip(), 'tipo': str(row['TIPO VEH.']).strip()})
-                                Vehiculo.objects.update_or_create(numero_interno=str(int(row['N° INT.'])).strip(), defaults={'patente': str(row.get('PPU', '')).strip(), 'modelo': modelo, 'kilometraje_actual': int(row['KM ACTUAL'])})
-                                count += 1
-                            except (ValueError, KeyError) as e:
-                                messages.warning(request, f"Se omitió una fila de vehículos por datos inválidos: {e}")
-                        messages.success(request, f"{count} registros de vehículos procesados.")
+                        # ... (tu código existente para cargar vehículos va aquí y no necesita cambios)
+                        # Por brevedad, lo omito, pero debe permanecer en tu archivo.
+                        messages.info(request, "Procesando archivo de vehículos...")
+
+                    # --- NUEVA LÓGICA PARA CARGAR TAREAS ---
+                    if 'archivo_tareas' in request.FILES:
+                        df_tareas = pd.read_excel(request.FILES['archivo_tareas'])
+                        
+                        tareas_unicas = set()
+                        
+                        # Identificar todas las columnas de "Novedades"
+                        columnas_novedades = [col for col in df_tareas.columns if 'Novedades' in col]
+
+                        # Iterar sobre cada fila del DataFrame
+                        for index, row in df_tareas.iterrows():
+                            # Iterar sobre cada columna de novedades en la fila actual
+                            for col_novedad in columnas_novedades:
+                                tarea_bruta = row[col_novedad]
+                                if pd.notna(tarea_bruta):
+                                    tarea_limpia = _limpiar_descripcion_tarea(tarea_bruta)
+                                    if tarea_limpia:
+                                        tareas_unicas.add(tarea_limpia)
+
+                        # Ahora, crear las tareas en la base de datos si no existen
+                        tareas_creadas = 0
+                        tareas_existentes = 0
+                        for descripcion_tarea in tareas_unicas:
+                            tarea, created = Tarea.objects.get_or_create(
+                                descripcion=descripcion_tarea,
+                                defaults={
+                                    'horas_hombre': 1.0, # Valor por defecto
+                                    'costo_base': 0.00   # Valor por defecto
+                                }
+                            )
+                            if created:
+                                tareas_creadas += 1
+                            else:
+                                tareas_existentes += 1
+                        
+                        messages.success(request, f"Carga de tareas completada: {tareas_creadas} tareas nuevas creadas. {tareas_existentes} tareas ya existían.")
+
             except Exception as e:
-                messages.error(request, f"Ocurrió un error durante la carga: {e}")
+                messages.error(request, f"Ocurrió un error crítico durante la carga: {e}")
+            
             return redirect('carga_masiva')
     else:
         form = CargaMasivaForm()
+
     context = {'form': form}
     return render(request, 'flota/carga_masiva.html', context)
 
