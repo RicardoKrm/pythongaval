@@ -23,11 +23,11 @@ from django.urls import reverse
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
     Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto,
-    MovimientoStock, RepuestoRequeridoPorTarea # Asegúrate de que este también esté importado
+    MovimientoStock, RepuestoRequeridoPorTarea 
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
-    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm,
+    CerrarOtMecanicoForm, AsignarPersonalOTForm, ManualTareaForm, ManualInsumoForm, FiltroPizarraForm, AsignarTareaForm,
     PausarOTForm, DiagnosticoEvaluacionForm, OTFiltroForm, CalendarioFiltroForm, RepuestoForm, MovimientoStockForm
 
 )
@@ -266,18 +266,19 @@ def orden_trabajo_detail(request, pk):
     ot = get_object_or_404(OrdenDeTrabajo, pk=pk)
     es_admin_o_super = request.user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()
     
-    # Inicialización de todos los formularios que usaremos
-    # Se inicializan con datos si es GET, o se usan las instancias vacías para el contexto
+    # Inicialización de todos los formularios
     asignar_form = AsignarPersonalOTForm(instance=ot)
     cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
     cambiar_estado_form = CambiarEstadoOTForm(instance=ot)
-    manual_tarea_form = ManualTareaForm()
-    manual_insumo_form = ManualInsumoForm() # <<-- Se inicializa aquí para el contexto
+    manual_tarea_form = ManualTareaForm() # Lo mantenemos por si acaso, pero será reemplazado en la plantilla
+    manual_insumo_form = ManualInsumoForm()
     pausar_form = PausarOTForm(instance=ot)
     diagnostico_form = DiagnosticoEvaluacionForm(instance=ot)
+    # --- NUEVO: Instancia del formulario para asignar tareas existentes ---
+    asignar_tarea_form = AsignarTareaForm()
 
     if request.method == 'POST':
-        # --- Lógica para Cargar Tareas de una Pauta (para OTs Preventivas) ---
+        # --- Lógica para Cargar Tareas de una Pauta ---
         if 'cargar_tareas_pauta' in request.POST:
             if ot.tipo == 'PREVENTIVA' and ot.pauta_mantenimiento:
                 tareas_de_pauta = ot.pauta_mantenimiento.tareas.all()
@@ -290,8 +291,7 @@ def orden_trabajo_detail(request, pk):
                 messages.success(request, f"Tareas de la pauta '{ot.pauta_mantenimiento.nombre}' cargadas con éxito.")
             else:
                 messages.error(request, "Esta acción solo es válida para OTs Preventivas con una pauta asignada.")
-            # Por lo tanto, si el POST falla, es mejor redirigir o re-renderizar todo.
-            return redirect('ot_detail', pk=ot.pk) # Redirige incluso si hay error para simplificar el flujo actual.
+            return redirect('ot_detail', pk=ot.pk)
 
         # --- Lógica para Pausar la OT ---
         elif 'pausar_ot' in request.POST:
@@ -311,10 +311,9 @@ def orden_trabajo_detail(request, pk):
                     messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
                     return redirect('ot_detail', pk=ot.pk)
                 else:
-                    messages.error(request, 'Error al pausar la OT. Por favor, corrija los errores.')
-                    pausar_form = form # Pasa el formulario con errores de vuelta al contexto.
-        
-        # --- Lógica para Guardar Diagnóstico (para OTs Evaluativas) ---
+                    pausar_form = form
+
+        # --- Lógica para Guardar Diagnóstico ---
         elif 'guardar_diagnostico' in request.POST:
             form = DiagnosticoEvaluacionForm(request.POST, instance=ot)
             if form.is_valid():
@@ -326,62 +325,45 @@ def orden_trabajo_detail(request, pk):
                 messages.success(request, 'Diagnóstico guardado con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, 'Error al guardar el diagnóstico. Por favor, corrija los errores.')
-                diagnostico_form = form # Pasa el formulario con errores de vuelta al contexto.
+                diagnostico_form = form
         
-        # --- Lógica para Añadir Tarea Manual (para OTs Correctivas/Evaluativas) ---
-        elif 'add_manual_tarea' in request.POST:
-            if ot.tipo in ['CORRECTIVA', 'EVALUATIVA']:
-                form = ManualTareaForm(request.POST)
-                if form.is_valid():
-                    descripcion = form.cleaned_data['descripcion']
-                    tarea, created = Tarea.objects.get_or_create(
-                        descripcion=descripcion,
-                        defaults={'horas_hombre': form.cleaned_data['horas_hombre'], 'costo_base': form.cleaned_data['costo_base']}
-                    )
-                    ot.tareas_realizadas.add(tarea)
-                    ot.save()
-                    messages.success(request, f'Tarea "{descripcion}" añadida con éxito.')
-                    return redirect('ot_detail', pk=ot.pk)
+        # --- ¡NUEVA LÓGICA PARA ASIGNAR TAREA EXISTENTE! ---
+        elif 'asignar_tarea_existente' in request.POST:
+            form = AsignarTareaForm(request.POST)
+            if form.is_valid():
+                tarea_seleccionada = form.cleaned_data['tarea']
+                
+                if ot.tareas_realizadas.filter(pk=tarea_seleccionada.pk).exists():
+                    messages.warning(request, f'La tarea "{tarea_seleccionada.descripcion}" ya está asignada a esta OT.')
                 else:
-                    messages.error(request, 'Error al añadir tarea manual. Por favor, corrija los errores.')
-                    manual_tarea_form = form # Pasa el formulario con errores de vuelta al contexto.
+                    ot.tareas_realizadas.add(tarea_seleccionada)
+                    ot.save() # Llama al save de la OT para recalcular costos
+                    
+                    HistorialOT.objects.create(
+                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION',
+                        descripcion=f"Se añadió la tarea: '{tarea_seleccionada.descripcion}'."
+                    )
+                    messages.success(request, f'Tarea "{tarea_seleccionada.descripcion}" añadida con éxito.')
+                
+                return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, "No se pueden añadir tareas manuales a una OT Preventiva.")
-            # Si hay un error y no se redirige, el código continúa y renderiza la página con los forms actualizados.
+                messages.error(request, 'Error al asignar la tarea. Por favor, seleccione una tarea válida.')
+                asignar_tarea_form = form # Pasa el formulario con errores de vuelta al contexto
 
-        # --- Lógica para Añadir Insumo Manual (para todas las OTs) ---
+        # --- Lógica para Añadir Insumo Manual ---
         elif 'add_manual_insumo' in request.POST:
-            form = ManualInsumoForm(request.POST) # <<-- Usa la versión ManualInsumoForm de forms.py
+            form = ManualInsumoForm(request.POST)
             if form.is_valid():
                 nombre = form.cleaned_data['nombre']
                 precio = form.cleaned_data['precio_unitario']
                 cantidad = form.cleaned_data['cantidad']
-
-                # Crea o actualiza el Insumo genérico
-                insumo, created = Insumo.objects.get_or_create(
-                    nombre=nombre,
-                    defaults={'precio_unitario': precio} 
-                )
-                
-                # Crea el DetalleInsumoOT, vinculándolo al Insumo (repuesto_inventario=None por defecto)
-                DetalleInsumoOT.objects.create(
-                    orden_de_trabajo=ot, 
-                    insumo=insumo, 
-                    cantidad=cantidad,
-                    repuesto_inventario=None # Aseguramos que sea None para insumos manuales
-                )
-                ot.save() # Recalcula el costo total de la OT
-
+                insumo, created = Insumo.objects.get_or_create(nombre=nombre, defaults={'precio_unitario': precio})
+                DetalleInsumoOT.objects.create(orden_de_trabajo=ot, insumo=insumo, cantidad=cantidad, repuesto_inventario=None)
+                ot.save()
                 messages.success(request, f'Insumo manual "{nombre}" añadido con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, 'Error al añadir insumo manual. Por favor, revise los datos.')
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        label = form.fields[field].label if field in form.fields else field.capitalize()
-                        messages.error(request, f"Error en '{label}': {error}")
-                manual_insumo_form = form # <<-- Pasar el formulario con errores de vuelta al contexto
+                manual_insumo_form = form
 
         # --- Lógica para Asignar Personal ---
         elif 'asignar_personal' in request.POST:
@@ -389,17 +371,13 @@ def orden_trabajo_detail(request, pk):
             if form.is_valid():
                 form.save()
                 responsable = form.cleaned_data.get('responsable')
-                # Accede a los elementos del ManyToManyField a través de .all()
-                ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado').all()]) 
+                ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado').all()])
                 descripcion = f"Se asignó a {responsable.username if responsable else 'nadie'} como responsable. Ayudantes: {ayudantes or 'ninguno'}."
-                HistorialOT.objects.create(
-                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='ASIGNACION', descripcion=descripcion
-                )
+                HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='ASIGNACION', descripcion=descripcion)
                 messages.success(request, '¡Personal asignado con éxito!')
                 return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, 'Error al asignar personal. Por favor, corrija los errores.')
-                asignar_form = form # Pasa el formulario con errores de vuelta al contexto.
+                asignar_form = form
         
         # --- Lógica para Cambiar Estado General ---
         elif 'cambiar_estado' in request.POST:
@@ -408,23 +386,16 @@ def orden_trabajo_detail(request, pk):
                 nuevo_estado = form.cleaned_data['estado']
                 if ot.estado == 'PAUSADA' and nuevo_estado == 'EN_PROCESO':
                     ot.motivo_pausa, ot.notas_pausa = None, ""
-                    HistorialOT.objects.create(
-                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='REANUDACION', 
-                        descripcion="La OT ha sido reanudada y puesta 'En Proceso'."
-                    )
+                    HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='REANUDACION', descripcion="La OT ha sido reanudada y puesta 'En Proceso'.")
                 if nuevo_estado == 'FINALIZADA' and ot.estado != 'FINALIZADA':
                     ot.fecha_cierre = timezone.now()
-                    HistorialOT.objects.create(
-                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='FINALIZACION', 
-                        descripcion=f"La OT ha sido finalizada por {request.user.username}."
-                    )
+                    HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='FINALIZACION', descripcion=f"La OT ha sido finalizada por {request.user.username}.")
                 ot.estado = nuevo_estado
                 ot.save()
                 messages.success(request, f"Estado de la OT actualizado a '{ot.get_estado_display()}'.")
                 return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, 'Error al cambiar estado. Por favor, corrija los errores.')
-                cambiar_estado_form = form # Pasa el formulario con errores de vuelta al contexto.
+                cambiar_estado_form = form
             
         # --- Lógica para Cerrar por Mecánico ---
         elif 'cerrar_mecanico' in request.POST:
@@ -433,27 +404,26 @@ def orden_trabajo_detail(request, pk):
                 instancia = form.save(commit=False)
                 instancia.estado = 'CERRADA_MECANICO'
                 instancia.save()
-                HistorialOT.objects.create(
-                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='CIERRE_MECANICO',
-                    descripcion=f"Cerrada por mecánico. Notas: {instancia.motivo_pendiente or 'N/A'}"
-                )
+                HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CIERRE_MECANICO', descripcion=f"Cerrada por mecánico. Notas: {instancia.motivo_pendiente or 'N/A'}")
                 messages.info(request, f"OT #{ot.folio} marcada como 'Cerrada por Mecánico'.")
                 return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, 'Error al cerrar por mecánico. Por favor, corrija los errores.')
-                cerrar_mecanico_form = form # Pasa el formulario con errores de vuelta al contexto.
+                cerrar_mecanico_form = form
 
-    # Si la petición es GET, o si algún POST no redirigió (porque hubo errores de formulario)
+    # Pasar todos los formularios al contexto
     context = {
         'ot': ot,
         'es_admin_o_super': es_admin_o_super,
         'asignar_form': asignar_form,
         'cerrar_mecanico_form': cerrar_mecanico_form,
         'cambiar_estado_form': cambiar_estado_form,
-        'manual_tarea_form': manual_tarea_form,
-        'manual_insumo_form': manual_insumo_form, # <<-- Importante: se usa la instancia que puede contener errores
+        'manual_insumo_form': manual_insumo_form,
         'pausar_form': pausar_form,
         'diagnostico_form': diagnostico_form,
+        # --- ¡NUEVO!: Pasar el formulario de asignar tarea al contexto ---
+        'asignar_tarea_form': asignar_tarea_form,
+        # Mantenemos 'manual_tarea_form' por si alguna otra parte lo necesita, aunque lo reemplazaremos
+        'manual_tarea_form': manual_tarea_form
     }
     return render(request, 'flota/orden_trabajo_detail.html', context)
 

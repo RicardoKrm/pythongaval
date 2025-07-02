@@ -152,6 +152,21 @@ class ManualTareaForm(forms.ModelForm):
             'costo_base': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
+# --- ¡NUEVA CLASE A AÑADIR! ---
+class AsignarTareaForm(forms.Form):
+    """
+    Formulario para seleccionar una Tarea existente y asignarla a una OT.
+    """
+    tarea = forms.ModelChoiceField(
+        queryset=Tarea.objects.all().order_by('descripcion'), # Obtiene todas las tareas y las ordena alfabéticamente
+        label="Seleccionar Tarea de la Lista",
+        widget=forms.Select(attrs={
+            'class': 'form-control select2', # Usa la clase 'select2' para un menú con buscador
+            'style': 'width: 100%;'
+        }),
+        help_text="Seleccione una tarea predefinida del catálogo."
+    )
+
 class ManualInsumoForm(forms.Form): # <<-- CAMBIO AQUÍ: de forms.ModelForm a forms.Form
     nombre = forms.CharField(
         max_length=150, 
