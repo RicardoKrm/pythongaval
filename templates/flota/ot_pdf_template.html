@@ -2,61 +2,384 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>OT {{ ot.folio|default:ot.pk }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OT #12345 - Detalles</title>
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        @page { size: letter; margin: 1.5cm; }
-        body { font-family: 'Helvetica', sans-serif; font-size: 11pt; }
-        h1, h2, h3 { font-weight: bold; color: #333; }
-        h1 { font-size: 24pt; text-align: center; margin-bottom: 0; }
-        h2 { font-size: 14pt; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 25px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside: avoid; }
-        th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
-        thead { background-color: #eee; }
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .info-grid div { padding-bottom: 5px; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .company-name { font-size: 16pt; font-weight: bold; }
-        ul { padding-left: 20px; }
+        /* Variables CSS optimizadas para un tema oscuro profesional */
+        :root {
+            --dark-bg: #0F172A; /* Azul oscuro muy profundo para el fondo principal */
+            --card-bg: #1E293B; /* Un poco más claro que el fondo para las tarjetas y contenedores */
+            --accent-color: #3B82F6; /* Azul brillante, tu color de acento principal */
+            --accent-color-dark: #2563EB; /* Variante más oscura del acento para estados hover/active */
+            --text-primary: #F8FAFC; /* Blanco suave para texto principal, mejor legibilidad */
+            --text-secondary: #94A3B8; /* Gris azulado para texto secundario o descripciones */
+            --border-color: #334155; /* Borde sutil entre elementos, más oscuro */
+            --header-gradient-start: #1E40AF; /* Inicio del degradado para el encabezado */
+            --header-gradient-end: #172554; /* Fin del degradado para el encabezado */
+            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
+            --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
+            --success-color: #10B981; /* Verde para éxito */
+            --warning-color: #F59E0B; /* Naranja para advertencia */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente moderna y legible */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            margin: 0; /* Eliminar margen predeterminado del body */
+            padding: 0; /* Eliminar padding predeterminado del body */
+        }
+
+        /* Contenedor principal para centrar el contenido */
+        .container-fluid {
+            padding: 1.5rem; /* Aumento ligero del padding horizontal y vertical */
+            max-width: 1200px; /* Limitar ancho para mejor legibilidad en pantallas grandes */
+            margin: 0 auto; /* Centrar el contenedor */
+        }
+
+        /* Encabezado de la página principal */
+        .page-header {
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            color: #E0E7FF;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-header .btn {
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.5rem;
+            text-decoration: none;
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+        }
+        .page-header .btn:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Estilos de las tarjetas generales */
+        .card { 
+            background-color: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 1.5rem; /* Aumento del padding interno */
+            margin-bottom: 1.5rem; /* Espacio entre tarjetas */
+        }
+        .card h2, .card h3, .card h5 {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-top: 0; /* Eliminar margen superior predeterminado */
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .card h2 {
+            font-size: 1.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+        .card h3 {
+            font-size: 1.5rem;
+        }
+        .card h5 {
+            font-size: 1.25rem;
+        }
+        .card i {
+            color: var(--accent-color);
+        }
+
+        /* Info Grid para Datos Generales */
+        .info-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Columnas responsivas */
+            gap: 1rem; 
+            margin-bottom: 1.5rem; 
+        }
+        .info-grid div { 
+            padding: 0.5rem 0; 
+            border-bottom: 1px dashed var(--border-color); /* Borde punteado sutil */
+        }
+        .info-grid div:last-child,
+        .info-grid div:nth-last-child(2) { /* Eliminar borde inferior de los últimos 2 elementos en diseño de 2 columnas */
+            border-bottom: none;
+        }
+        @media (min-width: 768px) {
+            .info-grid div:nth-child(odd) { /* Eliminar borde inferior para elementos impares en diseño de 2 columnas */
+                border-bottom: none;
+            }
+        }
+        .info-grid strong {
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        /* Lista de Tareas */
+        .task-list { 
+            list-style: none; 
+            padding: 0; 
+            margin: 0;
+        }
+        .task-list li {
+            background-color: var(--dark-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-primary);
+            font-weight: 400;
+        }
+        .task-list li:last-child {
+            margin-bottom: 0;
+        }
+        .task-list li i {
+            color: var(--success-color);
+        }
+        .task-list li.empty-message {
+            text-align: center;
+            font-style: italic;
+            color: var(--text-secondary);
+            background-color: transparent;
+            border: none;
+            justify-content: center;
+        }
+
+        /* Tablas - Estilo Excel-like */
+        .table-excel-responsive {
+            max-height: 400px; /* Altura máxima para el scroll de la tabla principal */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Suavizar el scroll en iOS */
+            border-radius: 0.75rem; /* Aplicar a wrapper para que bordes redondeados funcionen */
+            border: 1px solid var(--border-color); /* Borde al wrapper */
+        }
+        .table-excel {
+            width: 100%;
+            border-collapse: separate; /* Permite border-spacing */
+            border-spacing: 0;
+            background-color: var(--card-bg);
+            /* Removido border y border-radius de aquí para aplicarlos al wrapper */
+            box-shadow: var(--shadow-light); /* Sombra aún en la tabla */
+            margin-bottom: 0; /* Eliminar margen inferior de la tabla dentro del wrapper */
+        }
+        .table-excel thead th {
+            position: sticky; /* Fija el encabezado */
+            top: 0;
+            background-color: #1A202C; /* Fondo del encabezado de la tabla */
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            z-index: 1; /* Asegura que el encabezado esté sobre el contenido al hacer scroll */
+        }
+        .table-excel tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table-excel tbody tr:nth-child(even) { /* Filas rayadas */
+            background-color: #1A202C; /* Tono ligeramente más oscuro para filas pares */
+        }
+        .table-excel tbody tr:hover {
+            background-color: #2A384A; /* Fondo al pasar el ratón por las filas */
+        }
+        .table-excel td { 
+            padding: 0.75rem 1rem; /* Más padding para celdas */
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color); /* Borde inferior para cada celda */
+            border-right: 1px solid var(--border-color); /* Borde derecho para cada celda */
+            color: var(--text-primary);
+        }
+        .table-excel td:last-child {
+            border-right: none; /* Eliminar borde derecho de la última columna */
+        }
+        .table-excel tbody tr:last-child td {
+            border-bottom: none; /* Eliminar borde inferior de la última fila */
+        }
+        .table-excel .text-secondary { /* Para mensajes de "Sin datos" */
+            color: var(--text-secondary) !important;
+        }
+        .table-excel .text-center {
+            text-align: center;
+        }
+
+        /* Observación inicial */
+        .observation {
+            background-color: #1A202C;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        .observation strong {
+            color: var(--accent-color);
+            margin-right: 0.5rem;
+        }
+        .observation span {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+            .page-header h1 {
+                font-size: 1.75rem;
+            }
+            .card {
+                padding: 1.25rem;
+            }
+            .card h2 {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding: 1rem;
+            }
+            .page-header {
+                padding: 1rem;
+                border-radius: 0; /* Sin bordes redondeados en pantallas muy pequeñas */
+            }
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+            .card h2 {
+                font-size: 1.35rem;
+            }
+            .info-grid {
+                grid-template-columns: 1fr; /* Una columna en pantallas pequeñas */
+            }
+            .info-grid div {
+                border-bottom: 1px dashed var(--border-color); /* Asegurar borde en una columna */
+            }
+            .info-grid div:last-child { /* Asegurar borde en una columna */
+                border-bottom: none;
+            }
+            .table-excel-responsive {
+                max-height: 300px; /* Ajuste para pantallas más pequeñas */
+            }
+            .table-excel td, .table-excel th {
+                padding: 0.6rem 0.8rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .page-header .btn {
+                width: 100%; /* Botón ocupa todo el ancho */
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="company-name">{{ request.tenant.nombre }}</div>
-        <h1>Orden de Trabajo #{{ ot.folio|default:ot.pk }}</h1>
+    <div class="container-fluid">
+        <div class="page-header">
+            <h1><i class="fas fa-file-invoice me-2"></i>Orden de Trabajo #12345</h1>
+            <!-- Botón de regreso, simulando una navegación -->
+            <a href="#" class="btn"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-info-circle me-2"></i>Datos Generales</h2>
+            <div class="info-grid">
+                <div><strong>Vehículo:</strong> Camión A-123</div>
+                <div><strong>Tipo:</strong> Mantenimiento Correctivo</div>
+                <div><strong>Patente:</strong> ABCD-12</div>
+                <div><strong>Estado:</strong> En Progreso</div>
+                <div><strong>KM Apertura:</strong> 125,450 KM</div>
+                <div><strong>Fecha Creación:</strong> 01/07/2025</div>
+            </div>
+            <div class="observation">
+                <strong>Observación:</strong> <span>Revisar sistema de frenos traseros y cambio de aceite. Se detectó un ruido anómalo en el eje trasero.</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-clipboard-check me-2"></i>Tareas a Realizar</h3>
+            <ul class="task-list">
+                <li><i class="fas fa-check-circle"></i> Diagnóstico y revisión de frenos traseros.</li>
+                <li><i class="fas fa-check-circle"></i> Reemplazo de pastillas y discos de freno traseros.</li>
+                <li><i class="fas fa-check-circle"></i> Cambio de aceite de motor y filtro.</li>
+                <li><i class="fas fa-check-circle"></i> Inspección de fluidos y niveles.</li>
+                <li><i class="fas fa-check-circle"></i> Verificación de ruido en eje trasero y lubricación.</li>
+            </ul>
+            <!-- Ejemplo de lista vacía -->
+            <!-- <ul class="task-list">
+                <li class="empty-message">Sin tareas asignadas.</li>
+            </ul> -->
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-boxes me-2"></i>Insumos Utilizados</h3>
+            <div class="table-excel-responsive">
+                <table class="table-excel">
+                    <thead>
+                        <tr>
+                            <th>Insumo</th>
+                            <th>Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Pastillas de freno (juego)</td><td>1</td></tr>
+                        <tr><td>Discos de freno (par)</td><td>1</td></tr>
+                        <tr><td>Aceite de motor 15W-40</td><td>10 Litros</td></tr>
+                        <tr><td>Filtro de aceite</td><td>1</td></tr>
+                        <tr><td>Grasa lubricante multiuso</td><td>0.5 Kg</td></tr>
+                        <!-- Ejemplo de fila vacía -->
+                        <!-- <tr><td colspan="2" class="text-center text-secondary">Sin insumos registrados.</td></tr> -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
-
-    <h2>Datos Generales</h2>
-    <div class="info-grid">
-        <div><strong>Vehículo:</strong> {{ ot.vehiculo }}</div>
-        <div><strong>Tipo:</strong> {{ ot.get_tipo_display }}</div>
-        <div><strong>Patente:</strong> {{ ot.vehiculo.patente }}</div>
-        <div><strong>Estado:</strong> {{ ot.get_estado_display }}</div>
-        <div><strong>KM Apertura:</strong> {{ ot.kilometraje_apertura }} KM</div>
-        <div><strong>Fecha Creación:</strong> {{ ot.fecha_creacion|date:"d/m/Y" }}</div>
-    </div>
-    <strong>Observación:</strong> {{ ot.observacion_inicial|default:"N/A" }}
-
-    <h2>Tareas a Realizar</h2>
-    <ul>
-        {% for tarea in ot.tareas_realizadas.all %}
-            <li>{{ tarea.descripcion }}</li>
-        {% empty %}
-            <li>Sin tareas asignadas.</li>
-        {% endfor %}
-    </ul>
-
-    <h2>Insumos Utilizados</h2>
-    <table>
-        <thead>
-            <tr><th>Insumo</th><th>Cantidad</th></tr>
-        </thead>
-        <tbody>
-            {% for detalle in ot.detalleinsumoot_set.all %}
-            <tr><td>{{ detalle.insumo.nombre }}</td><td>{{ detalle.cantidad }}</td></tr>
-            {% empty %}
-            <tr><td colspan="2">Sin insumos registrados.</td></tr>
-            {% endfor %}
-        </tbody>
-    </table>
 </body>
 </html>

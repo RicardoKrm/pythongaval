@@ -3,29 +3,278 @@
 
 {% block title %}Carga Masiva de Datos{% endblock %}
 
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables CSS optimizadas para un tema oscuro profesional y pulido, basadas en la imagen proporcionada */
+        :root {
+            --dark-bg: #18182B; /* Fondo principal más profundo y oscuro, similar al de la imagen */
+            --card-bg: #212833; /* Fondo de tarjetas, ligeramente más claro que el fondo principal */
+            --input-bg: #2B3440; /* Fondo para campos de entrada, con buen contraste */
+            --accent-color: #007BFF; /* Azul vibrante, similar al botón y selección de la imagen */
+            --accent-color-dark: #0056b3; /* Variante más oscura del acento para hover/active */
+            --text-primary: #E0E7EB; /* Blanco suave y ligeramente cálido para texto principal */
+            --text-secondary: #9CA3AF; /* Gris neutro y suave para texto secundario */
+            --border-color: #3F4756; /* Borde sutil entre elementos */
+            --header-gradient-start: #1A237E; /* Inicio del degradado para el encabezado (azul oscuro) */
+            --header-gradient-end: #0D47A1; /* Fin del degradado para el encabezado (azul más claro) */
+            --shadow-light: 0 6px 15px rgba(0, 0, 0, 0.3); /* Sombra ligera más suave */
+            --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.4); /* Sombra más pronunciada y suave para el header */
+            --success-color: #10B981; /* Verde para éxito (mantenido) */
+            --warning-color: #F59E0B; /* Naranja para advertencia (mantenido) */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro (mantenido) */
+            --alert-danger-bg: rgba(239, 68, 68, 0.15); /* Fondo suave para alertas de peligro */
+        }
+
+        body {
+            background-color: var(--dark-bg) !important;
+            color: var(--text-primary) !important;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            padding: 2rem 1rem; /* Espaciado general del cuerpo */
+        }
+
+        /* Contenedor principal para centrar el contenido */
+        .container {
+            max-width: 900px; /* Ancho máximo para esta página específica */
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2.5rem;
+            text-align: center;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 2rem; /* Padding interno de las tarjetas */
+            margin-bottom: 2.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .card h2 i {
+            font-size: 1.5rem;
+            color: var(--text-primary); /* Iconos en h2 de tarjetas */
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Estilos para los campos de formulario generados por Django */
+        form p {
+            margin-bottom: 1.5rem; /* Espacio entre cada campo de formulario */
+        }
+
+        form label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.6rem;
+            font-size: 0.95em;
+        }
+
+        form input[type="file"] {
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.2rem;
+            width: 100%;
+            box-sizing: border-box; /* Asegura que padding y border no aumenten el ancho */
+        }
+
+        form input[type="file"]::file-selector-button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 0.3rem;
+            padding: 0.5rem 1rem;
+            margin-right: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        form input[type="file"]::file-selector-button:hover {
+            background-color: var(--accent-color-dark);
+        }
+
+        form .btn-submit {
+            background-color: var(--success-color);
+            color: white;
+            padding: 0.85rem 2rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        form .btn-submit:hover {
+            background-color: color-mix(in srgb, var(--success-color) 80%, black);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Estilos para la lista de plantillas */
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 1.5rem;
+        }
+
+        ul li {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem 1.5rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 500;
+        }
+
+        ul li:last-child {
+            margin-bottom: 0;
+        }
+
+        ul li a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        ul li a:hover {
+            color: var(--accent-color-dark);
+            text-decoration: underline;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 0.75rem;
+            }
+            h1 {
+                font-size: 2.2rem;
+                margin-bottom: 2rem;
+            }
+            .card {
+                padding: 1.5rem;
+                border-radius: 0.5rem;
+                margin-bottom: 2rem;
+            }
+            .card h2 {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            .card h2 i {
+                font-size: 1.3rem;
+            }
+            form p {
+                margin-bottom: 1rem;
+            }
+            form label {
+                font-size: 0.9em;
+                margin-bottom: 0.4rem;
+            }
+            form input[type="file"] {
+                padding: 0.6rem 1rem;
+                font-size: 0.9em;
+            }
+            form input[type="file"]::file-selector-button {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9em;
+            }
+            form .btn-submit {
+                padding: 0.7rem 1.5rem;
+                font-size: 1rem;
+                width: 100%; /* Botón ocupa todo el ancho */
+            }
+            ul li {
+                padding: 0.8rem 1rem;
+                margin-bottom: 0.5rem;
+                flex-direction: column; /* Apilar elementos en pantallas pequeñas */
+                align-items: flex-start;
+            }
+            ul li a {
+                margin-top: 0.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 1.5rem;
+            }
+            .card {
+                padding: 1rem;
+                border-radius: 0; /* Sin bordes redondeados en móviles */
+                margin-bottom: 1.5rem;
+            }
+            .card h2 {
+                font-size: 1.3rem;
+                margin-bottom: 0.8rem;
+            }
+            .card h2 i {
+                font-size: 1.1rem;
+            }
+            form .btn-submit {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
+<div class="container">
     <h1>Carga Masiva de Datos desde Excel</h1>
 
     <div class="card">
-        <h2>Subir Archivos</h2>
+        <h2><i class="fas fa-upload"></i> Subir Archivos</h2>
         <p>Selecciona los archivos Excel para cargar los catálogos. Las columnas deben coincidir con la plantilla.</p>
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <!-- El formulario se renderiza automáticamente como antes -->
             {{ form.as_p }}
             <br>
-            <button type="submit" class="btn-submit">Iniciar Carga</button>
+            <button type="submit" class="btn-submit"><i class="fas fa-file-import me-2"></i> Iniciar Carga</button>
         </form>
     </div>
 
     <div class="card">
-        <h2>Instrucciones y Plantillas</h2>
+        <h2><i class="fas fa-info-circle"></i> Instrucciones y Plantillas</h2>
         <p>Asegúrate de que tus archivos Excel sigan el formato correcto. Puedes descargar las plantillas aquí:</p>
         <ul>
             <!-- ¡CAMBIO CLAVE! Los enlaces ahora usan el tag 'static' -->
-            <li><a href="{% static 'plantillas/plantilla_vehiculos.xlsx' %}">Descargar Plantilla de Vehículos</a></li>
-            <li><a href="{% static 'plantillas/plantilla_tareas.xlsx' %}">Descargar Plantilla de Tareas</a></li>
-            <li><a href="{% static 'plantillas/plantilla_inventario_repuestos.xlsx' %}">Descargar Plantilla de Inventario</a></li>
+            <li><a href="{% static 'plantillas/plantilla_vehiculos.xlsx' %}"><i class="fas fa-download me-2"></i> Descargar Plantilla de Vehículos</a></li>
+            <li><a href="{% static 'plantillas/plantilla_tareas.xlsx' %}"><i class="fas fa-download me-2"></i> Descargar Plantilla de Tareas</a></li>
+            <li><a href="{% static 'plantillas/plantilla_inventario_repuestos.xlsx' %}"><i class="fas fa-download me-2"></i> Descargar Plantilla de Inventario</a></li>
         </ul>
     </div>
+</div>
 {% endblock %}

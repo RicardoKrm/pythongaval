@@ -1,63 +1,420 @@
-<!-- Archivo nuevo: flota/templates/flota/repuesto_detail.html -->
 {% extends "flota/base.html" %}
 
 {% block title %}Detalle de Repuesto: {{ repuesto.nombre }}{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="mb-1">{{ repuesto.nombre }}</h1>
-        <p class="h4 text-muted">{{ repuesto.numero_parte }} - {{ repuesto.get_calidad_display }}</p>
-    </div>
-    <div>
-        <a href="{% url 'registrar_movimiento' repuesto_pk=repuesto.pk %}" class="btn btn-primary">
-            <i class="fas fa-dolly-flatbed me-1"></i> Registrar Movimiento
-        </a>
-        <a href="{% url 'repuesto_list' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Volver al Inventario
-        </a>
-    </div>
-</div>
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Variables CSS optimizadas para un tema oscuro profesional (replicadas de diseños anteriores) */
+        :root {
+            --dark-bg: #0F172A; /* Azul oscuro muy profundo para el fondo principal */
+            --card-bg: #1E293B; /* Un poco más claro que el fondo para las tarjetas y contenedores */
+            --accent-color: #3B82F6; /* Azul brillante, tu color de acento principal */
+            --accent-color-dark: #2563EB; /* Variante más oscura del acento para estados hover/active */
+            --text-primary: #F8FAFC; /* Blanco suave para texto principal, mejor legibilidad */
+            --text-secondary: #94A3B8; /* Gris azulado para texto secundario o descripciones */
+            --border-color: #334155; /* Borde sutil entre elementos, más oscuro */
+            --header-gradient-start: #1E40AF; /* Inicio del degradado para el encabezado */
+            --header-gradient-end: #172554; /* Fin del degradado para el encabezado */
+            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
+            --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
+            --shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.4); /* Sombra al pasar el ratón */
+            --success-color: #10B981; /* Verde para éxito */
+            --warning-color: #F59E0B; /* Naranja para advertencia */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente moderna y legible */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            margin: 0; /* Eliminar margen predeterminado del body */
+            padding: 0; /* Eliminar padding predeterminado del body */
+            /* Añadir un patrón de fondo sutil para romper la planitud */
+            background-image: radial-gradient(circle at 100% 150%, var(--card-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 0% 150%, var(--card-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 50% 100%, var(--card-bg) 0%, transparent 10%),
+                              linear-gradient(to bottom, #0F172A, #121B2C); /* Fondo base */
+            background-size: 120% 120%;
+            background-attachment: fixed; /* Mantiene el patrón fijo al hacer scroll */
+        }
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header"><h4><i class="fas fa-info-circle me-2"></i>Información General</h4></div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item bg-transparent"><strong>Stock Actual:</strong> <span class="badge bg-success fs-6">{{ repuesto.stock_actual }}</span></li>
-                    <li class="list-group-item bg-transparent"><strong>Stock Mínimo:</strong> <span class="badge bg-warning text-dark fs-6">{{ repuesto.stock_minimo }}</span></li>
-                    <li class="list-group-item bg-transparent"><strong>Ubicación:</strong> {{ repuesto.ubicacion|default:"N/A" }}</li>
-                    <li class="list-group-item bg-transparent"><strong>Proveedor Habitual:</strong> {{ repuesto.proveedor_habitual|default:"N/A" }}</li>
-                </ul>
-            </div>
+        /* Contenedor principal para centrar el contenido */
+        .container-fluid {
+            padding: 1.5rem; /* Padding general para el contenedor */
+        }
+
+        /* Encabezado de la página principal (título del repuesto y botones) */
+        .page-header-detail {
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            color: #E0E7FF;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header-detail h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin: 0;
+            color: var(--text-primary); /* Asegurar color para el h1 */
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .page-header-detail p.h4 {
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 400;
+            font-size: 1.1rem !important; /* Ajuste para el subtítulo */
+            margin-top: 0.5rem;
+        }
+
+        /* Estilos generales para las tarjetas (card) */
+        .card { 
+            background-color: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            margin-bottom: 1.5rem; /* Espacio entre tarjetas */
+        }
+        .card-header {
+            background-color: #1A202C; /* Fondo ligeramente más oscuro para el header de la tarjeta */
+            border-bottom: 1px solid var(--border-color); /* Borde inferior sutil */
+            padding: 1.25rem 1.5rem; /* Más padding */
+            border-radius: 0.75rem 0.75rem 0 0; /* Bordes superiores redondeados */
+            display: flex;
+            align-items: center;
+            gap: 0.75rem; /* Espacio entre el icono y el título */
+            color: var(--text-primary);
+        }
+        .card-header h4 {
+            font-weight: 600;
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        .card-header i {
+            color: var(--accent-color);
+            font-size: 1.1rem;
+        }
+        .card-body {
+            padding: 1.5rem; /* Padding consistente */
+        }
+
+        /* List Group (para información general) */
+        .list-group-flush {
+            border-radius: 0; /* Eliminar bordes redondeados de la lista */
+        }
+        .list-group-item {
+            background-color: transparent !important; /* Asegurar fondo transparente */
+            border-color: var(--border-color) !important; /* Color de borde consistente */
+            color: var(--text-primary);
+            padding: 0.75rem 0; /* Ajuste de padding */
+        }
+        .list-group-item:first-child {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+        .list-group-item:last-child {
+            border-bottom: none !important; /* Eliminar borde inferior del último item */
+        }
+        .list-group-item strong {
+            color: var(--text-secondary); /* Color para las etiquetas */
+            font-weight: 500;
+            margin-right: 0.5rem;
+        }
+
+        /* Badges para Stock */
+        .badge {
+            padding: 0.4em 0.7em;
+            border-radius: 0.3rem;
+            font-weight: 600;
+            font-size: 0.9rem; /* Ajuste de tamaño de fuente */
+        }
+        .badge.bg-success {
+            background-color: var(--success-color) !important;
+            color: white !important;
+        }
+        .badge.bg-warning {
+            background-color: var(--warning-color) !important;
+            color: #1A202C !important; /* Texto oscuro para el badge naranja */
+        }
+        .badge.bg-danger { /* Añadido para stock crítico si aplica */
+            background-color: var(--danger-color) !important;
+            color: white !important;
+        }
+
+        /* Tabla de Historial de Movimientos (Estilo Excel-like) */
+        .table-excel {
+            width: 100%;
+            border-collapse: separate; /* Permite border-spacing */
+            border-spacing: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            overflow: hidden; /* Para que los bordes redondeados se apliquen correctamente */
+            box-shadow: var(--shadow-light);
+            margin-bottom: 0; /* Eliminar margen inferior si es la última tarjeta */
+        }
+        .table-excel thead th {
+            position: sticky; /* Fija el encabezado */
+            top: 0;
+            background-color: #1A202C; /* Fondo del encabezado de la tabla */
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            z-index: 1; /* Asegura que el encabezado esté sobre el contenido al hacer scroll */
+        }
+        .table-excel tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table-excel tbody tr:nth-child(even) { /* Filas rayadas */
+            background-color: #1A202C; /* Tono ligeramente más oscuro para filas pares */
+        }
+        .table-excel tbody tr:hover {
+            background-color: #2A384A; /* Fondo al pasar el ratón por las filas */
+        }
+        .table-excel td { 
+            padding: 0.75rem 1rem; /* Más padding para celdas */
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color); /* Borde inferior para cada celda */
+            border-right: 1px solid var(--border-color); /* Borde derecho para cada celda */
+            color: var(--text-primary);
+        }
+        .table-excel td:last-child {
+            border-right: none; /* Eliminar borde derecho de la última columna */
+        }
+        .table-excel tbody tr:last-child td {
+            border-bottom: none; /* Eliminar borde inferior de la última fila */
+        }
+        .table-excel .text-success {
+            color: var(--success-color) !important;
+        }
+        .table-excel .text-danger {
+            color: var(--danger-color) !important;
+        }
+        .table-excel .text-muted { /* Para mensajes de "Sin datos" */
+             color: var(--text-secondary) !important;
+        }
+        .table-excel a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .table-excel a:hover {
+            color: var(--accent-color-dark);
+            text-decoration: underline;
+        }
+
+        /* Table Responsive Wrapper para la tabla Excel-like */
+        .table-responsive {
+            max-height: 400px; /* Altura máxima para el scroll de la tabla principal */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Suavizar el scroll en iOS */
+            border-radius: 0.75rem; /* Asegurar que el wrapper también tenga bordes redondeados */
+            border: 1px solid var(--border-color); /* Borde para el wrapper */
+            box-shadow: var(--shadow-light);
+        }
+        .table-responsive table {
+            margin-bottom: 0; /* Eliminar margen inferior de la tabla dentro del wrapper */
+        }
+
+        /* Botones generales */
+        .btn {
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.5rem;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #475569; /* Gris azulado para secundario */
+            border: none;
+            color: var(--text-primary);
+        }
+        .btn-secondary:hover {
+            background-color: #334155; /* Gris más oscuro al pasar el ratón */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .page-header-detail {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+            .page-header-detail h1 {
+                font-size: 1.75rem;
+            }
+            .page-header-detail p.h4 {
+                font-size: 1rem !important;
+            }
+            .page-header-detail > div:last-child { /* Contenedor de botones */
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .page-header-detail .btn {
+                width: 100%;
+            }
+            .col-md-4, .col-md-8 {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header-detail {
+                padding: 1rem;
+            }
+            .page-header-detail h1 {
+                font-size: 1.5rem;
+            }
+            .page-header-detail p.h4 {
+                font-size: 0.9rem !important;
+            }
+            .card-header {
+                padding: 1rem;
+            }
+            .card-header h4 {
+                font-size: 1.1rem;
+            }
+            .card-body {
+                padding: 1rem;
+            }
+            .list-group-item {
+                padding: 0.6rem 0;
+            }
+            .table-excel td, .table-excel th {
+                padding: 0.5rem 0.75rem;
+            }
+            .table-responsive {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .page-header-detail {
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .page-header-detail h1 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header-detail">
+        <div>
+            <h1 class="mb-1">{{ repuesto.nombre }}</h1>
+            <p class="h4 text-muted">{{ repuesto.numero_parte }} - {{ repuesto.get_calidad_display }}</p>
+        </div>
+        <div>
+            <a href="{% url 'registrar_movimiento' repuesto_pk=repuesto.pk %}" class="btn btn-primary">
+                <i class="fas fa-dolly-flatbed me-1"></i> Registrar Movimiento
+            </a>
+            <a href="{% url 'repuesto_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver al Inventario
+            </a>
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header"><h4><i class="fas fa-history me-2"></i>Historial de Movimientos</h4></div>
-            <div class="card-body">
-                <table class="table">
-                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Usuario</th><th>OT</th><th>Notas</th></tr></thead>
-                    <tbody>
-                        {% for mov in movimientos %}
-                        <tr>
-                            <td>{{ mov.fecha_movimiento|date:"d/m/Y H:i" }}</td>
-                            <td>{{ mov.get_tipo_movimiento_display }}</td>
-                            <td class="fw-bold {% if mov.cantidad > 0 %}text-success{% else %}text-danger{% endif %}">{{ mov.cantidad }}</td>
-                            <td>{{ mov.usuario_responsable.username|default:"N/A" }}</td>
-                            <td>
-                                {% if mov.orden_de_trabajo %}
-                                <a href="{% url 'ot_detail' pk=mov.orden_de_trabajo.pk %}">{{ mov.orden_de_trabajo.folio }}</a>
-                                {% else %}--{% endif %}
-                            </td>
-                            <td>{{ mov.notas|default:"--" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="6" class="text-center">No hay movimientos registrados.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-info-circle me-2"></i>Información General</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Stock Actual:</strong> <span class="badge {% if repuesto.stock_actual <= repuesto.stock_minimo %}bg-danger{% else %}bg-success{% endif %} fs-6">{{ repuesto.stock_actual }}</span></li>
+                        <li class="list-group-item"><strong>Stock Mínimo:</strong> <span class="badge bg-warning text-dark fs-6">{{ repuesto.stock_minimo }}</span></li>
+                        <li class="list-group-item"><strong>Ubicación:</strong> {{ repuesto.ubicacion|default:"N/A" }}</li>
+                        <li class="list-group-item"><strong>Proveedor Habitual:</strong> {{ repuesto.proveedor_habitual|default:"N/A" }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-history me-2"></i>Historial de Movimientos</h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table-excel">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Cantidad</th>
+                                    <th>Usuario</th>
+                                    <th>OT</th>
+                                    <th>Notas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mov in movimientos %}
+                                <tr>
+                                    <td>{{ mov.fecha_movimiento|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ mov.get_tipo_movimiento_display }}</td>
+                                    <td class="fw-bold {% if mov.cantidad > 0 %}text-success{% else %}text-danger{% endif %}">{{ mov.cantidad }}</td>
+                                    <td>{{ mov.usuario_responsable.username|default:"N/A" }}</td>
+                                    <td>
+                                        {% if mov.orden_de_trabajo %}
+                                        <a href="{% url 'ot_detail' pk=mov.orden_de_trabajo.pk %}">{{ mov.orden_de_trabajo.folio }}</a>
+                                        {% else %}--{% endif %}
+                                    </td>
+                                    <td>{{ mov.notas|default:"--" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-secondary">No hay movimientos registrados.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -207,17 +207,12 @@ def ot_eventos_api(request):
     """
     connection.set_tenant(request.tenant)
     
-    # Pre-fetch detalles_insumos_ot y repuesto_inventario para evitar consultas N+1
-    # Asegúrate de que prefetch_related apunte a 'tareas_realizadas__repuestos_requeridos__repuesto'
-    # para la lógica de disponibilidad, y a 'detalles_insumos_ot__repuesto_inventario'
-    # si quieres acceder a los repuestos consumidos.
     ordenes_qs = OrdenDeTrabajo.objects.all().select_related('vehiculo', 'responsable').prefetch_related('tareas_realizadas__repuestos_requeridos__repuesto')
     
-    # Lógica de filtros
+    # Lógica de filtros (sin cambios)
     vehiculo_id = request.GET.get('vehiculo')
     estado = request.GET.get('estado')
     responsable_id = request.GET.get('responsable')
-    # NUEVO: Filtro por disponibilidad de repuestos
     repuestos_disponibles_filter = request.GET.get('repuestos_disponibles')
 
     if vehiculo_id:
@@ -237,7 +232,6 @@ def ot_eventos_api(request):
     else:
         final_ordenes = ordenes_filtradas_por_db
 
-
     eventos = []
     for ot in final_ordenes:
         fecha_inicio_evento = ot.fecha_programada if ot.fecha_programada else ot.fecha_creacion.date()
@@ -246,7 +240,10 @@ def ot_eventos_api(request):
         
         eventos.append({
             'id': ot.pk,
-            'title': f"OT-{ot.folio or ot.pk} ({ot.vehiculo.numero_interno})",
+            # --- ¡CAMBIO CLAVE AQUÍ! ---
+            # El título ahora es solo el número de la OT.
+            'title': f"OT-{ot.folio or ot.pk}", 
+            
             'resourceId': ot.responsable_id, 
             'start': fecha_inicio_evento.isoformat(),
             'end': ot.fecha_cierre.isoformat() if ot.fecha_cierre else None, 
@@ -257,8 +254,10 @@ def ot_eventos_api(request):
                 'tipo': ot.get_tipo_display(),
                 'estado': ot.get_estado_display(),
                 'responsable': ot.responsable.username if ot.responsable else 'N/A',
+                # Guardamos el título completo en extendedProps por si lo necesitamos en el tooltip
+                'fullTitle': f"OT-{ot.folio or ot.pk} ({ot.vehiculo.numero_interno})", 
                 'vehiculo_patente': ot.vehiculo.patente,
-                'hasAllPartsAvailable': ot.has_all_parts_available(), # <-- ¡NUEVO CAMPO EN LA API!
+                'hasAllPartsAvailable': ot.has_all_parts_available(),
             }
         })
             
@@ -274,11 +273,9 @@ def orden_trabajo_detail(request, pk):
     asignar_form = AsignarPersonalOTForm(instance=ot)
     cerrar_mecanico_form = CerrarOtMecanicoForm(instance=ot)
     cambiar_estado_form = CambiarEstadoOTForm(instance=ot)
-    manual_tarea_form = ManualTareaForm() # Lo mantenemos por si acaso, pero será reemplazado en la plantilla
     manual_insumo_form = ManualInsumoForm()
     pausar_form = PausarOTForm(instance=ot)
     diagnostico_form = DiagnosticoEvaluacionForm(instance=ot)
-    # --- NUEVO: Instancia del formulario para asignar tareas existentes ---
     asignar_tarea_form = AsignarTareaForm()
 
     if request.method == 'POST':
@@ -287,11 +284,7 @@ def orden_trabajo_detail(request, pk):
             if ot.tipo == 'PREVENTIVA' and ot.pauta_mantenimiento:
                 tareas_de_pauta = ot.pauta_mantenimiento.tareas.all()
                 ot.tareas_realizadas.add(*tareas_de_pauta)
-                
-                HistorialOT.objects.create(
-                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', 
-                    descripcion=f"Se cargaron {tareas_de_pauta.count()} tareas desde la pauta '{ot.pauta_mantenimiento.nombre}'."
-                )
+                HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', descripcion=f"Se cargaron {tareas_de_pauta.count()} tareas desde la pauta '{ot.pauta_mantenimiento.nombre}'.")
                 messages.success(request, f"Tareas de la pauta '{ot.pauta_mantenimiento.nombre}' cargadas con éxito.")
             else:
                 messages.error(request, "Esta acción solo es válida para OTs Preventivas con una pauta asignada.")
@@ -307,11 +300,8 @@ def orden_trabajo_detail(request, pk):
                     instancia = form.save(commit=False)
                     instancia.estado = 'PAUSADA'
                     instancia.save()
-                    
                     detalle_pausa = f"Motivo: {instancia.get_motivo_pausa_display()}. Notas: {instancia.notas_pausa or 'N/A'}"
-                    HistorialOT.objects.create(
-                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa
-                    )
+                    HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa)
                     messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
                     return redirect('ot_detail', pk=ot.pk)
                 else:
@@ -322,42 +312,33 @@ def orden_trabajo_detail(request, pk):
             form = DiagnosticoEvaluacionForm(request.POST, instance=ot)
             if form.is_valid():
                 instancia = form.save()
-                HistorialOT.objects.create(
-                    orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', 
-                    descripcion=f"Se añadió/actualizó el diagnóstico: '{instancia.diagnostico_evaluacion}'"
-                )
+                HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', descripcion=f"Se añadió/actualizó el diagnóstico: '{instancia.diagnostico_evaluacion}'")
                 messages.success(request, 'Diagnóstico guardado con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
             else:
                 diagnostico_form = form
         
-        # --- ¡NUEVA LÓGICA PARA ASIGNAR TAREA EXISTENTE! ---
+        # --- Lógica para Asignar Tarea Existente ---
         elif 'asignar_tarea_existente' in request.POST:
             form = AsignarTareaForm(request.POST)
             if form.is_valid():
                 tarea_seleccionada = form.cleaned_data['tarea']
-                
                 if ot.tareas_realizadas.filter(pk=tarea_seleccionada.pk).exists():
                     messages.warning(request, f'La tarea "{tarea_seleccionada.descripcion}" ya está asignada a esta OT.')
                 else:
                     ot.tareas_realizadas.add(tarea_seleccionada)
-                    ot.save() # Llama al save de la OT para recalcular costos
-                    
-                    HistorialOT.objects.create(
-                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION',
-                        descripcion=f"Se añadió la tarea: '{tarea_seleccionada.descripcion}'."
-                    )
+                    ot.save()
+                    HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', descripcion=f"Se añadió la tarea: '{tarea_seleccionada.descripcion}'.")
                     messages.success(request, f'Tarea "{tarea_seleccionada.descripcion}" añadida con éxito.')
-                
                 return redirect('ot_detail', pk=ot.pk)
             else:
-                messages.error(request, 'Error al asignar la tarea. Por favor, seleccione una tarea válida.')
-                asignar_tarea_form = form # Pasa el formulario con errores de vuelta al contexto
+                asignar_tarea_form = form
 
         # --- Lógica para Añadir Insumo Manual ---
         elif 'add_manual_insumo' in request.POST:
             form = ManualInsumoForm(request.POST)
             if form.is_valid():
+                # ... (código existente para añadir insumo manual)
                 nombre = form.cleaned_data['nombre']
                 precio = form.cleaned_data['precio_unitario']
                 cantidad = form.cleaned_data['cantidad']
@@ -373,6 +354,7 @@ def orden_trabajo_detail(request, pk):
         elif 'asignar_personal' in request.POST:
             form = AsignarPersonalOTForm(request.POST, instance=ot)
             if form.is_valid():
+                # ... (código existente para asignar personal)
                 form.save()
                 responsable = form.cleaned_data.get('responsable')
                 ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado').all()])
@@ -383,19 +365,31 @@ def orden_trabajo_detail(request, pk):
             else:
                 asignar_form = form
         
-        # --- Lógica para Cambiar Estado General ---
+        # --- Lógica para Cambiar Estado General (CON EL CÁLCULO DE TFS) ---
         elif 'cambiar_estado' in request.POST:
             form = CambiarEstadoOTForm(request.POST, instance=ot)
             if form.is_valid():
                 nuevo_estado = form.cleaned_data['estado']
+                
                 if ot.estado == 'PAUSADA' and nuevo_estado == 'EN_PROCESO':
                     ot.motivo_pausa, ot.notas_pausa = None, ""
                     HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='REANUDACION', descripcion="La OT ha sido reanudada y puesta 'En Proceso'.")
+
                 if nuevo_estado == 'FINALIZADA' and ot.estado != 'FINALIZADA':
                     ot.fecha_cierre = timezone.now()
-                    HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='FINALIZACION', descripcion=f"La OT ha sido finalizada por {request.user.username}.")
+                    
+                    # ¡CÁLCULO AUTOMÁTICO DE TFS!
+                    duracion_total = ot.fecha_cierre - ot.fecha_creacion
+                    ot.tfs_minutos = int(duracion_total.total_seconds() / 60)
+                    
+                    HistorialOT.objects.create(
+                        orden_de_trabajo=ot, usuario=request.user, tipo_evento='FINALIZACION', 
+                        descripcion=f"La OT ha sido finalizada por {request.user.username}. TFS registrado: {ot.tfs_minutos} min."
+                    )
+                
                 ot.estado = nuevo_estado
                 ot.save()
+                
                 messages.success(request, f"Estado de la OT actualizado a '{ot.get_estado_display()}'.")
                 return redirect('ot_detail', pk=ot.pk)
             else:
@@ -424,10 +418,7 @@ def orden_trabajo_detail(request, pk):
         'manual_insumo_form': manual_insumo_form,
         'pausar_form': pausar_form,
         'diagnostico_form': diagnostico_form,
-        # --- ¡NUEVO!: Pasar el formulario de asignar tarea al contexto ---
         'asignar_tarea_form': asignar_tarea_form,
-        # Mantenemos 'manual_tarea_form' por si alguna otra parte lo necesita, aunque lo reemplazaremos
-        'manual_tarea_form': manual_tarea_form
     }
     return render(request, 'flota/orden_trabajo_detail.html', context)
 
@@ -487,6 +478,8 @@ def _limpiar_descripcion_tarea(descripcion):
     return descripcion_limpia
 
 
+# En flota/views.py, reemplaza solo esta función
+
 @login_required
 def carga_masiva(request):
     connection.set_tenant(request.tenant)
@@ -494,69 +487,75 @@ def carga_masiva(request):
         form = CargaMasivaForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                with transaction.atomic(): # Transacción para asegurar la integridad de los datos
-                    
-                    # --- Lógica para Vehículos (existente) ---
+                with transaction.atomic():
+                    # --- Lógica para Vehículos ---
                     if 'archivo_vehiculos' in request.FILES:
-                        # ... (tu código para cargar vehículos) ...
-                        messages.info(request, "Procesando archivo de vehículos...")
-
-                    # --- Lógica para Tareas (existente) ---
+                        # ... tu código para vehículos aquí ...
+                        pass
+                    # --- Lógica para Tareas ---
                     if 'archivo_tareas' in request.FILES:
-                        # ... (tu código para cargar tareas que ya implementamos) ...
-                        messages.info(request, "Procesando archivo de tareas...")
-
-                    # --- ¡NUEVA LÓGICA PARA CARGAR REPUESTOS! ---
-                    if 'archivo_repuestos' in request.FILES:
-                        df_repuestos = pd.read_excel(request.FILES['archivo_repuestos'])
+                        # ... tu código para tareas aquí ...
+                        pass
+                    # --- LÓGICA FINAL PARA PARETO ---
+                    if 'archivo_tipos_falla' in request.FILES:
+                        # Leemos el archivo SIN cabecera y saltando las primeras 4 filas de basura
+                        df_pareto = pd.read_excel(
+                            request.FILES['archivo_tipos_falla'], 
+                            header=None, 
+                            skiprows=4
+                        )
                         
-                        # Mapeo de valores de Excel a los códigos del modelo
-                        # La clave es el valor en el Excel (en minúsculas y sin espacios)
-                        calidad_map = {
-                            'original': 'ORIGINAL',
-                            'alternativo oem': 'OEM',
-                            'oem': 'OEM',
-                            'alternativo generico': 'GENERICO',
-                            'generico': 'GENERICO',
-                        }
+                        # Asignamos manualmente los nombres de columna a las primeras columnas que nos interesan
+                        df_pareto.columns = [
+                            'n', 'criticidad', 'causa', 
+                            'descripcion', 'tfs_min', 'frec_relativa', 
+                            'frec_absoluta', 'punto_medicion'
+                        ] + [f'extra_{i}' for i in range(len(df_pareto.columns) - 8)]
 
-                        creados_count = 0
-                        actualizados_count = 0
 
-                        for index, row in df_repuestos.iterrows():
-                            # Limpiar y validar datos esenciales
-                            numero_parte = str(row['numero_parte']).strip() if pd.notna(row.get('numero_parte')) else None
-                            nombre = str(row['nombre']).strip() if pd.notna(row.get('nombre')) else None
+                        # Eliminamos filas que no tienen descripción (ej. la fila "Total")
+                        df_pareto.dropna(subset=['descripcion'], inplace=True)
+                        df_pareto = df_pareto[df_pareto['descripcion'].str.strip() != 'Total']
+
+                        vehiculo_ejemplo = Vehiculo.objects.first()
+                        if not vehiculo_ejemplo:
+                            messages.error(request, "No hay vehículos en la BD para crear OTs de ejemplo.")
+                            raise Exception("No hay vehículos para la carga de Pareto.")
+
+                        fallas_creadas = 0
+                        ots_creadas = 0
+                        for index, row in df_pareto.iterrows():
+                            # Mapeo de valores
+                            criticidad_map = {'ALTO': 'ALTA', 'MEDIO': 'MEDIA', 'LEVE': 'BAJA'}
+                            causa_map = {'MECÁNICA': 'MECANICA', 'ELÉCTRICA': 'ELECTRICA', 'OPERACIÓN': 'OPERACION'}
                             
-                            if not numero_parte or not nombre:
-                                messages.warning(request, f"Se omitió la fila {index + 2} del archivo de repuestos por falta de nombre o número de parte.")
-                                continue
+                            criticidad_excel = str(row['criticidad']).strip().upper()
+                            causa_excel = str(row['causa']).strip().upper()
 
-                            # Limpiar y convertir la calidad
-                            calidad_excel = str(row.get('calidad', 'generico')).lower().strip()
-                            calidad_modelo = calidad_map.get(calidad_excel, 'GENERICO') # Default a 'GENERICO' si no se encuentra
+                            criticidad = criticidad_map.get(criticidad_excel, 'MEDIA')
+                            causa = causa_map.get(causa_excel, 'MECANICA')
+                            descripcion = str(row['descripcion']).strip()
+                            tfs_minutos = int(row['tfs_min'])
 
-                            try:
-                                # Usar update_or_create para la integridad de los datos
-                                repuesto, created = Repuesto.objects.update_or_create(
-                                    numero_parte=numero_parte,
-                                    calidad=calidad_modelo,
-                                    defaults={
-                                        'nombre': nombre,
-                                        'stock_actual': int(row.get('stock_actual', 0)),
-                                        'stock_minimo': int(row.get('stock_minimo', 1)),
-                                        'ubicacion': str(row.get('ubicacion', '')).strip() if pd.notna(row.get('ubicacion')) else '',
-                                        'precio_unitario': float(row.get('precio_unitario', 0.0))
-                                    }
-                                )
-                                if created:
-                                    creados_count += 1
-                                else:
-                                    actualizados_count += 1
-                            except Exception as e:
-                                messages.error(request, f"Error al procesar la fila {index + 2} de repuestos: {e}")
+                            tipo_falla, created = TipoFalla.objects.update_or_create(
+                                descripcion=descripcion,
+                                defaults={'criticidad': criticidad, 'causa': causa}
+                            )
+                            if created:
+                                fallas_creadas += 1
 
-                        messages.success(request, f"Carga de repuestos completada: {creados_count} creados, {actualizados_count} actualizados.")
+                            OrdenDeTrabajo.objects.create(
+                                vehiculo=vehiculo_ejemplo,
+                                tipo='CORRECTIVA',
+                                estado='FINALIZADA',
+                                tipo_falla=tipo_falla,
+                                observacion_inicial=f"OT de ejemplo para la falla: {descripcion}",
+                                tfs_minutos=tfs_minutos,
+                                fecha_cierre=timezone.now()
+                            )
+                            ots_creadas += 1
+
+                        messages.success(request, f"Carga de Pareto completada: {fallas_creadas} tipos de falla nuevos y {ots_creadas} OTs de ejemplo generadas.")
 
             except Exception as e:
                 messages.error(request, f"Ocurrió un error crítico durante la carga: {e}")
@@ -567,7 +566,6 @@ def carga_masiva(request):
 
     context = {'form': form}
     return render(request, 'flota/carga_masiva.html', context)
-
 
 @login_required
 def indicadores_dashboard(request):

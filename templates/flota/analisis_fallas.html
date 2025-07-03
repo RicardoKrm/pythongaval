@@ -1,73 +1,493 @@
-<!-- templates/flota/analisis_fallas.html (Versión Mejorada) -->
 {% extends "flota/base.html" %}
+{% load static %} {# <-- ¡IMPORTANTE! Añade esta línea al principio #}
+
+{% block title %}Análisis de Pareto por Tiempo Fuera de Servicio{% endblock %}
+
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables CSS con la paleta de colores de la imagen, más vivas y profesionales */
+        :root {
+            --dark-bg: #0A0F18; /* Fondo principal aún más oscuro para máximo contraste */
+            --card-bg: #1A222F; /* Fondo de tarjetas, con un tono azulado oscuro pero más claro que el fondo */
+            --input-bg: #2B3545; /* Fondo para campos de entrada y elementos interactivos, más claro para contraste */
+            --accent-color: #00E5FF; /* Azul eléctrico brillante para acentos y botones primarios */
+            --accent-color-dark: #00B8CC; /* Azul más oscuro para hover/active */
+            --text-primary: #FFFFFF; /* Blanco puro para texto principal */
+            --text-secondary: #B0BEC5; /* Gris azulado claro para texto secundario y etiquetas */
+            --border-color: #4A5568; /* Borde sutil entre elementos */
+            --header-gradient-start: #00B8CC; /* Inicio del degradado para encabezados */
+            --header-gradient-end: #1A365D; /* Fin del degradado para encabezados */
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.5); /* Sombra ligera más pronunciada */
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada para cards */
+            --success-color: #69F0AE; /* Verde neón */
+            --warning-color: #FFD740; /* Amarillo dorado */
+            --danger-color: #FF1744; /* Rojo brillante */
+            --info-color: #00E5FF; /* Usar el nuevo accent-color */
+
+            /* Colores específicos para gráficos Chart.js - MANTENIDOS ULTRA VIVOS */
+            --chart-bar-color: #00FFFF; /* Azul claro eléctrico */
+            --chart-line-color: #FF4500; /* Naranja rojizo vibrante */
+            --chart-grid-color: rgba(176, 190, 197, 0.15); /* Cuadrícula más visible pero sutil */
+            --chart-tick-color: var(--text-secondary); /* Color de ticks */
+            --chart-legend-color: var(--text-primary); /* Color de leyenda */
+            --chart-tooltip-bg: var(--card-bg); /* Fondo de tooltip */
+            --chart-tooltip-border: var(--accent-color); /* Borde de tooltip */
+            --pareto-80-line-color: #FF0000; /* Rojo vivo */
+        }
+
+        body {
+            background-color: var(--dark-bg) !important;
+            color: var(--text-primary) !important;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            padding: 2.5rem 1.5rem; /* Espaciado general del cuerpo */
+        }
+
+        .container {
+            max-width: 1400px; /* Ancho máximo para el contenido */
+            margin: 0 auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        .header-container {
+            margin-bottom: 3.5rem;
+        }
+
+        h1 {
+            font-size: 3.5rem; /* Título más grande */
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2.5rem; /* Menos espacio si el filtro está en un card separado */
+            text-align: center;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.7); /* Sombra más pronunciada para el título */
+            letter-spacing: 0.05em;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem; /* Bordes más redondeados */
+            box-shadow: var(--shadow-medium); /* Sombra más prominente */
+            padding: 2.2rem; /* Más padding */
+            margin-bottom: 2.5rem; /* Espacio entre tarjetas */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px); /* Efecto de elevación sutil */
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9); /* Sombra más intensa al hover */
+        }
+
+        .card h2 {
+            font-size: 2rem; /* Título de tarjeta más grande */
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 1.8rem; /* Más espacio */
+            text-align: center;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+
+        /* Estilos para el formulario de filtros */
+        .filter-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.8rem;
+            align-items: flex-end;
+            margin-bottom: 0; /* Eliminar margen inferior si el botón está dentro del grid */
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.8rem;
+            font-size: 1em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.9rem 1.4rem;
+            border-radius: 0.7rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 1.05rem;
+            height: 52px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); /* Sombra interna más pronunciada */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.5rem rgba(0, 229, 255, 0.6); /* Sombra de foco más grande y viva */
+            outline: none;
+        }
+
+        input[type="date"].form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .btn-submit {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 1rem 2.5rem;
+            border: none;
+            border-radius: 0.7rem;
+            font-weight: 600;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6); /* Sombra más profunda */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            width: fit-content;
+            margin-top: 1.8rem; /* Para alinearse con los campos de fecha */
+            justify-self: end; /* Alinea el botón a la derecha dentro del grid */
+            align-self: end; /* Alinea el botón a la parte inferior dentro del grid */
+        }
+
+        .btn-submit:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        /* CUADRO DE DIÁLOGO EXPLICATIVO */
+        .explanation-card {
+            background-color: color-mix(in srgb, var(--card-bg) 70%, black); /* Fondo ligeramente más oscuro y con más contraste */
+            border-left: 6px solid var(--info-color); /* Borde más grueso y vivo */
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-light);
+        }
+        .explanation-card h2 {
+            color: var(--info-color); /* Color del título de la explicación */
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            text-align: left; /* Alineación a la izquierda */
+            text-shadow: none;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .explanation-card h2 i {
+            font-size: 1.8rem;
+            color: var(--info-color);
+        }
+        .explanation-card p {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.05em;
+        }
+        .explanation-card ul {
+            padding-left: 25px; /* Más indentación */
+            list-style: none; /* Eliminar viñetas por defecto */
+        }
+        .explanation-card ul li {
+            margin-bottom: 0.6rem;
+            color: var(--text-secondary);
+            font-size: 1em;
+            position: relative;
+            padding-left: 1.5rem; /* Espacio para el icono personalizado */
+        }
+        .explanation-card ul li::before {
+            content: "\f058"; /* Icono de check-circle */
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            color: var(--success-color); /* Color del icono */
+            position: absolute;
+            left: 0;
+            top: 0.1em;
+            font-size: 0.9em;
+        }
+        .explanation-card ul li strong {
+            color: var(--text-primary); /* Texto en negrita más claro */
+        }
+        .explanation-card ul li:nth-child(1)::before { content: "\f0c8"; color: var(--chart-bar-color); } /* Cuadrado para barras */
+        .explanation-card ul li:nth-child(2)::before { content: "\f06e"; color: var(--chart-line-color); } /* Ojo para línea */
+        .explanation-card ul li:nth-child(3)::before { content: "\f02d"; color: var(--pareto-80-line-color); } /* Bookmark para 80% */
+
+
+        /* Contenedor del gráfico */
+        .chart-container {
+            position: relative;
+            height: 500px; /* Altura más grande para el gráfico */
+            padding: 1rem; /* Espacio interno para el gráfico */
+        }
+
+        /* Estilos de la tabla de detalles */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 2rem; /* Espacio superior */
+            border-radius: 0.75rem;
+            overflow: hidden; /* Para que border-radius funcione */
+            box-shadow: var(--shadow-light);
+            background-color: var(--card-bg);
+        }
+
+        table thead {
+            background-color: var(--input-bg);
+        }
+        table thead th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 1.1rem 1rem;
+            border-bottom: 2px solid var(--border-color);
+            text-align: left;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        table tbody tr {
+            background-color: var(--card-bg);
+            transition: background-color 0.2s ease;
+        }
+        table tbody tr:nth-of-type(odd) {
+            background-color: color-mix(in srgb, var(--card-bg) 95%, black);
+        }
+        table tbody tr:hover {
+            background-color: color-mix(in srgb, var(--card-bg) 85%, black);
+        }
+        table td {
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 1rem;
+            vertical-align: middle;
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+        table td strong {
+            color: var(--accent-color); /* Resaltar valores numéricos */
+        }
+        table td.text-center { /* Para el mensaje de "no hay datos" */
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .container {
+                max-width: 960px;
+            }
+            h1 {
+                font-size: 3rem;
+            }
+            .card {
+                padding: 1.8rem;
+            }
+            .card h2 {
+                font-size: 1.8rem;
+            }
+            .filter-form {
+                gap: 1.5rem;
+            }
+            .form-control {
+                padding: 0.8rem 1.3rem;
+                height: 48px;
+            }
+            .btn-submit {
+                padding: 0.9rem 2.2rem;
+                font-size: 1.1rem;
+            }
+            .chart-container {
+                height: 400px;
+            }
+            table thead th, table td {
+                padding: 0.9rem 0.8rem;
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 992px) {
+            h1 {
+                font-size: 2.5rem;
+                margin-bottom: 2rem;
+            }
+            .card {
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            .card h2 {
+                font-size: 1.6rem;
+                margin-bottom: 1.5rem;
+            }
+            .filter-form {
+                grid-template-columns: 1fr; /* Una columna en tablets y móviles */
+                gap: 1rem;
+            }
+            .btn-submit {
+                width: 100%;
+                padding: 0.8rem 2rem;
+                font-size: 1rem;
+                margin-top: 1rem; /* Ajuste para el botón apilado */
+                justify-self: stretch; /* Estirar el botón */
+                align-self: stretch;
+            }
+            .explanation-card {
+                padding: 1.5rem;
+            }
+            .explanation-card h2 {
+                font-size: 1.6rem;
+            }
+            .explanation-card ul li {
+                font-size: 0.95em;
+            }
+            .chart-container {
+                height: 350px;
+            }
+            table thead th, table td {
+                padding: 0.8rem 0.7rem;
+                font-size: 0.85em;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 0.8rem;
+            }
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 1.5rem;
+            }
+            .card {
+                padding: 1.2rem;
+                border-radius: 0.75rem;
+                margin-bottom: 1.5rem;
+            }
+            .card h2 {
+                font-size: 1.4rem;
+                margin-bottom: 1rem;
+            }
+            .form-control {
+                padding: 0.7rem 1.2rem;
+                height: 44px;
+                font-size: 0.95rem;
+            }
+            .btn-submit {
+                padding: 0.7rem 1.5rem;
+                font-size: 0.95rem;
+            }
+            .explanation-card {
+                padding: 1.2rem;
+            }
+            .explanation-card h2 {
+                font-size: 1.4rem;
+            }
+            .explanation-card ul li {
+                font-size: 0.9em;
+            }
+            .chart-container {
+                height: 300px;
+            }
+            table thead th, table td {
+                padding: 0.7rem 0.6rem;
+                font-size: 0.8em;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card {
+                border-radius: 0.5rem;
+            }
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 1.5rem;
+            }
+            .explanation-card ul li {
+                padding-left: 1.2rem;
+            }
+            .explanation-card ul li::before {
+                font-size: 0.8em;
+            }
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
+<div class="container">
     <div class="header-container">
         <h1>Análisis de Pareto por Tiempo Fuera de Servicio</h1>
         <div class="card">
-        <form method="get" class="filter-form">
-            <div class="form-group">
-                <label for="start_date">Desde:</label>
-                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="end_date">Hasta:</label>
-                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
-            </div>
-            <button type="submit" class="btn-submit">Filtrar</button>
-        </form>
-    </div>
+            <h2><i class="fas fa-calendar-alt me-3"></i> Seleccionar Período</h2>
+            <form method="get" class="filter-form">
+                <div class="form-group">
+                    <label for="start_date">Desde:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="end_date">Hasta:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
+                </div>
+                <button type="submit" class="btn-submit"><i class="fas fa-filter me-2"></i>Aplicar Filtro</button>
+            </form>
+        </div>
     </div>
 
     <!-- CUADRO DE DIÁLOGO EXPLICATIVO -->
     <div class="card explanation-card">
-        <h2>¿Cómo leer este gráfico?</h2>
+        <h2><i class="fas fa-info-circle me-3"></i> ¿Cómo interpretar este Diagrama de Pareto?</h2>
         <p>
-            Este Diagrama de Pareto te ayuda a identificar las "pocas fallas vitales" que causan la mayoría de los problemas.
+            Este Diagrama de Pareto te ayuda a identificar las **"pocas fallas vitales"** que causan la mayoría del tiempo fuera de servicio (TFS) en tu flota.
         </p>
         <ul>
-            <li>Las <strong>barras azules</strong> representan el impacto individual de cada tipo de falla (cuánto tiempo de detención causa cada una en porcentaje). Están ordenadas de mayor a menor.</li>
-            <li>La <strong>línea naranja</strong> muestra el impacto acumulado.</li>
-            <li>El <strong>objetivo es enfocarse en las fallas que están a la izquierda de la línea del 80%</strong>. Solucionando estas pocas causas, resolverás aproximadamente el 80% del tiempo total de detención de la flota.</li>
+            <li>Las **barras azules** representan el **impacto individual** de cada tipo de falla (cuánto tiempo de detención causa cada una en porcentaje). Están ordenadas de mayor a menor impacto.</li>
+            <li>La **línea naranja** muestra el **impacto acumulado** de las fallas.</li>
+            <li>El **objetivo es enfocarse en las fallas que están a la izquierda de la línea del 80%**. Solucionando estas pocas causas, resolverás aproximadamente el 80% del tiempo total de detención de la flota.</li>
         </ul>
     </div>
 
     <div class="card">
-        <h2>Diagrama de Pareto</h2>
+        <h2><i class="fas fa-chart-bar me-3"></i> Diagrama de Pareto de Fallas</h2>
         <div class="chart-container">
             <canvas id="paretoChart"></canvas>
         </div>
     </div>
 
     <div class="card">
-        <h2>Detalle de Fallas por Impacto (TFS)</h2>
-        <table>
-            <!-- La tabla se mantiene igual que antes -->
-            <thead>
-                <tr>
-                    <th>Criticidad</th>
-                    <th>Causa</th>
-                    <th>Descripción de la Falla</th>
-                    <th>TFS Total (min)</th>
-                    <th>Impacto Relativo (%)</th>
-                    <th>Impacto Acumulado (%)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in data_pareto_tabla %}
-                <tr>
-                    <td>{{ item.tipo_falla__criticidad }}</td>
-                    <td>{{ item.tipo_falla__causa }}</td>
-                    <td>{{ item.tipo_falla__descripcion }}</td>
-                    <td><strong>{{ item.tfs_total_falla }}</strong></td>
-                    <td>{{ item.frecuencia_relativa }}%</td>
-                    <td>{{ item.frecuencia_acumulada }}%</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="6" style="text-align: center; padding: 20px;">No hay datos de OTs correctivas con TFS registrado para analizar.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h2><i class="fas fa-table me-3"></i> Detalle de Fallas por Impacto (TFS)</h2>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Criticidad</th>
+                        <th>Causa</th>
+                        <th>Descripción de la Falla</th>
+                        <th>TFS Total (min)</th>
+                        <th>Impacto Relativo (%)</th>
+                        <th>Impacto Acumulado (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in data_pareto_tabla %}
+                    <tr>
+                        <td>{{ item.tipo_falla__criticidad }}</td>
+                        <td>{{ item.tipo_falla__causa }}</td>
+                        <td>{{ item.tipo_falla__descripcion }}</td>
+                        <td><strong>{{ item.tfs_total_falla }}</strong></td>
+                        <td>{{ item.frecuencia_relativa }}%</td>
+                        <td>{{ item.frecuencia_acumulada }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4">No hay datos de OTs correctivas con TFS registrado para analizar en el período seleccionado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Script JSON para los datos (sin cambios) -->
@@ -81,9 +501,118 @@
     
     <!-- Librería y código para el gráfico (CON MEJORAS) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script> {# Plugin para etiquetas en los gráficos #}
     <script>
+        // Registrar el plugin de datalabels globalmente
+        Chart.register(ChartDataLabels);
+
         const dataElement = document.getElementById('pareto-data');
         const chartData = JSON.parse(dataElement.textContent);
+
+        // Opciones base para el gráfico de Pareto
+        const paretoChartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1500, // Duración de la animación
+                easing: 'easeInOutQuart' // Tipo de easing
+            },
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'var(--chart-tooltip-bg)',
+                    borderColor: 'var(--chart-tooltip-border)',
+                    borderWidth: 1,
+                    titleColor: 'var(--chart-legend-color)',
+                    bodyColor: 'var(--chart-legend-color)',
+                    titleFont: {
+                        size: 14,
+                        family: 'Inter',
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13,
+                        family: 'Inter'
+                    },
+                    cornerRadius: 8,
+                    displayColors: true,
+                    boxPadding: 5
+                },
+                legend: {
+                    labels: {
+                        color: 'var(--chart-legend-color)',
+                        font: {
+                            size: 14,
+                            family: 'Inter'
+                        }
+                    }
+                },
+                datalabels: {
+                    display: false // Desactivar por defecto para evitar saturación, se puede activar por dataset
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'var(--chart-grid-color)',
+                        drawBorder: false,
+                    },
+                    ticks: {
+                        color: 'var(--chart-tick-color)',
+                        font: {
+                            family: 'Inter'
+                        }
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Impacto Individual (%)',
+                        color: 'var(--text-secondary)',
+                        font: {
+                            family: 'Inter',
+                            size: 14
+                        }
+                    },
+                    ticks: {
+                        color: 'var(--chart-tick-color)',
+                        callback: value => value + '%'
+                    },
+                    grid: {
+                        color: 'var(--chart-grid-color)',
+                        drawBorder: false,
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    min: 0,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Impacto Acumulado (%)',
+                        color: 'var(--text-secondary)',
+                        font: {
+                            family: 'Inter',
+                            size: 14
+                        }
+                    },
+                    grid: {
+                        drawOnChartArea: false, /* Solo dibujar la cuadrícula para el eje Y principal */
+                        color: 'var(--chart-grid-color)',
+                    },
+                    ticks: {
+                        color: 'var(--chart-tick-color)',
+                        callback: value => value + '%'
+                    }
+                }
+            }
+        };
 
         const ctx = document.getElementById('paretoChart').getContext('2d');
         new Chart(ctx, {
@@ -94,56 +623,94 @@
                     {
                         label: 'Impacto Relativo por Falla (%)',
                         data: chartData.frecuenciaData,
-                        backgroundColor: '#3b82f6', // Un azul más vivo
-                        borderColor: '#1d4ed8',
+                        backgroundColor: '#00FFFF', /* Usar color directo para asegurar viveza */
+                        borderColor: '#00B8B8', /* Un poco más oscuro para el borde */
+                        borderWidth: 1,
                         yAxisID: 'y',
+                        borderRadius: 5, /* Bordes redondeados para las barras */
+                        hoverBackgroundColor: '#00E0E0', /* Color de hover más claro */
+                        hoverBorderColor: '#00B8B8',
+                        plugins: {
+                            datalabels: {
+                                display: true,
+                                anchor: 'end',
+                                align: 'top',
+                                color: 'var(--text-primary)',
+                                formatter: (value) => value + '%',
+                                font: {
+                                    weight: 'bold',
+                                    size: 12
+                                },
+                                textShadowColor: 'rgba(0,0,0,0.6)',
+                                textShadowBlur: 5
+                            }
+                        }
                     },
                     {
                         label: 'Porcentaje Acumulado',
                         data: chartData.acumuladaData,
                         type: 'line',
-                        borderColor: '#f97316', // Un naranja más intenso
-                        backgroundColor: 'rgba(249, 115, 22, 0.2)',
-                        borderWidth: 3, // Línea más gruesa
-                        pointBackgroundColor: '#f97316',
-                        pointRadius: 4,
+                        borderColor: '#FF4500', /* Usar color directo para asegurar viveza */
+                        backgroundColor: 'rgba(255, 69, 0, 0.3)', /* Fondo semitransparente para el área */
+                        borderWidth: 4, /* Línea más gruesa */
+                        pointBackgroundColor: '#FF4500',
+                        pointBorderColor: 'var(--card-bg)', /* Borde de punto del mismo color que el fondo de la tarjeta */
+                        pointBorderWidth: 2,
+                        pointRadius: 6, /* Puntos más grandes */
+                        pointHoverRadius: 9, /* Hover más notable */
                         yAxisID: 'y1',
-                        fill: true,
+                        fill: true, /* Rellenar el área debajo de la línea */
+                        tension: 0.4, /* Curva más suave */
+                        plugins: {
+                            datalabels: {
+                                display: true,
+                                align: 'end',
+                                anchor: 'end',
+                                color: 'var(--text-primary)',
+                                formatter: (value) => value + '%',
+                                font: {
+                                    weight: 'bold',
+                                    size: 12
+                                },
+                                textShadowColor: 'rgba(0,0,0,0.6)',
+                                textShadowBlur: 5
+                            }
+                        }
                     }
                 ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                ...paretoChartOptions,
                 plugins: {
-                    tooltip: { mode: 'index', intersect: false },
-                    legend: { labels: { color: '#e2e8f0', font: { size: 14 } } }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: '#a0aec0' } // Etiquetas del eje X más claras
-                    },
-                    y: { 
-                        type: 'linear', display: true, position: 'left',
-                        title: { display: true, text: 'Impacto Individual (%)', color: '#e2e8f0', font: {size: 14} },
-                        ticks: { color: '#a0aec0' }
-                    },
-                    y1: { 
-                        type: 'linear', display: true, position: 'right', min: 0, max: 100, 
-                        title: { display: true, text: 'Impacto Acumulado (%)', color: '#e2e8f0', font: {size: 14} },
-                        grid: { drawOnChartArea: false },
-                        ticks: { color: '#a0aec0', callback: value => value + '%' } // Añade el símbolo %
+                    ...paretoChartOptions.plugins,
+                    annotation: { /* Plugin para añadir la línea del 80% */
+                        annotations: {
+                            line80: {
+                                type: 'line',
+                                yMin: 80,
+                                yMax: 80,
+                                borderColor: '#FF0000', /* Color rojo vivo */
+                                borderWidth: 2,
+                                borderDash: [6, 6], /* Línea punteada */
+                                label: {
+                                    content: 'Objetivo 80%',
+                                    enabled: true,
+                                    position: 'start',
+                                    backgroundColor: '#FF0000',
+                                    color: 'white',
+                                    font: {
+                                        family: 'Inter',
+                                        size: 12,
+                                        weight: 'bold'
+                                    },
+                                    cornerRadius: 5,
+                                    padding: 6
+                                }
+                            }
+                        }
                     }
                 }
             }
         });
     </script>
-    <style> 
-        .chart-container { position: relative; height: 450px; } 
-        .explanation-card { background-color: #1e293b; border-left: 4px solid #3b82f6; }
-        .explanation-card ul { padding-left: 20px; }
-        .explanation-card li { margin-bottom: 0.5em; }
-        .filter-form { display: flex; align-items: flex-end; gap: 20px; background: none; padding: 0; }
-        .form-group { display: flex; flex-direction: column; }
-    </style>
 {% endblock %}

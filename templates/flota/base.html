@@ -84,6 +84,7 @@
             <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
             <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
             <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
+            <a href="#">Reportes</a>
             {% if user.is_staff %}
                 <a href="{% url 'carga_masiva' %}">Carga Masiva</a>
             {% endif %}

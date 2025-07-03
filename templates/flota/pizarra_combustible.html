@@ -3,94 +3,687 @@
 {% block title %}Análisis de Rendimiento y Combustible{% endblock %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        .layout-container { display: flex; gap: 1.5rem; }
-        .sidebar-menu { flex: 0 0 280px; background-color: #2d3748; padding: 1rem; border-radius: 8px; height: calc(100vh - 120px); overflow-y: auto; }
-        .main-content { flex-grow: 1; }
-        .sidebar-menu h4 { border-bottom: 1px solid #4a5568; padding-bottom: 0.5rem; }
-        .vehicle-list { list-style: none; padding: 0; }
-        .vehicle-list a { display: block; padding: 0.75rem 1rem; color: #cbd5e0; text-decoration: none; border-radius: 6px; }
-        .vehicle-list a:hover { background-color: #4a5568; }
-        .vehicle-list a.active { background-color: #3182ce; color: white; font-weight: bold; }
-        .card { background-color: #2d3748; border: 1px solid #4a5568; }
-        .form-label { font-weight: 600; }
-        .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border-color: #4a5568; }
-        .select2-container--default .select2-selection--single { background-color: #1a202c !important; border-color: #4a5568 !important; }
-        .select2-container--default .select2-selection--single .select2-selection__rendered { color: #cbd5e0 !important; }
-        .table-sm th, .table-sm td { padding: 0.5rem; }
-        .kpi-box { background-color: #1a202c; padding: 1rem; border-radius: 8px; text-align: center; }
-        .kpi-box .label { font-size: 0.9em; color: #a0aec0; }
-        .kpi-box .value { font-size: 1.75em; font-weight: bold; }
-        .prediction-result { border-left: 4px solid #3182ce; padding: 1rem; background-color: #1a202c; margin-top: 1rem; }
+        /* Variables CSS optimizadas para un tema oscuro profesional */
+        :root {
+            --dark-bg: #0F172A; /* Azul oscuro muy profundo para el fondo principal */
+            --card-bg: #1E293B; /* Un poco más claro que el fondo para las tarjetas y contenedores */
+            --accent-color: #3B82F6; /* Azul brillante, tu color de acento principal */
+            --accent-color-dark: #2563EB; /* Variante más oscura del acento para estados hover/active */
+            --text-primary: #F8FAFC; /* Blanco suave para texto principal, mejor legibilidad */
+            --text-secondary: #94A3B8; /* Gris azulado para texto secundario o descripciones */
+            --border-color: #334155; /* Borde sutil entre elementos, más oscuro */
+            --header-gradient-start: #1E40AF; /* Inicio del degradado para el encabezado */
+            --header-gradient-end: #172554; /* Fin del degradado para el encabezado */
+            --sidebar-width: 280px; /* Ancho fijo para el sidebar en pantallas grandes */
+            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
+            --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
+            --shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.4); /* Sombra al pasar el ratón */
+            --success-color: #10B981; /* Verde para éxito */
+            --warning-color: #F59E0B; /* Naranja para advertencia */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente moderna y legible */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            margin: 0; /* Eliminar margen predeterminado del body */
+            padding: 0; /* Eliminar padding predeterminado del body */
+        }
+
+        /* Contenedor principal para centrar el contenido */
+        .container-fluid {
+            padding-left: 1.5rem; /* Aumento ligero del padding horizontal */
+            padding-right: 1.5rem;
+        }
+
+        /* Encabezado de la página principal */
+        .page-header {
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            color: #E0E7FF;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Contenedor principal del layout con flexbox */
+        .layout-container { 
+            display: flex; 
+            gap: 1.5rem; 
+            padding-bottom: 1.5rem; /* Espacio inferior para el contenido */
+        }
+
+        /* Sidebar - Menú de Vehículos */
+        .sidebar-menu { 
+            flex: 0 0 var(--sidebar-width); 
+            background-color: var(--card-bg); 
+            padding: 1.5rem; 
+            border-radius: 0.75rem; 
+            box-shadow: var(--shadow-light);
+            height: fit-content; /* Ajustar altura al contenido */
+            max-height: calc(100vh - 120px); /* Altura máxima con scroll si es necesario */
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .sidebar-menu h4 { 
+            border-bottom: 1px solid var(--border-color); 
+            padding-bottom: 0.75rem; 
+            margin-bottom: 1.25rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sidebar-menu h4 i {
+            color: var(--accent-color);
+        }
+
+        .vehicle-list { 
+            list-style: none; 
+            padding: 0; 
+            margin: 0;
+        }
+        .vehicle-list li {
+            margin-bottom: 0.25rem;
+        }
+        .vehicle-list a { 
+            display: block; 
+            padding: 0.75rem 1rem; 
+            color: var(--text-secondary); 
+            text-decoration: none; 
+            border-radius: 0.5rem; 
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+            font-weight: 500;
+        }
+        .vehicle-list a:hover { 
+            background-color: #2A384A; /* Un tono ligeramente más claro para hover */
+            color: var(--text-primary);
+            transform: translateX(5px); /* Efecto de deslizamiento sutil */
+        }
+        .vehicle-list a.active { 
+            background-color: var(--accent-color); 
+            color: white; 
+            font-weight: 600; 
+            box-shadow: 0 2px 5px rgba(59, 130, 246, 0.2);
+        }
+        .vehicle-list p.text-muted {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+
+        /* Contenido Principal */
+        .main-content { 
+            flex-grow: 1; 
+        }
+
+        /* Estilos de las tarjetas generales */
+        .card { 
+            background-color: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 1.5rem; /* Aumento del padding interno */
+            margin-bottom: 1.5rem; /* Espacio entre tarjetas */
+        }
+        .card h3, .card h5 {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .card h3 {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h5 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Etiquetas de formulario */
+        .form-label { 
+            font-weight: 500; 
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Controles de formulario (input, select) */
+        .form-control, .form-select { 
+            background-color: var(--dark-bg); 
+            color: var(--text-primary); 
+            border: 1px solid var(--border-color); 
+            padding: 0.6rem 1rem; 
+            border-radius: 0.5rem; 
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.3);
+            background-color: #1A202C;
+        }
+
+        /* Estilos para Select2 */
+        .select2-container--default .select2-selection--single { 
+            background-color: var(--dark-bg) !important; 
+            border: 1px solid var(--border-color) !important; 
+            border-radius: 0.5rem !important;
+            height: calc(2.25rem + 2px) !important; /* Ajustar altura para que coincida con form-control */
+            display: flex !important;
+            align-items: center !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { 
+            color: var(--text-primary) !important; 
+            line-height: 1.5 !important;
+            padding-left: 1rem !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: calc(2.25rem + 2px) !important;
+            right: 0.75rem !important;
+        }
+        .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+            background-color: var(--accent-color) !important;
+            color: white !important;
+        }
+        .select2-container--default .select2-results__option {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        .select2-dropdown {
+            background-color: var(--card-bg) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 0.5rem !important;
+            box-shadow: var(--shadow-light);
+        }
+        .select2-search input {
+            background-color: var(--dark-bg) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            color: var(--text-secondary) !important;
+        }
+
+        /* KPI Boxes */
+        .kpi-box { 
+            background-color: #1A202C; /* Fondo ligeramente más oscuro para los KPI */
+            padding: 1.5rem; 
+            border-radius: 0.75rem; 
+            text-align: center; 
+            box-shadow: var(--shadow-light);
+            border: 1px solid var(--border-color);
+            height: 100%; /* Asegura que todos los KPI boxes tengan la misma altura */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .kpi-box .label { 
+            font-size: 0.95em; 
+            color: var(--text-secondary); 
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .kpi-box .value { 
+            font-size: 2.3em; /* Tamaño de fuente ligeramente más grande para los valores */
+            font-weight: 700; 
+            color: var(--accent-color); /* Color de acento para los valores */
+            line-height: 1.1;
+        }
+        .kpi-box .value small {
+            font-size: 0.6em;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Prediction Result */
+        .prediction-result { 
+            border-left: 5px solid var(--accent-color); 
+            padding: 1.5rem; 
+            background-color: #1A202C; /* Fondo consistente */
+            margin-top: 1.5rem; 
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+        }
+        .prediction-result p {
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .prediction-result p.fs-3 {
+            font-size: 1.75rem !important; /* Ajuste para que no sea demasiado grande */
+            color: var(--accent-color) !important;
+        }
+        .prediction-result small.text-muted {
+            color: var(--text-secondary) !important;
+        }
+        .prediction-result .text-danger {
+            color: var(--danger-color) !important;
+        }
+
+        /* Tablas - Estilo Excel-like */
+        .table-excel {
+            width: 100%;
+            border-collapse: separate; /* Permite border-spacing */
+            border-spacing: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            overflow: hidden; /* Para que los bordes redondeados se apliquen correctamente */
+            box-shadow: var(--shadow-light);
+            margin-bottom: 1.5rem; /* Espacio debajo de la tabla */
+        }
+        .table-excel thead th {
+            position: sticky; /* Fija el encabezado */
+            top: 0;
+            background-color: #1A202C; /* Fondo del encabezado de la tabla */
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            z-index: 1; /* Asegura que el encabezado esté sobre el contenido al hacer scroll */
+        }
+        .table-excel tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table-excel tbody tr:nth-child(even) { /* Filas rayadas */
+            background-color: #1A202C; /* Tono ligeramente más oscuro para filas pares */
+        }
+        .table-excel tbody tr:hover {
+            background-color: #2A384A; /* Fondo al pasar el ratón por las filas */
+        }
+        .table-excel td { 
+            padding: 0.75rem 1rem; /* Más padding para celdas */
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color); /* Borde inferior para cada celda */
+            border-right: 1px solid var(--border-color); /* Borde derecho para cada celda */
+            color: var(--text-primary);
+        }
+        .table-excel td:last-child {
+            border-right: none; /* Eliminar borde derecho de la última columna */
+        }
+        .table-excel tbody tr:last-child td {
+            border-bottom: none; /* Eliminar borde inferior de la última fila */
+        }
+        .table-excel .text-success {
+            color: var(--success-color) !important;
+        }
+        .table-excel .text-muted.small {
+            font-size: 0.8em;
+            color: var(--text-secondary) !important;
+        }
+        .table-excel .text-secondary { /* Para mensajes de "Sin datos" */
+             color: var(--text-secondary) !important;
+        }
+
+        /* Table Responsive Wrapper para la tabla Excel-like */
+        .table-excel-responsive {
+            max-height: 500px; /* Altura máxima para el scroll de la tabla principal */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Suavizar el scroll en iOS */
+        }
+        .table-excel-responsive table {
+            margin-bottom: 0; /* Eliminar margen inferior de la tabla dentro del wrapper */
+        }
+
+        /* Contenedores para gráficos (placeholders) */
+        .chart-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 1.5rem;
+            min-height: 300px; /* Altura mínima para los gráficos */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-style: italic;
+            text-align: center;
+        }
+        .chart-container h5 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .chart-placeholder {
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            color: var(--text-secondary);
+        }
+        .chart-container i {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+        }
+
+        /* Mensaje de selección de vehículo */
+        .card.text-center {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 3rem; /* Más padding para un mensaje central */
+        }
+        .card.text-center h3 {
+            color: var(--text-primary);
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .card.text-center p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Botones generales */
+        .btn {
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.5rem;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+            color: white;
+        }
+        .btn-info { 
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+            color: white;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .layout-container {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            .sidebar-menu {
+                width: 100%;
+                flex: none; /* Eliminar flex-basis fijo */
+                max-height: 300px; /* Reducir altura máxima del sidebar en móvil */
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+            .page-header h1 {
+                font-size: 1.75rem;
+            }
+            .kpi-box {
+                margin-bottom: 1.5rem; /* Espacio entre KPI boxes en columnas apiladas */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header {
+                padding: 1rem;
+            }
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+            .card h3 {
+                font-size: 1.5rem;
+            }
+            .card h5 {
+                font-size: 1.1rem;
+            }
+            .kpi-box {
+                padding: 1rem;
+            }
+            .kpi-box .value {
+                font-size: 1.8em;
+            }
+            .prediction-result {
+                padding: 1rem;
+            }
+            .table-excel-responsive {
+                max-height: 400px; /* Ajuste para pantallas más pequeñas */
+            }
+            .table-excel td, .table-excel th {
+                padding: 0.5rem 0.75rem;
+            }
+            .chart-container {
+                min-height: 250px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .page-header {
+                border-radius: 0; /* Sin bordes redondeados en pantallas muy pequeñas */
+            }
+            .page-header .btn {
+                width: 100%; /* Botón de registrar nueva carga ocupa todo el ancho */
+            }
+            .kpi-box {
+                margin-bottom: 1rem;
+            }
+            .chart-container {
+                min-height: 200px;
+            }
+        }
     </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Análisis de Rendimiento y Combustible</h1>
-    <a href="{% url 'registrar_carga_combustible' %}" class="btn btn-primary"><i class="fas fa-plus-circle me-2"></i>Registrar Nueva Carga</a>
-</div>
+<div class="container-fluid">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-line me-2"></i>Análisis de Rendimiento y Combustible</h1>
+        <a href="{% url 'registrar_carga_combustible' %}" class="btn btn-primary"><i class="fas fa-plus-circle me-2"></i>Registrar Nueva Carga</a>
+    </div>
 
-<div class="layout-container">
-    <!-- Columna Izquierda: Menú de Vehículos -->
-    <aside class="sidebar-menu">
-        <h4 class="text-light mb-3">Flota de Vehículos</h4>
-        <ul class="vehicle-list">
-            {% for v in todos_los_vehiculos %}
-            <li><a href="?vehiculo_id={{ v.pk }}" class="{% if vehiculo_seleccionado.pk == v.pk %}active{% endif %}">{{ v.numero_interno }} - {{ v.patente }}</a></li>
-            {% empty %}
-            <li><p class="text-muted">No hay vehículos.</p></li>
-            {% endfor %}
-        </ul>
-    </aside>
+    <div class="layout-container">
+        <!-- Columna Izquierda: Menú de Vehículos -->
+        <aside class="sidebar-menu">
+            <h4 class="mb-3"><i class="fas fa-car-alt me-2"></i>Flota de Vehículos</h4>
+            <ul class="vehicle-list">
+                {% for v in todos_los_vehiculos %}
+                <li><a href="?vehiculo_id={{ v.pk }}" class="{% if vehiculo_seleccionado.pk == v.pk %}active{% endif %}">{{ v.numero_interno }} - {{ v.patente }}</a></li>
+                {% empty %}
+                <li><p class="text-muted">No hay vehículos.</p></li>
+                {% endfor %}
+            </ul>
+        </aside>
 
-    <!-- Columna Derecha: Contenido Principal -->
-    <main class="main-content">
-        {% if vehiculo_seleccionado %}
-            <div class="card p-4">
-                <h3 class="mb-4">Análisis del Vehículo: {{ vehiculo_seleccionado.numero_interno }}</h3>
-                <div class="row mb-4">
-                    <div class="col-md-4"><div class="kpi-box"><div class="label">Rendimiento Promedio</div><div class="value">{{ analisis.rendimiento_general|floatformat:2|default:"N/A" }} <small>Km/L</small></div></div></div>
-                    <div class="col-md-4"><div class="kpi-box"><div class="label">Total Cargas</div><div class="value">{{ analisis.historial_cargas.count }}</div></div></div>
-                    <div class="col-md-4"><div class="kpi-box"><div class="label">Último KM Registrado</div><div class="value">{{ vehiculo_seleccionado.kilometraje_actual|floatformat:0 }}</div></div></div>
-                </div>
-
-                <!-- Predicción de Consumo (MODIFICADO) -->
-                <div class="card mb-4" style="background-color:#1a202c"><div class="card-body">
-                    <h5 class="mb-3">Predicción de Consumo</h5>
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="vehiculo_prediccion" value="{{ vehiculo_seleccionado.pk }}">
-                        <div class="row align-items-end">
-                            <div class="col-md-4 mb-3"><label for="origen_prediccion" class="form-label">Origen</label><input type="text" name="origen_prediccion" class="form-control" placeholder="Ej: Calama"></div>
-                            <div class="col-md-4 mb-3"><label for="destino_prediccion" class="form-label">Destino</label><input type="text" name="destino_prediccion" class="form-control" placeholder="Ej: Antofagasta"></div>
-                            <div class="col-md-4 mb-3"><label for="distancia_prediccion" class="form-label">Distancia (Km)</label><input type="number" step="0.01" name="distancia_prediccion" class="form-control" required></div>
+        <!-- Columna Derecha: Contenido Principal -->
+        <main class="main-content">
+            {% if vehiculo_seleccionado %}
+                <!-- Sección de KPIs -->
+                <div class="card">
+                    <h3 class="mb-4">Resumen de Rendimiento: {{ vehiculo_seleccionado.numero_interno }}</h3>
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="kpi-box">
+                                <div class="label">Rendimiento Promedio</div>
+                                <div class="value">{{ analisis.rendimiento_general|floatformat:2|default:"N/A" }} <small>Km/L</small></div>
+                            </div>
                         </div>
-                        <button type="submit" name="predecir_consumo" class="btn btn-info w-100 mt-2">Predecir Consumo</button>
-                    </form>
-                    {% if resultado_prediccion %}
-                    <div class="prediction-result mt-3">
-                        {% if resultado_prediccion.error %}<p class="text-danger mb-0">{{ resultado_prediccion.error }}</p>{% else %}<p class="mb-1">Consumo estimado para <strong>{{ resultado_prediccion.distancia_utilizada|floatformat:2 }} km</strong>:</p><p class="fs-3 fw-bold text-info mb-2">{{ resultado_prediccion.consumo_predicho_litros|floatformat:2 }} Litros</p><small class="text-muted">Basado en el rendimiento promedio del vehículo ({{ resultado_prediccion.rendimiento_base_kml|floatformat:2 }} Km/L).</small>{% endif %}
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="kpi-box">
+                                <div class="label">Total Cargas</div>
+                                <div class="value">{{ analisis.historial_cargas.count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="kpi-box">
+                                <div class="label">Último KM Registrado</div>
+                                <div class="value">{{ vehiculo_seleccionado.kilometraje_actual|floatformat:0 }}</div>
+                            </div>
+                        </div>
                     </div>
-                    {% endif %}
-                </div></div>
-
-                <!-- Tablas de Desglose (sin cambios) -->
-                <div class="row">
-                    <div class="col-md-6"><h5 class="mb-3">Rendimiento por Ruta</h5><table class="table table-dark table-sm"><thead><tr><th>Ruta</th><th>Rendimiento Prom.</th></tr></thead><tbody>{% for item in analisis.analisis_por_ruta %}<tr><td>{{ item.ruta__nombre }}</td><td><strong>{{ item.promedio_ruta|floatformat:2 }} Km/L</strong></td></tr>{% empty %}<tr><td colspan="2" class="text-center">Sin datos</td></tr>{% endfor %}</tbody></table></div>
-                    <div class="col-md-6"><h5 class="mb-3">Rendimiento por Conductor</h5><table class="table table-dark table-sm"><thead><tr><th>Conductor</th><th>Rendimiento Prom.</th></tr></thead><tbody>{% for item in analisis.analisis_por_conductor %}<tr><td>{{ item.conductor__username }}</td><td><strong>{{ item.promedio_conductor|floatformat:2 }} Km/L</strong></td></tr>{% empty %}<tr><td colspan="2" class="text-center">Sin datos</td></tr>{% endfor %}</tbody></table></div>
                 </div>
 
-                <!-- Historial de Cargas (sin cambios) -->
-                <h5 class="mt-4 mb-3">Historial de Cargas</h5>
-                <div class="table-responsive" style="max-height: 400px;"><table class="table table-dark table-striped table-sm"><thead><tr><th>Fecha</th><th>KM</th><th>Litros</th><th>Costo Total</th><th>Rendimiento Tramo</th></tr></thead><tbody>{% for carga in analisis.historial_cargas %}<tr><td>{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td><td>{{ carga.kilometraje_en_carga|floatformat:0 }}</td><td>{{ carga.litros_cargados|floatformat:2 }}</td><td>${{ carga.costo_total_carga|floatformat:0|default:"0" }}</td><td>{% if carga.rendimiento_calculado_kml %}<strong class="text-success">{{ carga.rendimiento_calculado_kml|floatformat:2 }} Km/L</strong>{% else %}<span class="text-muted small">Pendiente</span>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
-            </div>
-        {% else %}
-            <div class="card p-5 text-center"><h3><i class="fas fa-arrow-left me-3"></i>Seleccione un Vehículo</h3><p class="text-muted">Por favor, seleccione un vehículo del menú de la izquierda para ver su análisis de rendimiento detallado.</p></div>
-        {% endif %}
-    </main>
+                <!-- Tabla de Historial de Cargas (Estilo Excel) -->
+                <div class="card">
+                    <h5 class="mb-3"><i class="fas fa-table me-2"></i>Historial de Cargas Detallado</h5>
+                    <div class="table-excel-responsive">
+                        <table class="table-excel">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>KM</th>
+                                    <th>Litros</th>
+                                    <th>Costo Total</th>
+                                    <th>Rendimiento Tramo</th>
+                                    <th>Ruta</th>
+                                    <th>Conductor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for carga in analisis.historial_cargas %}
+                                <tr>
+                                    <td>{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ carga.kilometraje_en_carga|floatformat:0 }}</td>
+                                    <td>{{ carga.litros_cargados|floatformat:2 }}</td>
+                                    <td>${{ carga.costo_total_carga|floatformat:0|default:"0" }}</td>
+                                    <td>
+                                        {% if carga.rendimiento_calculado_kml %}
+                                            <strong class="text-success">{{ carga.rendimiento_calculado_kml|floatformat:2 }} Km/L</strong>
+                                        {% else %}
+                                            <span class="text-muted small">Pendiente</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ carga.ruta.nombre|default:"N/A" }}</td>
+                                    <td>{{ carga.conductor.username|default:"N/A" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-secondary">No hay cargas de combustible registradas para este vehículo.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sección de Predicción de Consumo (Campos de entrada) -->
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="mb-3"><i class="fas fa-calculator me-2"></i>Predicción de Consumo</h5>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="vehiculo_prediccion" value="{{ vehiculo_seleccionado.pk }}">
+                            <div class="row align-items-end g-3">
+                                <div class="col-md-4">
+                                    <label for="origen_prediccion" class="form-label">Origen</label>
+                                    <input type="text" name="origen_prediccion" id="origen_prediccion" class="form-control" placeholder="Ej: Calama">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="destino_prediccion" class="form-label">Destino</label>
+                                    <input type="text" name="destino_prediccion" id="destino_prediccion" class="form-control" placeholder="Ej: Antofagasta">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="distancia_prediccion" class="form-label">Distancia (Km)</label>
+                                    <input type="number" step="0.01" name="distancia_prediccion" id="distancia_prediccion" class="form-control" required>
+                                </div>
+                            </div>
+                            <button type="submit" name="predecir_consumo" class="btn btn-info w-100 mt-4">
+                                <i class="fas fa-gas-pump me-2"></i>Predecir Consumo
+                            </button>
+                        </form>
+                        {% if resultado_prediccion %}
+                        <div class="prediction-result mt-3">
+                            {% if resultado_prediccion.error %}
+                                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle me-2"></i>{{ resultado_prediccion.error }}</p>
+                            {% else %}
+                                <p class="mb-1">Consumo estimado para <strong>{{ resultado_prediccion.distancia_utilizada|floatformat:2 }} km</strong>:</p>
+                                <p class="fs-3 fw-bold mb-2">{{ resultado_prediccion.consumo_predicho_litros|floatformat:2 }} Litros</p>
+                                <small class="text-muted">Basado en el rendimiento promedio del vehículo ({{ resultado_prediccion.rendimiento_base_kml|floatformat:2 }} Km/L).</small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Sección de Gráficos Estadísticos -->
+                <div class="row">
+                    <div class="col-md-6 mb-3 mb-md-0">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Rendimiento por Ruta</h5>
+                            <i class="fas fa-chart-column"></i>
+                            <p class="chart-placeholder">Aquí se mostrará un gráfico de barras del rendimiento por ruta.</p>
+                            <small class="text-secondary"> (Requiere una librería de gráficos como Chart.js o D3.js y datos procesados.)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-chart-pie me-2"></i>Rendimiento por Conductor</h5>
+                            <i class="fas fa-chart-pie"></i>
+                            <p class="chart-placeholder">Aquí se mostrará un gráfico de pastel del rendimiento por conductor.</p>
+                            <small class="text-secondary"> (Requiere una librería de gráficos como Chart.js o D3.js y datos procesados.)</small>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="card p-5 text-center">
+                    <h3><i class="fas fa-arrow-left me-3"></i>Seleccione un Vehículo</h3>
+                    <p class="text-muted">Por favor, seleccione un vehículo del menú de la izquierda para ver su análisis de rendimiento detallado.</p>
+                </div>
+            {% endif %}
+        </main>
+    </div>
 </div>
 {% endblock %}
 
@@ -100,8 +693,13 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    // El JavaScript para el modal de registro de carga ya no es necesario aquí,
-    // ya que está en su propia página. El resto del JS se mantiene simple.
+    // Inicializar Select2 en los selectores de formulario si existen
+    $('.form-select').select2({
+        theme: "bootstrap-5", // Usar el tema de Bootstrap 5 para Select2
+        width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $(this).hasClass('w-100') ? '100%' : 'style',
+        placeholder: $( this ).data( 'placeholder' ),
+        allowClear: Boolean( $( this ).data( 'allow-clear' ) ),
+    });
 });
 </script>
 {% endblock %}

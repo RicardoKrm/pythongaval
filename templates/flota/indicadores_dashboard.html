@@ -1,26 +1,276 @@
-<!-- templates/flota/indicadores_dashboard.html (Versión con todos los gráficos) -->
 {% extends "flota/base.html" %}
+{% load static %} {# <-- ¡IMPORTANTE! Añade esta línea al principio #}
 
 {% block title %}Dashboard de Indicadores{% endblock %}
 
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables CSS con la paleta de colores de la imagen, más vivas y profesionales */
+        :root {
+            --dark-bg: #1A202C; /* Fondo principal oscuro y profundo */
+            --card-bg: #2D3748; /* Fondo de tarjetas, ligeramente más claro */
+            --input-bg: #4A5568; /* Fondo para campos de entrada y elementos interactivos */
+            --accent-color: #4299E1; /* Azul vibrante y claro para acentos y botones primarios */
+            --accent-color-dark: #3182CE; /* Azul más oscuro para hover/active */
+            --text-primary: #E2E8F0; /* Blanco suave para texto principal */
+            --text-secondary: #A0AEC0; /* Gris azulado para texto secundario y etiquetas */
+            --border-color: #4A5568; /* Borde sutil entre elementos */
+            --header-gradient-start: #2B6CB0; /* Inicio del degradado para encabezados */
+            --header-gradient-end: #1A365D; /* Fin del degradado para encabezados */
+            --shadow-light: 0 6px 15px rgba(0, 0, 0, 0.3); /* Sombra ligera y suave */
+            --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.45); /* Sombra más pronunciada */
+            --success-color: #38A169; /* Verde para éxito, más vibrante */
+            --warning-color: #DD6B20; /* Naranja para advertencia, más vibrante */
+            --danger-color: #E53E3E; /* Rojo para peligro, más vibrante */
+            --alert-danger-bg: rgba(229, 62, 62, 0.15); /* Fondo suave para alertas de peligro */
+            --info-color: #4299E1; /* Color para alertas de información */
+            --line-chart-color-1: #4299E1; /* Azul para línea 1 */
+            --line-chart-color-2: #38A169; /* Verde para línea 2 */
+            --line-chart-color-3: #DD6B20; /* Naranja para línea 3 */
+            --line-chart-color-4: #A0AEC0; /* Gris para línea 4 (ej. target) */
+        }
+
+        body {
+            background-color: var(--dark-bg) !important;
+            color: var(--text-primary) !important;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            padding: 2rem 1rem; /* Espaciado general del cuerpo */
+        }
+
+        .container {
+            max-width: 1400px; /* Ancho máximo para el contenido */
+            margin: 0 auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 3rem;
+            text-align: center;
+            text-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 1.8rem;
+            margin-bottom: 2rem; /* Espacio entre tarjetas */
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        /* Estilos para el formulario de filtros */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            align-items: flex-end;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-grid p {
+            margin: 0;
+        }
+
+        .form-grid label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.6rem;
+            font-size: 0.95em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1.3rem;
+            border-radius: 0.6rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            height: 48px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.3rem rgba(66, 153, 225, 0.4);
+            outline: none;
+        }
+
+        input[type="date"].form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
+
+        .btn-submit {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.95rem 2.2rem;
+            border: none;
+            border-radius: 0.6rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            display: block;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Contenedores de gráficos */
+        .charts-container, .charts-container-small, .charts-container-line {
+            display: grid;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .charts-container {
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+        .charts-container-small {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+        .charts-container-line { /* Nuevo contenedor para gráficos de línea */
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); /* Más anchos para líneas */
+        }
+        .card canvas {
+            height: 300px !important;
+            width: 100% !important;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            h1 {
+                font-size: 2.4rem;
+                margin-bottom: 2.5rem;
+            }
+            .card {
+                padding: 1.5rem;
+            }
+            .card h2 {
+                font-size: 1.6rem;
+                margin-bottom: 1.2rem;
+            }
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .form-grid p {
+                width: 100%;
+            }
+            .btn-submit {
+                width: 100%;
+                margin-left: 0;
+                margin-right: 0;
+                padding: 0.8rem 1.8rem;
+                font-size: 1rem;
+            }
+            .charts-container, .charts-container-small, .charts-container-line {
+                gap: 1.5rem;
+            }
+            .charts-container {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+            .charts-container-small {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+            .charts-container-line {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            }
+            .card canvas {
+                height: 280px !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1.5rem 0.5rem;
+            }
+            h1 {
+                font-size: 2rem;
+                margin-bottom: 2rem;
+            }
+            .card {
+                padding: 1.2rem;
+                border-radius: 0.5rem;
+            }
+            .card h2 {
+                font-size: 1.4rem;
+                margin-bottom: 1rem;
+            }
+            .form-grid label {
+                font-size: 0.85em;
+                margin-bottom: 0.4rem;
+            }
+            .form-control {
+                padding: 0.7rem 1rem;
+                font-size: 0.95rem;
+                height: 44px;
+            }
+            .btn-submit {
+                padding: 0.7rem 1.5rem;
+                font-size: 0.95rem;
+            }
+            .charts-container, .charts-container-small, .charts-container-line {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            .card canvas {
+                height: 250px !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card {
+                border-radius: 0;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
+<div class="container">
     <h1>Dashboard de Indicadores de Flota</h1>
 
     <!-- Filtro de Fechas -->
     <div class="card">
+        <h2><i class="fas fa-filter me-2"></i> Filtrar Datos</h2>
         <form method="get">
             <div class="form-grid">
-                <p>
+                <div>
                     <label for="start_date">Fecha de Inicio:</label>
                     <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
-                </p>
-                <p>
+                </div>
+                <div>
                     <label for="end_date">Fecha de Fin:</label>
                     <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
-                </p>
+                </div>
             </div>
-            <br>
-            <button type="submit" class="btn-submit">Filtrar</button>
+            <button type="submit" class="btn-submit"><i class="fas fa-search me-2"></i>Filtrar</button>
         </form>
     </div>
 
@@ -40,7 +290,7 @@
         </div>
     </div>
 
-    <!-- Contenedores para los Gráficos KPI Mensuales -->
+    <!-- Contenedores para los Gráficos KPI Mensuales (Barras) -->
     <div class="charts-container">
         <div class="card">
             <h2>Disponibilidad Mensual (%)</h2>
@@ -53,6 +303,18 @@
         <div class="card">
             <h2>Utilización Mensual (%)</h2>
             <canvas id="utilizacionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- NUEVOS Contenedores para los Gráficos Comparativos de Línea -->
+    <div class="charts-container-line">
+        <div class="card">
+            <h2>Disponibilidad vs. Confiabilidad</h2>
+            <canvas id="disponibilidadConfiabilidadLineChart"></canvas>
+        </div>
+        <div class="card">
+            <h2>Utilización vs. Meta (%)</h2>
+            <canvas id="utilizacionMetaLineChart"></canvas>
         </div>
     </div>
 
@@ -78,16 +340,71 @@
     <script>
         const chartData = JSON.parse(document.getElementById('chart-data').textContent);
 
-        // Función para crear un gráfico de barras (sin cambios)
+        // Colores para los gráficos, basados en la paleta definida
+        const primaryChartColor = 'rgba(66, 153, 225, 0.8)'; // var(--accent-color) con opacidad
+        const primaryChartBorderColor = 'rgba(66, 153, 225, 1)'; // var(--accent-color)
+
+        const doughnutColors = [
+            '#4299E1', // Azul (accent-color)
+            '#38A169', // Verde (success-color)
+            '#DD6B20', // Naranja (warning-color)
+            '#E53E3E', // Rojo (danger-color)
+            '#A0AEC0', // Gris (text-secondary)
+            '#63B3ED', // Azul claro
+            '#68D391', // Verde claro
+            '#F6AD55'  // Naranja claro
+        ];
+
+        // Función para crear un gráfico de barras
         function createBarChart(canvasId, chartLabel, labels, data) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             new Chart(ctx, {
-                type: 'bar', data: { labels: labels, datasets: [{ label: chartLabel, data: data, backgroundColor: 'rgba(54, 162, 235, 0.6)' }] },
-                options: { scales: { y: { beginAtZero: true, max: 100 } }, maintainAspectRatio: false }
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartLabel,
+                        data: data,
+                        backgroundColor: primaryChartColor,
+                        borderColor: primaryChartBorderColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(160, 174, 192, 0.2)' // Color de la cuadrícula
+                            },
+                            ticks: {
+                                color: 'var(--text-secondary)' // Color de las etiquetas del eje Y
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(160, 174, 192, 0.2)' // Color de la cuadrícula
+                            },
+                            ticks: {
+                                color: 'var(--text-secondary)' // Color de las etiquetas del eje X
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'var(--text-primary)' // Color del texto de la leyenda
+                            }
+                        }
+                    },
+                    maintainAspectRatio: false,
+                    responsive: true
+                }
             });
         }
         
-        // Función para crear un gráfico de donut (NUEVA)
+        // Función para crear un gráfico de donut
         function createDoughnutChart(canvasId, labels, data) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             new Chart(ctx, {
@@ -96,12 +413,87 @@
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: ['#3498db', '#e67e22', '#2ecc71', '#f1c40f'],
+                        backgroundColor: doughnutColors, // Usar la paleta de colores definida
+                        borderColor: 'var(--card-bg)', // Color del borde entre secciones del donut
+                        borderWidth: 2
                     }]
                 },
-                options: { maintainAspectRatio: false, responsive: true }
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom', // Leyenda en la parte inferior
+                            labels: {
+                                color: 'var(--text-primary)' // Color del texto de la leyenda
+                            }
+                        }
+                    }
+                }
             });
         }
+
+        // Función para crear un gráfico de línea (NUEVA)
+        function createLineChart(canvasId, chartTitle, labels, datasets) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets.map(dataset => ({
+                        label: dataset.label,
+                        data: dataset.data,
+                        borderColor: dataset.color,
+                        backgroundColor: dataset.color.replace('1)', '0.2)'), // Color con opacidad para el área
+                        fill: false, // No rellenar el área debajo de la línea por defecto
+                        tension: 0.3, // Suavizar las líneas
+                        pointBackgroundColor: dataset.color,
+                        pointBorderColor: 'var(--card-bg)',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        ...dataset.options // Permitir opciones adicionales por dataset (ej. fill: true)
+                    }))
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(160, 174, 192, 0.2)'
+                            },
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(160, 174, 192, 0.2)'
+                            },
+                            ticks: {
+                                color: 'var(--text-secondary)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: 'var(--text-primary)'
+                            }
+                        },
+                        title: {
+                            display: false, // El título se maneja en el H2 del card
+                            text: chartTitle,
+                            color: 'var(--text-primary)'
+                        }
+                    },
+                    maintainAspectRatio: false,
+                    responsive: true
+                }
+            });
+        }
+
 
         // Creación de los gráficos de barras
         createBarChart('disponibilidadChart', 'Disponibilidad %', chartData.labelsMes, chartData.disponibilidadData);
@@ -111,20 +503,52 @@
         // Creación de los nuevos gráficos de donut
         if (chartData.totalPreventivas > 0 || chartData.totalCorrectivas > 0) {
             createDoughnutChart('tipoOtChart', ['Preventivas', 'Correctivas'], [chartData.totalPreventivas, chartData.totalCorrectivas]);
+        } else {
+            // Mostrar mensaje si no hay datos
+            const canvas = document.getElementById('tipoOtChart');
+            const parent = canvas.parentElement;
+            parent.innerHTML = '<p class="text-secondary text-center" style="padding: 2rem;">No hay datos de Órdenes de Trabajo para el período seleccionado.</p>';
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'center';
+            parent.style.justifyContent = 'center';
+            parent.style.minHeight = '300px';
         }
+
         if (chartData.preventivasOk > 0 || chartData.preventivasPendientes > 0) {
             createDoughnutChart('avancePreventivasChart', ['Finalizadas', 'Pendientes'], [chartData.preventivasOk, chartData.preventivasPendientes]);
+        } else {
+            const canvas = document.getElementById('avancePreventivasChart');
+            const parent = canvas.parentElement;
+            parent.innerHTML = '<p class="text-secondary text-center" style="padding: 2rem;">No hay datos de Avance de Preventivas para el período seleccionado.</p>';
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'center';
+            parent.style.justifyContent = 'center';
+            parent.style.minHeight = '300px';
         }
+
         if (chartData.correctivasOk > 0 || chartData.correctivasPendientes > 0) {
             createDoughnutChart('avanceCorrectivasChart', ['Finalizadas', 'Pendientes'], [chartData.correctivasOk, chartData.correctivasPendientes]);
+        } else {
+            const canvas = document.getElementById('avanceCorrectivasChart');
+            const parent = canvas.parentElement;
+            parent.innerHTML = '<p class="text-secondary text-center" style="padding: 2rem;">No hay datos de Avance de Correctivas para el período seleccionado.</p>';
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'center';
+            parent.style.justifyContent = 'center';
+            parent.style.minHeight = '300px';
         }
+
+        // Creación de los nuevos gráficos de línea comparativos
+        createLineChart('disponibilidadConfiabilidadLineChart', 'Disponibilidad vs. Confiabilidad', chartData.labelsMes, [
+            { label: 'Disponibilidad (%)', data: chartData.disponibilidadData, color: 'var(--line-chart-color-1)' },
+            { label: 'Confiabilidad (%)', data: chartData.confiabilidadData, color: 'var(--line-chart-color-2)' }
+        ]);
+
+        // Para Utilización vs. Meta, creamos una data de meta fija para el ejemplo
+        const utilizacionTargetData = Array(chartData.labelsMes.length).fill(85); // Ejemplo: 85% de meta
+        createLineChart('utilizacionMetaLineChart', 'Utilización vs. Meta', chartData.labelsMes, [
+            { label: 'Utilización (%)', data: chartData.utilizacionData, color: 'var(--line-chart-color-3)' },
+            { label: 'Meta (%)', data: utilizacionTargetData, color: 'var(--line-chart-color-4)', options: { borderDash: [5, 5] } } // Línea punteada para la meta
+        ]);
     </script>
-    <style>
-        .charts-container, .charts-container-small { display: grid; gap: 20px; margin-top: 20px; }
-        .charts-container { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-        .charts-container-small { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-        .card canvas { height: 300px !important; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .form-grid p { margin: 0; }
-    </style>
 {% endblock %}

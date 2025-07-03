@@ -1,62 +1,387 @@
-<!-- Archivo nuevo: flota/templates/flota/repuesto_form.html -->
 {% extends "flota/base.html" %}
 
 {% block title %}{% if repuesto %}Editar Repuesto{% else %}Crear Nuevo Repuesto{% endif %}{% endblock %}
 
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Variables CSS optimizadas para un tema oscuro profesional (replicadas de diseños anteriores) */
+        :root {
+            --dark-bg: #0F172A; /* Azul oscuro muy profundo para el fondo principal */
+            --card-bg: #1E293B; /* Un poco más claro que el fondo para las tarjetas y contenedores */
+            --accent-color: #3B82F6; /* Azul brillante, tu color de acento principal */
+            --accent-color-dark: #2563EB; /* Variante más oscura del acento para estados hover/active */
+            --text-primary: #F8FAFC; /* Blanco suave para texto principal, mejor legibilidad */
+            --text-secondary: #94A3B8; /* Gris azulado para texto secundario o descripciones */
+            --border-color: #334155; /* Borde sutil entre elementos, más oscuro */
+            --header-gradient-start: #1E40AF; /* Inicio del degradado para el encabezado */
+            --header-gradient-end: #172554; /* Fin del degradado para el encabezado */
+            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
+            --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
+            --shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.4); /* Sombra al pasar el ratón */
+            --success-color: #10B981; /* Verde para éxito */
+            --warning-color: #F59E0B; /* Naranja para advertencia */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente moderna y legible */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            margin: 0; /* Eliminar margen predeterminado del body */
+            padding: 0; /* Eliminar padding predeterminado del body */
+            /* Añadir un patrón de fondo sutil para romper la planitud */
+            background-image: radial-gradient(circle at 100% 150%, var(--card-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 0% 150%, var(--card-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 50% 100%, var(--card-bg) 0%, transparent 10%),
+                              linear-gradient(to bottom, #0F172A, #121B2C); /* Fondo base */
+            background-size: 120% 120%;
+            background-attachment: fixed; /* Mantiene el patrón fijo al hacer scroll */
+        }
+
+        /* Contenedor principal para centrar el contenido */
+        .container-fluid {
+            padding: 1.5rem; /* Padding general para el contenedor */
+        }
+
+        /* Encabezado de la página principal (título del formulario) */
+        .page-header-form {
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            color: #E0E7FF;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column; /* Apilar título y descripción */
+            align-items: flex-start;
+        }
+
+        .page-header-form h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin: 0;
+            color: var(--text-primary); 
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .page-header-form h1 i {
+            color: var(--accent-color);
+            font-size: 1.8rem;
+        }
+        .page-header-form p.text-muted {
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 400;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0;
+        }
+
+        /* Contenedor del formulario principal */
+        .form-main-card {
+            max-width: 800px; /* Limita el ancho del formulario para mejor legibilidad */
+            margin: 0 auto; /* Centra el formulario */
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05); /* Sombra más pronunciada y sutil borde interno */
+            padding: 2.5rem; /* Más padding interno */
+            position: relative;
+            z-index: 1; /* Asegura que esté sobre el fondo */
+        }
+
+        /* Estilo para secciones de formulario agrupadas */
+        .form-section-card {
+            background-color: #1A202C; /* Fondo ligeramente más oscuro que el contenedor principal */
+            border: 1px solid #2D3748; /* Borde más sutil para las secciones */
+            border-radius: 0.6rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem; /* Espacio entre secciones */
+            box-shadow: var(--shadow-light);
+        }
+        .form-section-card:last-of-type {
+            margin-bottom: 0; /* Eliminar margen inferior de la última sección */
+        }
+
+        /* Título de sección dentro del formulario (ahora para .form-section-card) */
+        .form-section-card h5 {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-top: 0; 
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-section-card h5 i {
+            color: var(--accent-color);
+            font-size: 1rem;
+        }
+
+        /* Etiquetas de formulario */
+        .form-label { 
+            font-weight: 500; 
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        /* Controles de formulario (input, select) */
+        .form-control, .form-select { 
+            background-color: var(--dark-bg); 
+            color: var(--text-primary); 
+            border: 1px solid var(--border-color); 
+            padding: 0.6rem 1rem; 
+            border-radius: 0.5rem; 
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.3);
+            background-color: #1A202C;
+        }
+
+        /* Estilos para Select2 */
+        .select2-container--default .select2-selection--single { 
+            background-color: var(--dark-bg) !important; 
+            border: 1px solid var(--border-color) !important; 
+            border-radius: 0.5rem !important;
+            height: calc(2.25rem + 2px) !important; 
+            display: flex !important;
+            align-items: center !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered { 
+            color: var(--text-primary) !important; 
+            line-height: 1.5 !important;
+            padding-left: 1rem !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: calc(2.25rem + 2px) !important;
+            right: 0.75rem !important;
+        }
+        .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+            background-color: var(--accent-color) !important;
+            color: white !important;
+        }
+        .select2-container--default .select2-results__option {
+            background-color: var(--card-bg) !important;
+            color: var(--text-primary) !important;
+        }
+        .select2-dropdown {
+            background-color: var(--card-bg) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 0.5rem !important;
+            box-shadow: var(--shadow-light);
+        }
+        .select2-search input {
+            background-color: var(--dark-bg) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Botones de acción */
+        .btn {
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.5rem;
+            text-decoration: none;
+        }
+        .btn-success { /* Para el botón Guardar */
+            background-color: var(--success-color);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem; 
+            font-size: 1.05rem;
+        }
+        .btn-success:hover {
+            background-color: #0C8A60; /* Tono más oscuro de verde */
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(16, 185, 129, 0.2);
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #475569; 
+            border: none;
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            font-size: 1.05rem;
+        }
+        .btn-secondary:hover {
+            background-color: #334155; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .page-header-form {
+                padding: 1.5rem;
+            }
+            .page-header-form h1 {
+                font-size: 1.75rem;
+                text-align: center;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .page-header-form p.text-muted {
+                text-align: center;
+            }
+            .form-main-card {
+                margin: 1rem auto;
+                padding: 1.5rem;
+            }
+            .form-section-card {
+                padding: 1rem;
+            }
+            .form-section-card h5 {
+                font-size: 1rem;
+            }
+            .btn-success, .btn-secondary {
+                padding: 0.6rem 1.25rem;
+                font-size: 0.95rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .page-header-form {
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .page-header-form h1 {
+                font-size: 1.5rem;
+            }
+            .form-main-card {
+                border-radius: 0;
+                box-shadow: none;
+                padding: 1rem;
+            }
+            .form-section-card h5 {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<h1>{% if repuesto %}Editar Repuesto{% else %}Crear Nuevo Repuesto{% endif %}</h1>
-<p class="text-muted">
-    {% if repuesto %}
-        Modificando los detalles de <strong>{{ repuesto.nombre }} ({{ repuesto.numero_parte }})</strong>.
-    {% else %}
-        Añade un nuevo ítem al inventario.
-    {% endif %}
-</p>
+<div class="container-fluid">
+    <div class="page-header-form">
+        <h1>
+            {% if repuesto %}
+                <i class="fas fa-edit me-2"></i>Editar Repuesto
+            {% else %}
+                <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Repuesto
+            {% endif %}
+        </h1>
+        <p class="text-muted">
+            {% if repuesto %}
+                Modificando los detalles de <strong>{{ repuesto.nombre }} ({{ repuesto.numero_parte }})</strong>.
+            {% else %}
+                Añade un nuevo ítem al inventario de repuestos.
+            {% endif %}
+        </p>
+    </div>
 
-<div class="card mt-4">
-    <div class="card-body">
-        <form method="post">
+    <div class="form-main-card">
+        <form method="post" class="row g-3">
             {% csrf_token %}
-            <div class="row">
-                <div class="col-md-8 mb-3">
-                    <label class="form-label">{{ form.nombre.label }}</label>
-                    {{ form.nombre }}
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">{{ form.numero_parte.label }}</label>
-                    {{ form.numero_parte }}
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">{{ form.calidad.label }}</label>
-                    {{ form.calidad }}
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">{{ form.stock_actual.label }}</label>
-                    {{ form.stock_actual }}
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">{{ form.stock_minimo.label }}</label>
-                    {{ form.stock_minimo }}
-                </div>
-            </div>
-             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.ubicacion.label }}</label>
-                    {{ form.ubicacion }}
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.proveedor_habitual.label }}</label>
-                    {{ form.proveedor_habitual }}
+            
+            <div class="col-12 form-section-card">
+                <h5><i class="fas fa-info-circle me-2"></i>Información Básica del Repuesto</h5>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label" for="{{ form.nombre.id_for_label }}">{{ form.nombre.label }}</label>
+                        {{ form.nombre }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ form.numero_parte.id_for_label }}">{{ form.numero_parte.label }}</label>
+                        {{ form.numero_parte }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ form.calidad.id_for_label }}">{{ form.calidad.label }}</label>
+                        {{ form.calidad }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ form.stock_actual.id_for_label }}">{{ form.stock_actual.label }}</label>
+                        {{ form.stock_actual }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="{{ form.stock_minimo.id_for_label }}">{{ form.stock_minimo.label }}</label>
+                        {{ form.stock_minimo }}
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-3">
-                <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Repuesto</button>
-                <a href="{% url 'repuesto_list' %}" class="btn btn-secondary">Cancelar</a>
+            <div class="col-12 form-section-card">
+                <h5><i class="fas fa-warehouse me-2"></i>Detalles de Ubicación y Proveedor</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.ubicacion.id_for_label }}">{{ form.ubicacion.label }}</label>
+                        {{ form.ubicacion }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="{{ form.proveedor_habitual.id_for_label }}">{{ form.proveedor_habitual.label }}</label>
+                        {{ form.proveedor_habitual }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 d-grid gap-2 mt-4">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-save me-2"></i>Guardar Repuesto
+                </button>
+                <a href="{% url 'repuesto_list' %}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-times-circle me-2"></i>Cancelar
+                </a>
             </div>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Inicializar todos los select2 en esta página
+    $('.form-select').select2({
+        theme: "bootstrap-5", // Usar el tema de Bootstrap 5 para Select2
+        width: $( this ).data( 'width' ) ? $( this ).data( 'width' ) : $(this).hasClass('w-100') ? '100%' : 'style',
+        placeholder: $( this ).data( 'placeholder' ),
+        allowClear: Boolean( $( this ).data( 'allow-clear' ) ),
+    });
+});
+</script>
 {% endblock %}

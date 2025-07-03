@@ -1,22 +1,353 @@
-<!-- Archivo: flota/templates/flota/repuesto_list.html -->
 {% extends "flota/base.html" %}
 
 {% block title %}Inventario de Repuestos{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-boxes me-2"></i> Pizarra de Repuestos</h1>
-    <div>
-        <a href="{% url 'repuesto_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus-circle me-1"></i> Añadir Nuevo Repuesto
-        </a>
-    </div>
-</div>
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Variables CSS optimizadas para un tema oscuro profesional (replicadas de diseños anteriores) */
+        :root {
+            --dark-bg: #0F172A; /* Azul oscuro muy profundo para el fondo principal */
+            --card-bg: #1E293B; /* Un poco más claro que el fondo para las tarjetas y contenedores */
+            --accent-color: #3B82F6; /* Azul brillante, tu color de acento principal */
+            --accent-color-dark: #2563EB; /* Variante más oscura del acento para estados hover/active */
+            --text-primary: #F8FAFC; /* Blanco suave para texto principal, mejor legibilidad */
+            --text-secondary: #94A3B8; /* Gris azulado para texto secundario o descripciones */
+            --border-color: #334155; /* Borde sutil entre elementos, más oscuro */
+            --header-gradient-start: #1E40AF; /* Inicio del degradado para el encabezado */
+            --header-gradient-end: #172554; /* Fin del degradado para el encabezado */
+            --shadow-light: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra ligera para elementos */
+            --shadow-medium: 0 8px 16px rgba(0, 0, 0, 0.3); /* Sombra más pronunciada para el header */
+            --shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.4); /* Sombra al pasar el ratón */
+            --success-color: #10B981; /* Verde para éxito */
+            --warning-color: #F59E0B; /* Naranja para advertencia */
+            --danger-color: #EF4444; /* Rojo para crítico/peligro */
+        }
+        
+        /* Estilos generales del cuerpo */
+        body {
+            font-family: 'Inter', sans-serif; /* Fuente moderna y legible */
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            margin: 0; /* Eliminar margen predeterminado del body */
+            padding: 0; /* Eliminar padding predeterminado del body */
+            /* Añadir un patrón de fondo sutil para romper la planitud */
+            background-image: radial-gradient(circle at 100% 150%, var(--card-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 0% 150%, var(--card-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 50% 100%, var(--card-bg) 0%, transparent 10%),
+                              linear-gradient(to bottom, #0F172A, #121B2C); /* Fondo base */
+            background-size: 120% 120%;
+            background-attachment: fixed; /* Mantiene el patrón fijo al hacer scroll */
+        }
 
-<div class="card">
-    <div class="card-body">
+        /* Contenedor principal para centrar el contenido */
+        .container-fluid {
+            padding: 1.5rem; /* Padding general para el contenedor */
+        }
+
+        /* Encabezado de la página principal (título y botón) */
+        .page-header-list {
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-medium);
+            color: #E0E7FF;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-header-list h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            margin: 0;
+            color: var(--text-primary); 
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .page-header-list h1 i {
+            color: var(--accent-color);
+            font-size: 1.8rem;
+        }
+
+        /* Estilos generales para las tarjetas (card) */
+        .card { 
+            background-color: var(--card-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 1.5rem; /* Aumento del padding interno */
+        }
+        .card-body {
+            padding: 0; /* Eliminar padding del body de la tarjeta principal para que la tabla lo maneje */
+        }
+
+        /* Formulario de Búsqueda */
+        .search-form {
+            padding: 1.5rem 1.5rem 0 1.5rem; /* Padding solo arriba y lados */
+            margin-bottom: 1.5rem; /* Espacio debajo del formulario */
+        }
+        .input-group .form-control {
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-right: none; /* Eliminar borde entre input y botón */
+            border-radius: 0.5rem 0 0 0.5rem; /* Solo esquinas izquierdas redondeadas */
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+        .input-group .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.3);
+            background-color: #1A202C;
+        }
+        .input-group .btn-outline-info {
+            background-color: var(--accent-color); /* Color de acento para el botón de búsqueda */
+            border: none;
+            color: white;
+            border-radius: 0 0.5rem 0.5rem 0; /* Solo esquinas derechas redondeadas */
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+        }
+        .input-group .btn-outline-info:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        /* Tabla de Repuestos (Estilo Excel-like) */
+        .table-excel {
+            width: 100%;
+            border-collapse: separate; /* Permite border-spacing */
+            border-spacing: 0;
+            background-color: var(--card-bg); /* Fondo de la tabla */
+            /* border: 1px solid var(--border-color); */ /* El table-responsive ya tiene borde */
+            border-radius: 0.75rem;
+            overflow: hidden; /* Para que los bordes redondeados se apliquen correctamente */
+            /* box-shadow: var(--shadow-light); */ /* La sombra ya está en table-responsive */
+            margin-bottom: 0;
+        }
+        .table-excel thead th {
+            position: sticky; /* Fija el encabezado */
+            top: 0;
+            background-color: #1A202C; /* Fondo del encabezado de la tabla */
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            text-align: left;
+            z-index: 1; /* Asegura que el encabezado esté sobre el contenido al hacer scroll */
+        }
+        .table-excel tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table-excel tbody tr:nth-child(even) { /* Filas rayadas */
+            background-color: #1A202C; /* Tono ligeramente más oscuro para filas pares */
+        }
+        .table-excel tbody tr:hover {
+            background-color: #2A384A; /* Fondo al pasar el ratón por las filas */
+        }
+        .table-excel td { 
+            padding: 0.75rem 1rem; /* Más padding para celdas */
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color); /* Borde inferior para cada celda */
+            border-right: 1px solid var(--border-color); /* Borde derecho para cada celda */
+            color: var(--text-primary);
+        }
+        .table-excel td:last-child {
+            border-right: none; /* Eliminar borde derecho de la última columna */
+        }
+        .table-excel tbody tr:last-child td {
+            border-bottom: none; /* Eliminar borde inferior de la última fila */
+        }
+        .table-excel a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-weight: 500;
+        }
+        .table-excel a:hover {
+            color: var(--accent-color-dark);
+            text-decoration: underline;
+        }
+        .table-excel .text-center {
+            text-align: center;
+        }
+        .table-excel .fw-bold {
+            font-weight: 600;
+        }
+
+        /* Clases para el estado de stock en las filas */
+        .stock-danger {
+            background-color: rgba(var(--danger-color-rgb), 0.2) !important; /* Fondo rojo semitransparente */
+            color: var(--text-primary) !important;
+        }
+        .stock-warning {
+            background-color: rgba(var(--warning-color-rgb), 0.2) !important; /* Fondo naranja semitransparente */
+            color: var(--text-primary) !important;
+        }
+        /* Definir RGB para usar en rgba() */
+        :root {
+            --danger-color-rgb: 239, 68, 68;
+            --warning-color-rgb: 245, 158, 11;
+        }
+
+
+        /* Table Responsive Wrapper para la tabla Excel-like */
+        .table-responsive {
+            max-height: calc(100vh - 350px); /* Altura máxima para el scroll, ajustada */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* Suavizar el scroll en iOS */
+            border-radius: 0.75rem; /* Asegurar que el wrapper también tenga bordes redondeados */
+            border: 1px solid var(--border-color); /* Borde para el wrapper */
+            box-shadow: var(--shadow-light);
+        }
+        .table-responsive table {
+            margin-bottom: 0; /* Eliminar margen inferior de la tabla dentro del wrapper */
+        }
+
+        /* Botones generales */
+        .btn {
+            font-weight: 500;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 1.5rem;
+            text-decoration: none;
+        }
+        .btn-primary {
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-color-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #475569; 
+            border: none;
+            color: var(--text-primary);
+        }
+        .btn-secondary:hover {
+            background-color: #334155; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            color: var(--text-primary);
+        }
+        .btn-sm {
+            padding: 0.3rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .page-header-list {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+            }
+            .page-header-list h1 {
+                font-size: 1.75rem;
+            }
+            .page-header-list > div:last-child { /* Contenedor de botones */
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .page-header-list .btn {
+                width: 100%;
+            }
+            .table-responsive {
+                max-height: 400px; /* Ajuste para pantallas medianas */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header-list {
+                padding: 1rem;
+            }
+            .page-header-list h1 {
+                font-size: 1.5rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+            .search-form {
+                padding: 1rem 1rem 0 1rem;
+            }
+            .table-excel td, .table-excel th {
+                padding: 0.5rem 0.75rem;
+            }
+            .table-responsive {
+                max-height: 300px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .page-header-list {
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .page-header-list h1 {
+                font-size: 1.3rem;
+            }
+            .input-group {
+                flex-direction: column;
+            }
+            .input-group .form-control, .input-group .btn-outline-info {
+                border-radius: 0.5rem !important; /* Redondear todas las esquinas */
+                width: 100%;
+            }
+            .input-group .form-control {
+                margin-bottom: 0.5rem;
+            }
+            .table-responsive {
+                max-height: 250px;
+            }
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header-list">
+        <h1><i class="fas fa-boxes me-2"></i> Inventario de Repuestos</h1>
+        <div>
+            <a href="{% url 'repuesto_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Añadir Nuevo Repuesto
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
         <!-- Formulario de Búsqueda -->
-        <form method="get" class="mb-4">
+        <form method="get" class="search-form">
             <div class="input-group">
                 <input type="text" name="q" class="form-control" placeholder="Buscar por nombre o número de parte..." value="{{ query }}">
                 <button class="btn btn-outline-info" type="submit"><i class="fas fa-search"></i> Buscar</button>
@@ -24,8 +355,8 @@
         </form>
 
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-dark">
+            <table class="table-excel">
+                <thead>
                     <tr>
                         <th>Nombre</th>
                         <th>Número de Parte</th>
@@ -38,16 +369,18 @@
                 </thead>
                 <tbody>
                     {% for repuesto in repuestos %}
-                    <tr class{% if repuesto.stock_actual <= repuesto.stock_minimo %} "table-danger" {% elif repuesto.stock_actual <= repuesto.stock_minimo|add:5 %} "table-warning" {% endif %}>
-                        
-                        <!-- ===================== ESTA ES LA LÍNEA MODIFICADA ===================== -->
+                    <tr class="
+                        {% if repuesto.stock_actual <= repuesto.stock_minimo %}
+                            stock-danger
+                        {% elif repuesto.stock_actual <= repuesto.stock_minimo|add:5 %}
+                            stock-warning
+                        {% endif %}
+                    ">
                         <td>
                             <a href="{% url 'repuesto_detail' pk=repuesto.pk %}">
                                 {{ repuesto.nombre }}
                             </a>
                         </td>
-                        <!-- ======================================================================= -->
-
                         <td>{{ repuesto.numero_parte }}</td>
                         <td>{{ repuesto.get_calidad_display }}</td>
                         <td class="text-center fw-bold">{{ repuesto.stock_actual }}</td>
@@ -61,7 +394,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-4">No se encontraron repuestos.</td>
+                        <td colspan="7" class="text-center py-4 text-secondary">No se encontraron repuestos.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

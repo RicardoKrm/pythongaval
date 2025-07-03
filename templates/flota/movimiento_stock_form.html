@@ -1,40 +1,278 @@
-<!-- Archivo nuevo: flota/templates/flota/movimiento_stock_form.html -->
 {% extends "flota/base.html" %}
+{% load static %} {# <-- ¡IMPORTANTE! Añade esta línea al principio #}
 
 {% block title %}Registrar Movimiento de Stock{% endblock %}
 
+{% block extra_head %}
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variables CSS con la paleta de colores de la imagen, más vivas y profesionales */
+        :root {
+            --dark-bg: #1A202C; /* Fondo principal oscuro y profundo */
+            --card-bg: #2D3748; /* Fondo de tarjetas, ligeramente más claro */
+            --input-bg: #4A5568; /* Fondo para campos de entrada y elementos interactivos */
+            --accent-color: #4299E1; /* Azul vibrante y claro para acentos y botones primarios */
+            --accent-color-dark: #3182CE; /* Azul más oscuro para hover/active */
+            --text-primary: #E2E8F0; /* Blanco suave para texto principal */
+            --text-secondary: #A0AEC0; /* Gris azulado para texto secundario y etiquetas */
+            --border-color: #4A5568; /* Borde sutil entre elementos */
+            --header-gradient-start: #2B6CB0; /* Inicio del degradado para encabezados */
+            --header-gradient-end: #1A365D; /* Fin del degradado para encabezados */
+            --shadow-light: 0 6px 15px rgba(0, 0, 0, 0.3); /* Sombra ligera y suave */
+            --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.45); /* Sombra más pronunciada */
+            --success-color: #38A169; /* Verde para éxito, más vibrante */
+            --warning-color: #DD6B20; /* Naranja para advertencia, más vibrante */
+            --danger-color: #E53E3E; /* Rojo para peligro, más vibrante */
+            --alert-danger-bg: rgba(229, 62, 62, 0.15); /* Fondo suave para alertas de peligro */
+            --alert-info-bg: rgba(66, 153, 225, 0.15); /* Fondo suave para alertas de información */
+            --info-color: #4299E1; /* Color para alertas de información */
+        }
+
+        body {
+            background-color: var(--dark-bg) !important;
+            color: var(--text-primary) !important;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            padding: 2rem 1rem; /* Espaciado general del cuerpo */
+        }
+
+        /* Contenedor principal para centrar el contenido */
+        .container {
+            max-width: 800px; /* Ancho máximo para esta página */
+            margin: 0 auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem; /* Menos margen inferior para el título */
+            text-align: center;
+            text-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        }
+
+        p.text-muted {
+            color: var(--text-secondary) !important;
+            font-size: 1.1em;
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow-light);
+            padding: 2rem;
+            margin-top: 2.5rem;
+        }
+
+        .card-body {
+            padding: 0; /* Ya está controlado por el padding del .card */
+        }
+
+        /* Estilos para los campos de formulario */
+        .mb-3 {
+            margin-bottom: 1.5rem !important; /* Espacio entre campos */
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.6rem;
+            font-size: 0.95em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1.3rem;
+            border-radius: 0.6rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            font-size: 1rem;
+            height: 48px; /* Altura consistente */
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.3rem rgba(66, 153, 225, 0.4);
+            outline: none;
+        }
+
+        /* Estilos específicos para textarea (notas) */
+        textarea.form-control {
+            height: auto; /* Permitir que el textarea se ajuste */
+            min-height: 100px; /* Altura mínima para el textarea */
+            resize: vertical; /* Permitir redimensionamiento vertical */
+        }
+
+        /* Estilos para alertas */
+        .alert {
+            padding: 1.25rem 1.75rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2rem; /* Más espacio debajo de la alerta */
+            font-size: 1.05rem;
+            font-weight: 500;
+            line-height: 1.4;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .alert-info {
+            background-color: var(--alert-info-bg);
+            border-color: var(--info-color);
+            color: var(--info-color);
+        }
+        .alert-info strong {
+            color: var(--info-color);
+        }
+
+        /* Estilos para botones */
+        .mt-3 {
+            margin-top: 2rem !important; /* Más espacio encima de los botones */
+        }
+        .btn {
+            padding: 0.95rem 2.2rem;
+            border-radius: 0.6rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none; /* Eliminar subrayado en enlaces */
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: color-mix(in srgb, var(--success-color) 80%, black);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: var(--text-secondary);
+            color: var(--dark-bg);
+            margin-left: 1rem; /* Espacio entre botones */
+        }
+        .btn-secondary:hover {
+            background-color: color-mix(in srgb, var(--text-secondary) 80%, black);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+                margin-bottom: 1rem;
+            }
+            p.text-muted {
+                font-size: 1em;
+                margin-bottom: 1.5rem;
+            }
+            .card {
+                padding: 1.5rem;
+                margin-top: 1.5rem;
+            }
+            .form-label {
+                font-size: 0.9em;
+                margin-bottom: 0.4rem;
+            }
+            .form-control {
+                padding: 0.7rem 1rem;
+                font-size: 0.95rem;
+                height: 44px;
+            }
+            textarea.form-control {
+                min-height: 80px;
+            }
+            .alert {
+                padding: 1rem 1.2rem;
+                font-size: 0.95rem;
+                margin-bottom: 1.5rem;
+            }
+            .btn {
+                padding: 0.8rem 1.8rem;
+                font-size: 1rem;
+                width: 100%; /* Botones ocupan todo el ancho en móviles */
+                margin-left: 0;
+                margin-bottom: 0.75rem; /* Espacio entre botones apilados */
+            }
+            .btn:last-child {
+                margin-bottom: 0;
+            }
+            .mt-3 {
+                margin-top: 1.5rem !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            .card {
+                border-radius: 0; /* Sin bordes redondeados en pantallas muy pequeñas */
+                padding: 1rem;
+            }
+            .alert {
+                border-radius: 0.5rem;
+            }
+            .btn {
+                font-size: 0.95rem;
+                padding: 0.7rem 1.5rem;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<h1>Registrar Movimiento de Stock</h1>
-<p class="text-muted">
-    Añadiendo un movimiento para el repuesto: <strong>{{ repuesto }}</strong>
-</p>
+<div class="container">
+    <h1>Registrar Movimiento de Stock</h1>
+    <p class="text-muted">
+        Añadiendo un movimiento para el repuesto: <strong>{{ repuesto }}</strong>
+    </p>
 
-<div class="card mt-4">
-    <div class="card-body">
-        <form method="post">
-            {% csrf_token %}
-            <div class="alert alert-info">
-                <strong>Instrucciones:</strong> Para entradas o sumas de stock, use un número positivo en cantidad (ej: 10). Para salidas o restas, use un número negativo (ej: -2).
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">{{ form.tipo_movimiento.label }}</label>
-                {{ form.tipo_movimiento }}
-            </div>
-            <div class="mb-3">
-                <label class="form-label">{{ form.cantidad.label }}</label>
-                {{ form.cantidad }}
-            </div>
-            <div class="mb-3">
-                <label class="form-label">{{ form.notas.label }}</label>
-                {{ form.notas }}
-            </div>
+    <div class="card mt-4">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="alert alert-info">
+                    <strong>Instrucciones:</strong> Para entradas o sumas de stock, use un número positivo en cantidad (ej: 10). Para salidas o restas, use un número negativo (ej: -2).
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">{{ form.tipo_movimiento.label }}</label>
+                    {{ form.tipo_movimiento }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.cantidad.label }}</label>
+                    {{ form.cantidad }}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.notas.label }}</label>
+                    {{ form.notas }}
+                </div>
 
-            <div class="mt-3">
-                <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Registrar Movimiento</button>
-                <a href="{% url 'repuesto_detail' pk=repuesto.pk %}" class="btn btn-secondary">Cancelar</a>
-            </div>
-        </form>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Registrar Movimiento</button>
+                    <a href="{% url 'repuesto_detail' pk=repuesto.pk %}" class="btn btn-secondary"><i class="fas fa-times-circle me-2"></i>Cancelar</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

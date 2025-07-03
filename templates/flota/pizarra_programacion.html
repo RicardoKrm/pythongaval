@@ -406,20 +406,24 @@
         .fc-event.prioridad-ALTA { border-left-color: var(--warning-color) !important; }
         .fc-event.prioridad-CRITICA { border-left-color: var(--danger-color) !important; }
         
-        /* Estilos para el contenido del evento (iconos y título) */
         .fc-event-main-frame { 
             display: flex;
             align-items: center;
             gap: 6px;
             height: 100%;
             padding: 0.3rem 0.5rem;
+            /* ¡AÑADIDO! Asegura que el contenedor no se desborde */
+            width: 100%; 
+            box-sizing: border-box;
         }
         
-        .fc-event-title-wrap {
-            flex-grow: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        /* ¡CAMBIO CLAVE AQUÍ! Apuntamos a la clase correcta y aseguramos el comportamiento */
+        .fc-event-title {
+            white-space: nowrap;      /* No permitir saltos de línea */
+            overflow: hidden;         /* Ocultar el texto que se desborda */
+            text-overflow: ellipsis;  /* Añadir '...' al final del texto cortado */
+            flex-grow: 1;             /* Permitir que ocupe el espacio disponible */
+            min-width: 0;             /* Ayuda a que flexbox maneje el overflow correctamente */
         }
         
         .repuesto-icon {
