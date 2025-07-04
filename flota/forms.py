@@ -113,13 +113,17 @@ class CargaMasivaForm(forms.Form):
         required=False, 
         widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
     )
-    # --- ¡NUEVO CAMPO AÑADIDO! ---
     archivo_repuestos = forms.FileField(
         label="Archivo Excel de Inventario de Repuestos", 
         required=False, 
         widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
     )
-
+    archivo_programa_mantenimiento = forms.FileField(
+        label="Archivo de Programa de Mantenimiento (Flota Completa)", 
+        required=False, 
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    )
+    
 class CerrarOtMecanicoForm(forms.ModelForm):
     class Meta:
         model = OrdenDeTrabajo

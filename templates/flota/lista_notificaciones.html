@@ -1,0 +1,51 @@
+{% extends "flota/base.html" %}
+
+{% block title %}Todas las Notificaciones{% endblock %}
+
+{% block content %}
+<h1>Todas mis Notificaciones</h1>
+
+<div class="card">
+    <div class="list-group list-group-flush">
+        {% for notificacion in notificaciones %}
+            <a href="{{ notificacion.url_destino|default:'#' }}" class="list-group-item list-group-item-action {% if not notificacion.leida %}bg-secondary fw-bold{% endif %}" style="text-decoration: none; color: inherit;">
+                <div class="d-flex w-100 justify-content-between">
+                    <p class="mb-1">{{ notificacion.mensaje }}</p>
+                    <small class="text-muted">{{ notificacion.fecha_creacion|date:"d/m/Y H:i" }}</small>
+                </div>
+                <small class="text-muted">{{ notificacion.fecha_creacion|timesince }} atrás</small>
+            </a>
+        {% empty %}
+            <div class="list-group-item">No tienes notificaciones.</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Paginación -->
+{% if notificaciones.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if notificaciones.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ notificaciones.previous_page_number }}">Anterior</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+            {% endif %}
+
+            {% for i in notificaciones.paginator.page_range %}
+                {% if notificaciones.number == i %}
+                    <li class="page-item active" aria-current="page"><span class="page-link">{{ i }}</span></li>
+                {% else %}
+                    <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if notificaciones.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ notificaciones.next_page_number }}">Siguiente</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+
+{% endblock %}

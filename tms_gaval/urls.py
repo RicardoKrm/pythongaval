@@ -37,6 +37,9 @@ urlpatterns = [
     path('api/ots/add-repuesto/', flota_views.add_repuesto_a_ot_api, name='add_repuesto_a_ot_api'),
     path('pizarra-combustible/', flota_views.pizarra_combustible, name='pizarra_combustible'),
     path('combustible/registrar/', flota_views.registrar_carga_combustible, name='registrar_carga_combustible'),
+    path('ot/<int:pk>/autorizar-horas-extra/', views.autorizar_horas_extra, name='autorizar_horas_extra'),
+    path('notificaciones/', views.lista_notificaciones, name='lista_notificaciones'),
+    path('api/notificaciones/marcar-leidas/', views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
     
 
     

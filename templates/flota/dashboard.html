@@ -2,20 +2,14 @@
 
 {% block title %}Pizarra de Mantenimiento{% endblock %}
 
+
 {% block content %}
     <h1>Pizarra de Mantenimiento Preventivo</h1>
-    {% comment %}
-Archivo: templates/flota/dashboard.html
-Modificado para añadir columnas del Excel, respetando la estructura de `data_flota`.
-{% endcomment %}
 
-    <div class="dashboard-top-section"> {# Contenedor principal de toda la sección superior #}
-
-        {# Sección de Filtros - Horizontal y 100% Ancho #}
-        <div class="card filter-section-professional mb-4"> {# Añadimos mb-4 para espacio debajo del card #}
+    <div class="dashboard-top-section">
+        <div class="card filter-section-professional mb-4">
             <div class="card-body">
                 <form method="get" action="" class="filter-form-professional">
-                    {# Campos de filtro organizados horizontalmente con flexbox #}
                     <div class="filter-group">
                         <label for="{{ filtro_form.modelo.id_for_label }}">Modelos</label>
                         {{ filtro_form.modelo }}
@@ -32,7 +26,6 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
                         <label for="id_fecha_hasta">Fecha Hasta</label>
                         <input type="date" name="fecha_hasta" id="id_fecha_hasta" class="form-control" value="{{ request.GET.fecha_hasta }}">
                     </div>
-                    {# Espacio para los botones #}
                     <div class="filter-buttons-professional">
                         <button type="submit" class="btn btn-primary btn-professional">Aplicar</button>
                         <button type="submit" name="proximos_5000_km" value="true" class="btn btn-warning btn-professional">Próximos 5000 KM</button>
@@ -42,7 +35,6 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
             </div>
         </div>
 
-        {# Sección de KPIs - Horizontal y 100% Ancho, debajo de los filtros #}
         <div class="card kpi-section-professional mb-4">
             <div class="card-body kpi-grid-professional">
                 <div class="kpi-card-professional">
@@ -65,10 +57,8 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
                 {% endif %}
             </div>
         </div>
-
     </div>
     
-    {# La tabla permanece igual #}
     <table class="table table-bordered table-hover table-striped mt-3" id="pizarraMantenimientoTable">
         <thead>
             <tr>
@@ -76,15 +66,14 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
                 <th>PPU</th>
                 <th>Marca</th>
                 <th>Modelo</th>
+                <th>Razón Social</th>
                 <th>Norma</th>
                 <th>Intervalo KM</th>
                 <th>KM Últ. Mant.</th>
                 <th>Fecha Últ. Mant.</th>
                 <th>Tipo Mant. Anterior</th>
-
                 <th>Estatus de la Mantención</th>
                 <th>KM Acum. Prox. Mant.</th>
-
                 <th>KM Actual</th>
                 <th>Fecha KM Actual</th>
                 <th>KM Prox. Mant.</th>
@@ -97,18 +86,17 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
             {% for item in data_flota %}
             <tr class="estado-{{ item.estado }}">
                 <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
-                <td>{{ item.vehiculo.ppu|default:"N/A" }}</td>
-                <td>{{ item.vehiculo.modelo.marca.nombre|default:"N/A" }}</td>
+                <td>{{ item.vehiculo.patente|default:"N/A" }}</td>
+                <td>{{ item.vehiculo.modelo.marca|default:"N/A" }}</td>
                 <td>{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td>
+                <td>{{ item.vehiculo.razon_social|default:"N/A" }}</td>
                 <td>{{ item.vehiculo.norma_euro.nombre|default:"N/A" }}</td>
                 <td>{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td>
                 <td>{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td>
                 <td>{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td>
                 <td>{{ item.tipo_ultimo_mant|default:"--" }}</td>
-
                 <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
                 <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td>
-
                 <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
                 <td>{{ item.vehiculo.fecha_actualizacion_km|date:"d/m/Y H:i" }}</td>
                 <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
@@ -126,7 +114,7 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
             </tr>
             {% empty %}
             <tr>
-                <td colspan="17" style="text-align: center; padding: 20px;">
+                <td colspan="18" style="text-align: center; padding: 20px;">
                     No hay vehículos registrados para esta empresa.
                 </td>
             </tr>
@@ -147,47 +135,6 @@ Modificado para añadir columnas del Excel, respetando la estructura de `data_fl
             </form>
         </div>
     </div>
-
-    <script>
-        const modal = document.getElementById('kmModal');
-        const form = document.getElementById('kmForm');
-        const vehiculoNumeroSpan = document.getElementById('modalVehiculoNumero');
-        const kmInput = document.getElementById('modalKmInput');
-
-        function openModal(vehiculoId, vehiculoNumero, kmActual) {
-            event.stopPropagation();
-            closeAllMenus();
-            form.action = `/vehiculo/${vehiculoId}/actualizar-km/`;
-            vehiculoNumeroSpan.textContent = vehiculoNumero;
-            kmInput.value = kmActual;
-            kmInput.placeholder = `KM actual: ${kmActual}`;
-            modal.style.display = 'block';
-        }
-
-        function closeModal() {
-            modal.style.display = 'none';
-        }
-
-        function toggleMenu(event, menuId) {
-            event.stopPropagation();
-            const currentMenu = document.getElementById(menuId);
-            const isShown = currentMenu.classList.contains('show');
-            closeAllMenus();
-            if (!isShown) {
-                currentMenu.classList.add('show');
-            }
-        }
-
-        function closeAllMenus() {
-            document.querySelectorAll('.action-menu').forEach(menu => menu.classList.remove('show'));
-        }
-        
-        window.onclick = function(event) {
-            closeAllMenus();
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
     </script>
 
     <script>

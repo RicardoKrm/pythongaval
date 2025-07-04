@@ -23,11 +23,13 @@ from django.db.models import Min, Sum, Count, F, Q, Avg
 from django.db.models import OuterRef, Subquery, Avg
 
 
+
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
     Tarea, Insumo, TipoFalla, Proveedor, DetalleInsumoOT, HistorialOT, Repuesto,
     MovimientoStock, RepuestoRequeridoPorTarea,
-    Ruta, CondicionAmbiental, CargaCombustible # <-- ASEGÚRATE DE QUE ESTÉ AQUÍ
+    Ruta, CondicionAmbiental, CargaCombustible, transaction, transaction, NormaEuro, Notificacion
+    
 )
 from .forms import (
     OrdenDeTrabajoForm, CambiarEstadoOTForm, BitacoraDiariaForm, CargaMasivaForm, 
@@ -290,22 +292,51 @@ def orden_trabajo_detail(request, pk):
                 messages.error(request, "Esta acción solo es válida para OTs Preventivas con una pauta asignada.")
             return redirect('ot_detail', pk=ot.pk)
 
-        # --- Lógica para Pausar la OT ---
+        # --- Lógica para Pausar la OT (MODIFICADA PARA CREAR NOTIFICACIONES) ---
         elif 'pausar_ot' in request.POST:
             if not es_admin_o_super:
                 messages.error(request, "No tienes permiso para pausar la OT.")
+                return redirect('ot_detail', pk=ot.pk)
+            
+            form = PausarOTForm(request.POST, instance=ot)
+            if form.is_valid():
+                instancia = form.save(commit=False)
+                instancia.estado = 'PAUSADA'
+                instancia.save()
+
+                detalle_pausa = f"Motivo: {instancia.get_motivo_pausa_display()}. Notas: {instancia.notas_pausa or 'N/A'}"
+                HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa)
+                
+                # === INICIO DE LA NUEVA LÓGICA DE NOTIFICACIÓN ===
+                try:
+                    destinatarios = User.objects.filter(groups__name='Administrador').exclude(pk=request.user.pk)
+                    
+                    if destinatarios.exists():
+                        mensaje_notificacion = f"La OT #{instancia.folio} fue pausada por {request.user.username}."
+                        url_notificacion = reverse('ot_detail', args=[ot.pk])
+                        
+                        notificaciones_a_crear = [
+                            Notificacion(
+                                usuario_destino=admin,
+                                mensaje=mensaje_notificacion,
+                                url_destino=url_notificacion
+                            ) for admin in destinatarios
+                        ]
+                        
+                        Notificacion.objects.bulk_create(notificaciones_a_crear)
+                        
+                        messages.info(request, f"Se ha enviado una notificación en la aplicación a {destinatarios.count()} administrador(es).")
+                    else:
+                        messages.warning(request, "La OT ha sido pausada, pero no se encontraron otros administradores para notificar.")
+
+                except Exception as e:
+                    messages.error(request, f"La OT ha sido pausada, pero ocurrió un error al crear las notificaciones: {e}")
+                # === FIN DE LA NUEVA LÓGICA DE NOTIFICACIÓN ===
+
+                messages.warning(request, f'La OT #{ot.folio} ha sido pausada con éxito.')
+                return redirect('ot_detail', pk=ot.pk)
             else:
-                form = PausarOTForm(request.POST, instance=ot)
-                if form.is_valid():
-                    instancia = form.save(commit=False)
-                    instancia.estado = 'PAUSADA'
-                    instancia.save()
-                    detalle_pausa = f"Motivo: {instancia.get_motivo_pausa_display()}. Notas: {instancia.notas_pausa or 'N/A'}"
-                    HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa)
-                    messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
-                    return redirect('ot_detail', pk=ot.pk)
-                else:
-                    pausar_form = form
+                pausar_form = form
 
         # --- Lógica para Guardar Diagnóstico ---
         elif 'guardar_diagnostico' in request.POST:
@@ -327,7 +358,6 @@ def orden_trabajo_detail(request, pk):
                     messages.warning(request, f'La tarea "{tarea_seleccionada.descripcion}" ya está asignada a esta OT.')
                 else:
                     ot.tareas_realizadas.add(tarea_seleccionada)
-                    ot.save()
                     HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='MODIFICACION', descripcion=f"Se añadió la tarea: '{tarea_seleccionada.descripcion}'.")
                     messages.success(request, f'Tarea "{tarea_seleccionada.descripcion}" añadida con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
@@ -338,13 +368,11 @@ def orden_trabajo_detail(request, pk):
         elif 'add_manual_insumo' in request.POST:
             form = ManualInsumoForm(request.POST)
             if form.is_valid():
-                # ... (código existente para añadir insumo manual)
                 nombre = form.cleaned_data['nombre']
                 precio = form.cleaned_data['precio_unitario']
                 cantidad = form.cleaned_data['cantidad']
                 insumo, created = Insumo.objects.get_or_create(nombre=nombre, defaults={'precio_unitario': precio})
                 DetalleInsumoOT.objects.create(orden_de_trabajo=ot, insumo=insumo, cantidad=cantidad, repuesto_inventario=None)
-                ot.save()
                 messages.success(request, f'Insumo manual "{nombre}" añadido con éxito.')
                 return redirect('ot_detail', pk=ot.pk)
             else:
@@ -354,7 +382,6 @@ def orden_trabajo_detail(request, pk):
         elif 'asignar_personal' in request.POST:
             form = AsignarPersonalOTForm(request.POST, instance=ot)
             if form.is_valid():
-                # ... (código existente para asignar personal)
                 form.save()
                 responsable = form.cleaned_data.get('responsable')
                 ayudantes = ", ".join([user.username for user in form.cleaned_data.get('personal_asignado').all()])
@@ -365,7 +392,7 @@ def orden_trabajo_detail(request, pk):
             else:
                 asignar_form = form
         
-        # --- Lógica para Cambiar Estado General (CON EL CÁLCULO DE TFS) ---
+        # --- Lógica para Cambiar Estado General ---
         elif 'cambiar_estado' in request.POST:
             form = CambiarEstadoOTForm(request.POST, instance=ot)
             if form.is_valid():
@@ -377,14 +404,11 @@ def orden_trabajo_detail(request, pk):
 
                 if nuevo_estado == 'FINALIZADA' and ot.estado != 'FINALIZADA':
                     ot.fecha_cierre = timezone.now()
-                    
-                    # ¡CÁLCULO AUTOMÁTICO DE TFS!
                     duracion_total = ot.fecha_cierre - ot.fecha_creacion
                     ot.tfs_minutos = int(duracion_total.total_seconds() / 60)
-                    
                     HistorialOT.objects.create(
                         orden_de_trabajo=ot, usuario=request.user, tipo_evento='FINALIZACION', 
-                        descripcion=f"La OT ha sido finalizada por {request.user.username}. TFS registrado: {ot.tfs_minutos} min."
+                        descripcion=f"La OT ha sido finalizada. TFS registrado: {ot.tfs_minutos} min."
                     )
                 
                 ot.estado = nuevo_estado
@@ -478,8 +502,6 @@ def _limpiar_descripcion_tarea(descripcion):
     return descripcion_limpia
 
 
-# En flota/views.py, reemplaza solo esta función
-
 @login_required
 def carga_masiva(request):
     connection.set_tenant(request.tenant)
@@ -488,74 +510,47 @@ def carga_masiva(request):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # --- Lógica para Vehículos ---
-                    if 'archivo_vehiculos' in request.FILES:
-                        # ... tu código para vehículos aquí ...
-                        pass
-                    # --- Lógica para Tareas ---
-                    if 'archivo_tareas' in request.FILES:
-                        # ... tu código para tareas aquí ...
-                        pass
-                    # --- LÓGICA FINAL PARA PARETO ---
-                    if 'archivo_tipos_falla' in request.FILES:
-                        # Leemos el archivo SIN cabecera y saltando las primeras 4 filas de basura
-                        df_pareto = pd.read_excel(
-                            request.FILES['archivo_tipos_falla'], 
-                            header=None, 
-                            skiprows=4
-                        )
+                    if 'archivo_programa_mantenimiento' in request.FILES:
+                        archivo_excel = request.FILES['archivo_programa_mantenimiento']
+                        df = pd.read_excel(archivo_excel, header=1)
+                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('(', '').str.replace(')', '')
                         
-                        # Asignamos manualmente los nombres de columna a las primeras columnas que nos interesan
-                        df_pareto.columns = [
-                            'n', 'criticidad', 'causa', 
-                            'descripcion', 'tfs_min', 'frec_relativa', 
-                            'frec_absoluta', 'punto_medicion'
-                        ] + [f'extra_{i}' for i in range(len(df_pareto.columns) - 8)]
+                        creados = 0
+                        actualizados = 0
 
+                        for index, row in df.iterrows():
+                            if pd.isna(row['n°_int']):
+                                continue
 
-                        # Eliminamos filas que no tienen descripción (ej. la fila "Total")
-                        df_pareto.dropna(subset=['descripcion'], inplace=True)
-                        df_pareto = df_pareto[df_pareto['descripcion'].str.strip() != 'Total']
+                            modelo_obj, _ = ModeloVehiculo.objects.get_or_create(
+                                nombre=str(row['modelo']).strip(),
+                                defaults={'marca': str(row['marca']).strip(), 'tipo': str(row['tipo_veh']).strip()}
+                            )
+                            norma_obj, _ = NormaEuro.objects.get_or_create(nombre=str(row['norma']).strip())
 
-                        vehiculo_ejemplo = Vehiculo.objects.first()
-                        if not vehiculo_ejemplo:
-                            messages.error(request, "No hay vehículos en la BD para crear OTs de ejemplo.")
-                            raise Exception("No hay vehículos para la carga de Pareto.")
-
-                        fallas_creadas = 0
-                        ots_creadas = 0
-                        for index, row in df_pareto.iterrows():
-                            # Mapeo de valores
-                            criticidad_map = {'ALTO': 'ALTA', 'MEDIO': 'MEDIA', 'LEVE': 'BAJA'}
-                            causa_map = {'MECÁNICA': 'MECANICA', 'ELÉCTRICA': 'ELECTRICA', 'OPERACIÓN': 'OPERACION'}
+                            vehiculo_obj, created = Vehiculo.objects.update_or_create(
+                                numero_interno=str(int(row['n°_int'])),
+                                defaults={
+                                    'patente': str(row['ppu']).strip() if pd.notna(row['ppu']) else None,
+                                    'modelo': modelo_obj,
+                                    'norma_euro': norma_obj,
+                                    'chasis': str(row.get('chasis')).strip() if pd.notna(row.get('chasis')) else None,
+                                    'motor': str(row.get('motor')).strip() if pd.notna(row.get('motor')) else None,
+                                    'razon_social': str(row.get('razón__social')).strip() if pd.notna(row.get('razón__social')) else None,
+                                    'kilometraje_actual': int(row['km_actual']) if pd.notna(row['km_actual']) else 0,
+                                    'aplicacion': str(row.get('aplic')).strip() if pd.notna(row.get('aplic')) else None,
+                                }
+                            )
                             
-                            criticidad_excel = str(row['criticidad']).strip().upper()
-                            causa_excel = str(row['causa']).strip().upper()
-
-                            criticidad = criticidad_map.get(criticidad_excel, 'MEDIA')
-                            causa = causa_map.get(causa_excel, 'MECANICA')
-                            descripcion = str(row['descripcion']).strip()
-                            tfs_minutos = int(row['tfs_min'])
-
-                            tipo_falla, created = TipoFalla.objects.update_or_create(
-                                descripcion=descripcion,
-                                defaults={'criticidad': criticidad, 'causa': causa}
-                            )
                             if created:
-                                fallas_creadas += 1
-
-                            OrdenDeTrabajo.objects.create(
-                                vehiculo=vehiculo_ejemplo,
-                                tipo='CORRECTIVA',
-                                estado='FINALIZADA',
-                                tipo_falla=tipo_falla,
-                                observacion_inicial=f"OT de ejemplo para la falla: {descripcion}",
-                                tfs_minutos=tfs_minutos,
-                                fecha_cierre=timezone.now()
-                            )
-                            ots_creadas += 1
-
-                        messages.success(request, f"Carga de Pareto completada: {fallas_creadas} tipos de falla nuevos y {ots_creadas} OTs de ejemplo generadas.")
+                                creados += 1
+                            else:
+                                actualizados += 1
+                        
+                        messages.success(request, f"Carga de flota completada: {creados} vehículos nuevos creados y {actualizados} vehículos actualizados.")
+                    
+                    # Aquí puedes añadir las otras lógicas de carga que tenías
+                    # if 'archivo_pautas' in request.FILES: ...
 
             except Exception as e:
                 messages.error(request, f"Ocurrió un error crítico durante la carga: {e}")
@@ -566,7 +561,6 @@ def carga_masiva(request):
 
     context = {'form': form}
     return render(request, 'flota/carga_masiva.html', context)
-
 @login_required
 def indicadores_dashboard(request):
     connection.set_tenant(request.tenant)
@@ -1228,3 +1222,67 @@ def pizarra_combustible(request):
         'resultado_prediccion': resultado_prediccion,
     }
     return render(request, 'flota/pizarra_combustible.html', context)
+
+
+@login_required
+@user_passes_test(es_supervisor_o_admin)
+def autorizar_horas_extra(request, pk):
+    connection.set_tenant(request.tenant)
+    ot = get_object_or_404(OrdenDeTrabajo, pk=pk)
+
+    if request.method == 'POST':
+        ot.horas_extra_autorizadas = True
+        
+        if ot.estado == 'PAUSADA':
+            ot.estado = 'EN_PROCESO'
+            
+        ot.save()
+
+        HistorialOT.objects.create(
+            orden_de_trabajo=ot,
+            usuario=request.user,
+            tipo_evento='MODIFICACION',
+            descripcion="Se han autorizado las horas extra para esta OT."
+        )
+
+        messages.success(request, f"¡Horas extra autorizadas para la OT #{ot.folio}!")
+    
+    return redirect('ot_detail', pk=pk)
+
+@login_required
+def lista_notificaciones(request):
+    """
+    Muestra todas las notificaciones del usuario, paginadas.
+    """
+    connection.set_tenant(request.tenant)
+    
+    # Obtenemos todas las notificaciones del usuario logueado
+    notificaciones_list = request.user.notificaciones.all()
+    
+    # Paginación
+    paginator = Paginator(notificaciones_list, 20) # Muestra 20 notificaciones por página
+    page = request.GET.get('page')
+    try:
+        notificaciones = paginator.page(page)
+    except PageNotAnInteger:
+        notificaciones = paginator.page(1)
+    except EmptyPage:
+        notificaciones = paginator.page(paginator.num_pages)
+        
+    context = {
+        'notificaciones': notificaciones
+    }
+    return render(request, 'flota/lista_notificaciones.html', context)
+
+@login_required
+def marcar_notificaciones_leidas(request):
+    """
+    API view que marca todas las notificaciones no leídas del usuario como leídas.
+    Se llama vía JavaScript (fetch).
+    """
+    if request.method == 'POST':
+        # Buscamos todas las notificaciones NO leídas del usuario y las actualizamos
+        request.user.notificaciones.filter(leida=False).update(leida=True)
+        return JsonResponse({'status': 'ok'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)

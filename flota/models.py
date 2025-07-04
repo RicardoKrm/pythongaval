@@ -44,6 +44,7 @@ class Vehiculo(models.Model):
     fecha_actualizacion_km = models.DateTimeField(auto_now=True)
     aplicacion = models.CharField(max_length=100, blank=True, null=True, help_text="Ej: Faena, Carretera, Interurbano")
     norma_euro = models.ForeignKey(NormaEuro, on_delete=models.SET_NULL, null=True, blank=True, related_name='vehiculos')
+    razon_social = models.CharField(max_length=255, blank=True, null=True, help_text="Razón social o propietario del vehículo")
 
     def __str__(self):
         patente_str = self.patente or "S/P"
@@ -212,10 +213,6 @@ class PautaMantenimiento(models.Model):
 
     def __str__(self): return f"{self.nombre} ({self.modelo_vehiculo.nombre} - {self.kilometraje_pauta} KM)"
 
-# ==============================================================================
-#                      MODELOS PRINCIPALES DE OPERACIÓN
-# ==============================================================================
-
 class OrdenDeTrabajo(models.Model):
     # --- CHOICES ---
     ESTADO_CHOICES = [
@@ -277,104 +274,61 @@ class OrdenDeTrabajo(models.Model):
     motivo_pausa = models.CharField(max_length=50, choices=MOTIVO_PAUSA_CHOICES, blank=True, null=True)
     notas_pausa = models.TextField(blank=True, null=True)
     tareas_realizadas = models.ManyToManyField(Tarea, blank=True, related_name='ordenes_de_trabajo')
-
-    # Como mencionaste, la relación ManyToMany `insumos_utilizados` se gestiona a través de DetalleInsumoOT.
-    # No es necesario declararla explícitamente aquí si DetalleInsumoOT ya tiene un ForeignKey a OrdenDeTrabajo.
-    # Si DetalleInsumoOT tiene un ForeignKey a OrdenDeTrabajo, la relación inversa
-    # 'detalles_insumos_ot' (por defecto sería 'detalleinsumoots_set' si no hay related_name)
-    # ya existe y puedes usarla directamente. Si DetalleInsumoOT tiene un related_name como
-    # 'detalles_de_ot', entonces la usarías así: self.detalles_de_ot.all().
-    # Asumo que tienes un modelo DetalleInsumoOT con un ForeignKey a esta OrdenDeTrabajo
-    # y un related_name como 'detalles_insumos_ot'. Si no es así, por favor, avísame.
-
+    horas_extra_autorizadas = models.BooleanField(
+        default=False,
+        help_text="Indica si un supervisor autorizó trabajar fuera del tiempo estándar o del horario laboral."
+    )
     personal_asignado = models.ManyToManyField(User, related_name='ots_asignadas', blank=True)
 
-    # --- MÉTODOS DEL MODELO ---
     def save(self, *args, **kwargs):
-        # Generar el folio si es nuevo (antes de super().save() para que esté disponible si se necesita)
-        if not self.folio:
-            # Obtener el último ID para generar el folio. Es preferible hacerlo antes de guardar,
-            # pero considera que si hay muchas inserciones concurrentes, podría haber duplicados.
-            # Una alternativa más robusta para folios únicos es usar un campo UUID.
+        if not self.folio and not self.pk:
             last_ot = OrdenDeTrabajo.objects.all().order_by('id').last()
             new_id = (last_ot.id + 1) if last_ot else 1
             self.folio = f'OT-{new_id:04d}'
 
-        # Llama primero al método save del padre para guardar la instancia en la DB
-        # y asegurarte de que tenga un primary key (ID).
+        original_estado = None
+        if self.pk:
+            try:
+                original_estado = OrdenDeTrabajo.objects.get(pk=self.pk).estado
+            except OrdenDeTrabajo.DoesNotExist:
+                pass
+
         super().save(*args, **kwargs)
 
-        # Ahora que la instancia OrdenDeTrabajo tiene un PK, puedes acceder a sus relaciones inversas.
-        # Recalcular el costo total de la OT después de que los detalles de insumos puedan ser relacionados
-        # (especialmente útil si los detalles se guardan en la misma transacción o inmediatamente después).
-        # Si los DetalleInsumoOT se agregan DESPUÉS de guardar la OT inicial, este cálculo
-        # debería hacerse en otro lugar (ej. en la vista, después de guardar ambos).
-        # Sin embargo, si estás creando la OT y los DetalleInsumoOT al mismo tiempo,
-        # y los DetalleInsumoOT se guardan en el mismo `save()` (lo cual es menos común
-        # si se manejan con un Formset), esta lógica tiene sentido.
-        #
-        # Si estás creando una nueva OT y los detalles NO están guardados aún,
-        # self.detalles_insumos_ot.all() estará vacío en la primera pasada de save().
-        # Una solución común es actualizar el costo total en una segunda pasada,
-        # o cuando se guarden los detalles del insumo.
-        #
-        # Para el propósito de arreglar el `ValueError`, movemos esto aquí.
-        # Si los detalles NO se guardan junto con la OT, este costo será 0 inicialmente.
-        costo_insumos = 0
-        for detalle in self.detalles_insumos_ot.all(): # Ahora esto no dará ValueError
-            if detalle.repuesto_inventario:
-                costo_insumos += detalle.cantidad * detalle.repuesto_inventario.precio_unitario
-            elif detalle.insumo:
-                costo_insumos += detalle.cantidad * detalle.insumo.precio_unitario
+        if self.estado == 'FINALIZADA' and original_estado != 'FINALIZADA':
+            if self.kilometraje_cierre and self.kilometraje_cierre > 0:
+                if self.vehiculo.kilometraje_actual < self.kilometraje_cierre:
+                    self.vehiculo.kilometraje_actual = self.kilometraje_cierre
+                    self.vehiculo.save(update_fields=['kilometraje_actual'])
 
-        # Si tareas_realizadas ya está establecido (ej. a través de un ManyToManyField en el formulario),
-        # esto funcionará. De lo contrario, también podría ser 0 en la primera pasada.
-        costo_tareas = self.tareas_realizadas.aggregate(total=Sum('costo_base'))['total'] or 0
-        self.costo_total = costo_insumos + costo_tareas
+        costo_insumos_actual = self.detalles_insumos_ot.filter(repuesto_inventario__isnull=False).aggregate(
+            total=Sum(F('cantidad') * F('repuesto_inventario__precio_unitario'), output_field=models.DecimalField())
+        )['total'] or 0.00
+        costo_insumos_manuales = self.detalles_insumos_ot.filter(insumo__isnull=False).aggregate(
+            total=Sum(F('cantidad') * F('insumo__precio_unitario'), output_field=models.DecimalField())
+        )['total'] or 0.00
+        costo_tareas_actual = self.tareas_realizadas.aggregate(total=Sum('costo_base'))['total'] or 0.00
+        nuevo_costo_total = costo_insumos_actual + costo_insumos_manuales + costo_tareas_actual
 
-        # Si el costo_total se ha actualizado, debemos guardarlo de nuevo.
-        # Esto resultará en una segunda llamada a save(), lo cual es aceptable
-        # para asegurar que el costo_total se actualice correctamente.
-        # Si quieres evitar la segunda llamada, considera un trigger de DB
-        # o un signal post_save, o calcula el costo_total en tu vista.
-        if self.has_changed('costo_total'): # Solo guarda de nuevo si el costo ha cambiado
-             super().save(update_fields=['costo_total'])
-
+        if self.costo_total != nuevo_costo_total:
+            self.costo_total = nuevo_costo_total
+            OrdenDeTrabajo.objects.filter(pk=self.pk).update(costo_total=self.costo_total)
 
     def __str__(self):
         return f"OT {self.folio or self.pk} - {self.vehiculo.numero_interno}"
 
-    # --- MÉTODO ADICIONAL PARA LA DISPONIBILIDAD DE REPUESTOS ---
     def has_all_parts_available(self):
-        """
-        Verifica si todos los repuestos *planificados* (requeridos por las tareas asociadas)
-        para esta Orden de Trabajo están disponibles en el stock actual.
-        """
         required_parts_data = RepuestoRequeridoPorTarea.objects.filter(
             tarea__in=self.tareas_realizadas.all()
-        ).values('repuesto__id', 'repuesto__stock_actual').annotate(
+        ).values('repuesto_id', 'repuesto__stock_actual').annotate(
             total_required_for_ot=Sum('cantidad_requerida')
         )
-
         if not required_parts_data.exists():
-            # Si la OT no tiene tareas que requieran repuestos, se considera que están disponibles.
             return True
-
         for item in required_parts_data:
-            repuesto_stock = item['repuesto__stock_actual']
-            total_required = item['total_required_for_ot']
-
-            if repuesto_stock < total_required:
-                return False # En cuanto encuentra un repuesto faltante, retorna False
-
-        return True # Si revisó todos y todos están disponibles, retorna True
-
-    # Método auxiliar para verificar si un campo ha cambiado antes de un segundo save
-    def has_changed(self, field_name):
-        if not self.pk: # Si no ha sido guardado, todo es nuevo
-            return True
-        old_value = self.__class__._default_manager.filter(pk=self.pk).values_list(field_name, flat=True).get()
-        return getattr(self, field_name) != old_value
+            if item['repuesto__stock_actual'] < item['total_required_for_ot']:
+                return False
+        return True
 
 
 class DetalleInsumoOT(models.Model):
@@ -573,3 +527,42 @@ class CargaCombustible(models.Model):
         if self.vehiculo.kilometraje_actual < self.kilometraje_en_carga:
             self.vehiculo.kilometraje_actual = self.kilometraje_en_carga
             self.vehiculo.save(update_fields=['kilometraje_actual'])
+
+class Notificacion(models.Model):
+    """
+    Modela una notificación para un usuario específico dentro de la aplicación.
+    """
+    # El usuario que recibirá la notificación. Si se borra el usuario, se borran sus notificaciones.
+    usuario_destino = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='notificaciones'
+    )
+    
+    # El contenido de la notificación
+    mensaje = models.CharField(
+        max_length=255, 
+        help_text="El texto que verá el usuario. Ej: 'La OT #123 fue pausada por Juan Pérez.'"
+    )
+    
+    # Un campo para saber si el usuario ya vio la notificación
+    leida = models.BooleanField(default=False)
+    
+    # La URL a la que se redirigirá al usuario si hace clic en la notificación
+    url_destino = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        help_text="URL a la que se dirige la notificación. Ej: /ot/123/detail/"
+    )
+    
+    # La fecha en que se creó la notificación
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion'] # Muestra las notificaciones más nuevas primero
+        verbose_name = "Notificación"
+        verbose_name_plural = "Notificaciones"
+
+    def __str__(self):
+        return f"Notificación para {self.usuario_destino.username}: {self.mensaje[:30]}..."
