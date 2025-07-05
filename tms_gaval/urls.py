@@ -40,6 +40,9 @@ urlpatterns = [
     path('ot/<int:pk>/autorizar-horas-extra/', views.autorizar_horas_extra, name='autorizar_horas_extra'),
     path('notificaciones/', views.lista_notificaciones, name='lista_notificaciones'),
     path('api/notificaciones/marcar-leidas/', views.marcar_notificaciones_leidas, name='marcar_notificaciones_leidas'),
+    path('administracion/usuarios/', views.lista_usuarios, name='lista_usuarios'),
+    path('administracion/usuarios/crear/', views.crear_usuario, name='crear_usuario'),
+    path('administracion/usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
     
 
     

@@ -1,0 +1,55 @@
+{% extends "flota/base.html" %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestión de Usuarios</h1>
+    <a href="{% url 'crear_usuario' %}" class="btn btn-primary">
+        <i class="fas fa-plus-circle me-1"></i> Crear Nuevo Usuario
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Nombre de Usuario</th>
+                    <th>Nombre Completo</th>
+                    <th>Email</th>
+                    <th>Rol</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                    <tr>
+                        <td><strong>{{ usuario.username }}</strong></td>
+                        <td>{{ usuario.get_full_name|default:"-" }}</td>
+                        <td>{{ usuario.email|default:"-" }}</td>
+                        <td>
+                            {% with grupo=usuario.groups.first %}
+                                {% if grupo %}
+                                    <span class="badge bg-secondary">{{ grupo.name }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Sin Rol</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        <td>
+                            <a href="{% url 'editar_usuario' user_id=usuario.pk %}" class="btn btn-sm btn-outline-info">
+                                Editar
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">No hay usuarios registrados.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

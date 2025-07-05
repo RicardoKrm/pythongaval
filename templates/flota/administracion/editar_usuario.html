@@ -1,0 +1,49 @@
+{% extends "flota/base.html" %}
+
+{% block title %}Editar Usuario: {{ usuario_a_editar.username }}{% endblock %}
+
+{% block content %}
+<h1>Editar Usuario: <strong>{{ usuario_a_editar.username }}</strong></h1>
+<p class="text-muted">Estás editando los detalles y el rol. La contraseña no se puede cambiar desde esta pantalla.</p>
+
+<div class="form-card mt-4">
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
+                {{ form.first_name }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
+                {{ form.last_name }}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                {{ form.email }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.grupo.id_for_label }}" class="form-label">{{ form.grupo.label }}</label>
+                {{ form.grupo }}
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mt-4">
+            <button type="submit" class="btn-submit">Guardar Cambios</button>
+            <a href="{% url 'lista_usuarios' %}" class="btn-secondary ms-2">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

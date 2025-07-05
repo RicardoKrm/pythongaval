@@ -2,6 +2,7 @@
 
 from django import forms
 from django.contrib.auth.models import User  
+from django.contrib.auth.models import Group
 
 from .models import (
     OrdenDeTrabajo, BitacoraDiaria, Vehiculo, Tarea, Insumo, DetalleInsumoOT,
@@ -383,3 +384,26 @@ class CargaCombustibleForm(forms.ModelForm):
             is_active=True, 
             groups__name__in=['Mecánico', 'Supervisor', 'Administrador']
         ).distinct()    
+
+
+class UsuarioCreacionForm(forms.Form):
+    username = forms.CharField(label="Nombre de usuario", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    first_name = forms.CharField(label="Nombre", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(label="Apellido", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(label="Contraseña", widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+    grupo = forms.ModelChoiceField(
+        queryset=Group.objects.exclude(name='Administrador'), # Un admin no puede crear otros admins
+        label="Rol del Usuario",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+class UsuarioEdicionForm(forms.Form):
+    first_name = forms.CharField(label="Nombre", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(label="Apellido", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    grupo = forms.ModelChoiceField(
+        queryset=Group.objects.exclude(name='Administrador'),
+        label="Rol del Usuario",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )

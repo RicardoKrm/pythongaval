@@ -4,13 +4,11 @@
     <meta charset="UTF-8">
     <title>{% block title %}TMS GAVAL{% endblock %} - {{ request.tenant.nombre }}</title>
     
-    <!-- Librería de Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     
     <style>
-        /* ESTILOS ORIGINALES Y GLOBALES DE TU APLICACIÓN (SIN CAMBIOS) */
+        /* TUS ESTILOS ORIGINALES (SIN CAMBIOS) */
         body { font-family: system-ui, sans-serif; margin: 0; background-color: #1a202c; color: #cbd5e0; }
         nav { background-color: #2d3748; padding: 1em 2em; display: flex; justify-content: space-between; align-items: center; }
         .nav-links a { color: white; text-decoration: none; margin-right: 1.5em; font-weight: 500; }
@@ -47,67 +45,17 @@
         .estado-ot-EN_PROCESO { background-color: #3182ce; }
         .estado-ot-CERRADA_MECANICO { background-color: #718096; }
 
-        /* === ESTILOS 100% AISLADOS PARA LA CAMPANA === */
-        .notification-bell-wrapper {
-            position: relative;
-            margin-right: 1.5em; /* Espacio a la derecha */
-        }
-        #notification-bell-button {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 5px;
-            position: relative;
-        }
-        #notification-count {
-            position: absolute;
-            top: -5px;
-            right: -8px;
-            background-color: #c53030;
-            color: white;
-            border-radius: 50%;
-            padding: 2px 6px;
-            font-size: 0.7em;
-            font-weight: bold;
-            border: 1px solid white;
-        }
-        #notification-popup {
-            display: none; /* Oculto por defecto */
-            position: absolute;
-            top: 40px; /* Debajo de la campana */
-            right: 0;
-            width: 350px;
-            max-height: 400px;
-            overflow-y: auto;
-            background-color: #2d3748;
-            border: 1px solid #4a5568;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            z-index: 1000;
-        }
-        #notification-popup a {
-            display: block;
-            padding: 12px 15px;
-            color: #cbd5e0;
-            text-decoration: none;
-            border-bottom: 1px solid #4a5568;
-        }
-        #notification-popup a:hover {
-            background-color: #4a5568;
-        }
-        #notification-popup a.notif-unread {
-             background-color: #354154;
-             font-weight: bold;
-        }
+        /* ESTILOS AISLADOS PARA LA CAMPANA */
+        .notification-bell-wrapper { position: relative; margin-right: 1.5em; }
+        #notification-bell-button { background: none; border: none; color: white; cursor: pointer; padding: 5px; position: relative; }
+        #notification-count { position: absolute; top: -5px; right: -8px; background-color: #c53030; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; font-weight: bold; border: 1px solid white; }
+        #notification-popup { display: none; position: absolute; top: 40px; right: 0; width: 350px; max-height: 400px; overflow-y: auto; background-color: #2d3748; border: 1px solid #4a5568; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000; }
+        #notification-popup a { display: block; padding: 12px 15px; color: #cbd5e0; text-decoration: none; border-bottom: 1px solid #4a5568; }
+        #notification-popup a:hover { background-color: #4a5568; }
+        #notification-popup a.notif-unread { background-color: #354154; font-weight: bold; }
         #notification-popup p { margin: 0; font-size: 0.9em; }
         #notification-popup .notif-time { font-size: 0.8em; color: #a0aec0; margin-top: 4px; }
-        #notification-popup .notif-empty, #notification-popup .notif-footer {
-            padding: 15px;
-            text-align: center;
-            color: #a0aec0;
-            font-size: 0.9em;
-        }
+        #notification-popup .notif-empty, #notification-popup .notif-footer { padding: 15px; text-align: center; color: #a0aec0; font-size: 0.9em; }
         #notification-popup .notif-footer a { border: none; padding: 0; display: inline; text-decoration: underline; }
     </style>
     
@@ -129,10 +77,15 @@
             {% if user.is_staff %}
                 <a href="{% url 'carga_masiva' %}">Carga Masiva</a>
             {% endif %}
+
+            <!-- ===== INICIO DEL CAMBIO CORREGIDO ===== -->
+            {% if es_administrador %}
+                <a href="{% url 'lista_usuarios' %}">Gestionar Usuarios</a>
+            {% endif %}
+            <!-- ===== FIN DEL CAMBIO CORREGIDO ===== -->
         </div>
         <div class="user-menu">
             {% if user.is_authenticated %}
-                <!-- ===== INICIO DEL NUEVO BLOQUE DE NOTIFICACIONES (VERSIÓN SEGURA) ===== -->
                 <div class="notification-bell-wrapper">
                     <button id="notification-bell-button">
                         <i class="fas fa-bell fa-lg"></i>
@@ -153,7 +106,6 @@
                         <div class="notif-footer"><a href="{% url 'lista_notificaciones' %}">Ver todas</a></div>
                     </div>
                 </div>
-                <!-- ===== FIN DEL NUEVO BLOQUE DE NOTIFICACIONES ===== -->
 
                 <span>Bienvenido, {{ user.username }}</span>
                 <a href="#">Mi Perfil</a>
@@ -180,58 +132,54 @@
     <!-- Librerías JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Scripts Globales -->
     <script>
-        const bellButton = $('#notification-bell-button');
-const popup = $('#notification-popup');
-const countBadge = $('#notification-count');
-const markAsReadUrl = "{% url 'marcar_notificaciones_leidas' %}";
-const csrfToken = "{{ csrf_token }}";
-let notificationsHaveBeenMarked = false; // Una bandera para evitar llamadas repetidas
+        $(document).ready(function() {
+            $('.select2').select2();
 
-if (bellButton.length > 0) {
-    bellButton.on('click', function(event) {
-        event.stopPropagation();
-        popup.toggle();
-        
-        // Si el contador es visible y aún no hemos marcado las notificaciones
-        if (countBadge.is(':visible') && !notificationsHaveBeenMarked) {
-            notificationsHaveBeenMarked = true; // Marcamos para no volver a llamar
+            const bellButton = $('#notification-bell-button');
+            const popup = $('#notification-popup');
+            const countBadge = $('#notification-count');
+            const markAsReadUrl = "{% url 'marcar_notificaciones_leidas' %}";
+            const csrfToken = "{{ csrf_token }}";
+            let notificationsHaveBeenMarked = false;
 
-            // Hacemos la llamada a la API para marcar como leídas
-            fetch(markAsReadUrl, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    // Si el servidor confirma, ocultamos el contador visualmente
-                    countBadge.hide();
-                } else {
-                    // Si falla, volvemos a poner la bandera en falso para reintentar
-                    notificationsHaveBeenMarked = false;
-                }
-            })
-            .catch(error => {
-                console.error("Error al marcar notificaciones como leídas:", error);
-                notificationsHaveBeenMarked = false; // Reintentar en caso de error de red
-            });
-        }
-    });
+            if (bellButton.length > 0) {
+                bellButton.on('click', function(event) {
+                    event.stopPropagation();
+                    popup.toggle();
+                    
+                    if (countBadge.is(':visible') && !notificationsHaveBeenMarked) {
+                        notificationsHaveBeenMarked = true;
+                        fetch(markAsReadUrl, {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.status === 'ok') {
+                                countBadge.hide();
+                            } else {
+                                notificationsHaveBeenMarked = false;
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error al marcar notificaciones como leídas:", error);
+                            notificationsHaveBeenMarked = false;
+                        });
+                    }
+                });
 
-    $(document).on('click', function(event) {
-        if (!$(event.target).closest('.notification-bell-wrapper').length) {
-            if (popup.is(':visible')) {
-                popup.hide();
+                $(document).on('click', function(event) {
+                    if (!$(event.target).closest('.notification-bell-wrapper').length) {
+                        if (popup.is(':visible')) {
+                            popup.hide();
+                        }
+                    }
+                });
             }
-        }
-    });
-}
+        });
     </script>
     
     {% block extra_scripts %}{% endblock extra_scripts %}
