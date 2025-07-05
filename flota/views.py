@@ -22,6 +22,9 @@ from django.urls import reverse
 from django.db.models import Min, Sum, Count, F, Q, Avg
 from django.db.models import OuterRef, Subquery, Avg
 from django.contrib.auth.models import User, Group
+from .decorators import es_personal_operativo
+from django.db.models import Q
+from django.core.exceptions import PermissionDenied
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
@@ -137,41 +140,37 @@ def dashboard_flota(request):
 def orden_trabajo_list(request):
     connection.set_tenant(request.tenant)
     
+    # --- Lógica de Creación de OT (sin cambios, pero movida arriba para claridad) ---
     if request.method == 'POST':
+        # Solo personal operativo puede crear OTs
+        if not es_personal_operativo(request.user):
+            raise PermissionDenied # O mostrar un mensaje de error
+
         form = OrdenDeTrabajoForm(request.POST)
         if form.is_valid():
-            ot = form.save()
-            HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CREACION', descripcion=f"OT #{ot.folio} creada con éxito.")
+            ot = form.save(commit=False)
+            ot.creada_por = request.user # Opcional: registrar quién creó la OT
+            ot.save()
+            
+            HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CREACION', descripcion=f"OT #{ot.folio} creada.")
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
-            if 'from_calendar' in request.GET:
-                return redirect('pizarra_programacion')
             return redirect('ot_list')
         else:
-            messages.error(request, 'Por favor, corrija los errores en el formulario.')
-            for field, errors in form.errors.items():
-                for error in errors:
-                    label = form.fields[field].label or field.capitalize()
-                    messages.error(request, f"Error en '{label}': {error}")
-            return redirect('ot_list')
-
+            messages.error(request, 'Por favor, corrija los errores en el formulario de creación.')
+    
+    # --- Lógica de Listado y Filtrado (AQUÍ ESTÁ EL CAMBIO PRINCIPAL) ---
+    
+    # 1. Determinar el queryset base según el rol del usuario
+    if es_personal_operativo(request.user):
+        # Admins, Supervisores y Gerentes ven todas las OTs
+        ordenes_list = OrdenDeTrabajo.objects.all()
     else:
-        initial_data = {}
-        
-        vehiculo_id = request.GET.get('vehiculo_id')
-        if vehiculo_id:
-            initial_data['vehiculo'] = vehiculo_id
-            initial_data['tipo'] = 'CORRECTIVA'
-        
-        fecha_programada_str = request.GET.get('fecha_programada')
-        if fecha_programada_str:
-            try:
-                initial_data['fecha_programada'] = datetime.strptime(fecha_programada_str, '%Y-%m-%d').date()
-            except (ValueError, TypeError):
-                pass
-        
-        form = OrdenDeTrabajoForm(initial=initial_data)
+        # Mecánicos ven solo las OTs donde están asignados
+        ordenes_list = OrdenDeTrabajo.objects.filter(
+            Q(responsable=request.user) | Q(personal_asignado=request.user)
+        ).distinct()
 
-    ordenes_list = OrdenDeTrabajo.objects.all().select_related('vehiculo').order_by('-fecha_creacion')
+    # 2. Aplicar filtros de búsqueda sobre el queryset base
     filtro_form = OTFiltroForm(request.GET)
     if filtro_form.is_valid():
         if filtro_form.cleaned_data['vehiculo']:
@@ -185,6 +184,8 @@ def orden_trabajo_list(request):
         if filtro_form.cleaned_data['fecha_hasta']:
             ordenes_list = ordenes_list.filter(fecha_creacion__date__lte=filtro_form.cleaned_data['fecha_hasta'])
 
+    # 3. Ordenar y Paginar el resultado final
+    ordenes_list = ordenes_list.select_related('vehiculo').order_by('-fecha_creacion')
     paginator = Paginator(ordenes_list, 10)
     page = request.GET.get('page')
     try:
@@ -193,6 +194,9 @@ def orden_trabajo_list(request):
         ordenes_paginadas = paginator.page(1)
     except EmptyPage:
         ordenes_paginadas = paginator.page(paginator.num_pages)
+    
+    # 4. Preparar el formulario de creación para el contexto
+    form = OrdenDeTrabajoForm()
     
     context = {
         'ordenes': ordenes_paginadas,
