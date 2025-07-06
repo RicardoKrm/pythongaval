@@ -30,6 +30,8 @@ from django.db.models import Sum, Count, F, Q # Asegúrate de que todas estas es
 from .decorators import es_administrador, es_gerente # Importamos los decoradores de rol
 from datetime import timedelta # Para manejar fechas
 from django.db.models.functions import TruncMonth
+import csv
+from django.http import HttpResponse
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
@@ -1472,3 +1474,80 @@ def kpi_rrhh_dashboard(request):
     }
 
     return render(request, 'flota/kpi_rrhh_dashboard.html', context)
+
+@login_required
+@user_passes_test(lambda u: es_administrador(u) or es_gerente(u))
+def reportes_dashboard(request):
+    """
+    Página principal para la generación de reportes.
+    Inicialmente, permite exportar OTs a CSV.
+    """
+    connection.set_tenant(request.tenant)
+
+    # Lógica para manejar la petición de exportación
+    if request.method == 'POST':
+        # Obtenemos las fechas del formulario
+        start_date_str = request.POST.get('start_date')
+        end_date_str = request.POST.get('end_date')
+
+        try:
+            start_date = timezone.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = timezone.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError, AttributeError):
+            messages.error(request, "Formato de fecha inválido. Por favor, seleccione un rango de fechas.")
+            return redirect('reportes_dashboard')
+
+        # Filtramos las OTs en el rango de fechas de CIERRE
+        ordenes = OrdenDeTrabajo.objects.filter(
+            fecha_cierre__date__range=[start_date, end_date]
+        ).select_related(
+            'vehiculo', 'vehiculo__modelo', 'responsable', 'tipo_falla'
+        ).prefetch_related('tareas_realizadas', 'detalles_insumos_ot')
+        
+        if not ordenes.exists():
+            messages.warning(request, "No se encontraron Órdenes de Trabajo en el período seleccionado para exportar.")
+            return redirect('reportes_dashboard')
+
+        # --- Lógica de Generación de CSV ---
+        response = HttpResponse(
+            content_type='text/csv',
+            headers={'Content-Disposition': f'attachment; filename="reporte_ots_{start_date_str}_a_{end_date_str}.csv"'},
+        )
+        response.write(u'\ufeff'.encode('utf8')) # BOM para que Excel reconozca UTF-8
+
+        writer = csv.writer(response, delimiter=';') # Usamos punto y coma como delimitador, común en Excel en español
+        
+        # Escribimos la cabecera del CSV
+        writer.writerow([
+            'Folio OT', 'Estado', 'Tipo', 'Vehiculo Numero', 'Vehiculo Patente', 
+            'Fecha Creacion', 'Fecha Cierre', 'Kilometraje Apertura', 'Kilometraje Cierre',
+            'Responsable', 'Costo Total', 'TFS (Minutos)', 'Tipo de Falla', 'Tareas'
+        ])
+
+        # Escribimos los datos de cada OT
+        for ot in ordenes:
+            # Concatenamos las descripciones de las tareas
+            tareas_str = ", ".join([tarea.descripcion for tarea in ot.tareas_realizadas.all()])
+            
+            writer.writerow([
+                ot.folio,
+                ot.get_estado_display(),
+                ot.get_tipo_display(),
+                ot.vehiculo.numero_interno,
+                ot.vehiculo.patente,
+                ot.fecha_creacion.strftime('%d-%m-%Y %H:%M') if ot.fecha_creacion else '',
+                ot.fecha_cierre.strftime('%d-%m-%Y %H:%M') if ot.fecha_cierre else '',
+                ot.kilometraje_apertura,
+                ot.kilometraje_cierre,
+                ot.responsable.username if ot.responsable else 'N/A',
+                f"{ot.costo_total:.2f}".replace('.',','), # Formato decimal para Excel en español
+                ot.tfs_minutos,
+                ot.tipo_falla.descripcion if ot.tipo_falla else 'N/A',
+                tareas_str
+            ])
+        
+        return response
+
+    # Lógica para mostrar la página si la petición es GET
+    context = {}
+    return render(request, 'flota/reportes_dashboard.html', context)

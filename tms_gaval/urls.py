@@ -46,4 +46,6 @@ urlpatterns = [
     path('administracion/usuarios/crear/', views.crear_usuario, name='crear_usuario'),
     path('administracion/usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
     path('kpi-rrhh/', views.kpi_rrhh_dashboard, name='kpi_rrhh_dashboard'),
+    path('reportes/', views.reportes_dashboard, name='reportes_dashboard'),
+    
 ]
