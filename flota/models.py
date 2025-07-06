@@ -22,12 +22,29 @@ class Proveedor(models.Model):
 
     def __str__(self): return self.nombre
 
+# Reemplaza la clase ModeloVehiculo completa en flota/models.py
+
 class ModeloVehiculo(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     marca = models.CharField(max_length=50)
     tipo = models.CharField(max_length=50, help_text="Ej: Bus, Camión, Camioneta")
 
-    def __str__(self): return f"{self.marca} {self.nombre}"
+    # === INICIO DE LOS NUEVOS CAMPOS ===
+    rendimiento_optimo_kml = models.DecimalField(
+        max_digits=5, decimal_places=2, default=5.0,
+        verbose_name="Rendimiento Óptimo (Km/L)",
+        help_text="Rendimiento en Km/L a partir del cual se considera 'ÓPTIMO' (verde)."
+    )
+    rendimiento_regular_kml = models.DecimalField(
+        max_digits=5, decimal_places=2, default=4.0,
+        verbose_name="Rendimiento Regular (Km/L)",
+        help_text="Rendimiento en Km/L a partir del cual se considera 'REGULAR' (amarillo)."
+    )
+    # Nota: Cualquier valor por debajo de 'Regular' se considerará 'DEFICIENTE' (rojo).
+    # === FIN DE LOS NUEVOS CAMPOS ===
+
+    def __str__(self):
+        return f"{self.marca} {self.nombre}"
 
 class NormaEuro(models.Model):
     nombre = models.CharField(max_length=20, unique=True, help_text="Ej: EURO V, EURO VI")
@@ -86,29 +103,36 @@ class TipoFalla(models.Model):
 
     def __str__(self): return self.descripcion
 
+# Reemplaza la clase ConfiguracionEmpresa completa en flota/models.py
+
 class ConfiguracionEmpresa(models.Model):
     porcentaje_alerta_mantenimiento = models.PositiveIntegerField(
         default=25,
         help_text="Porcentaje del intervalo de KM para activar la alerta 'PRÓXIMO'. Ej: 25."
     )
 
-    def __str__(self): return "Configuración General de la Empresa"
+    # === INICIO DEL NUEVO CAMPO ===
+    horas_laborales_mes_por_persona = models.PositiveIntegerField(
+        default=160, # Basado en una jornada de 40 horas semanales (40*4)
+        verbose_name="Horas Laborales Base por Mes",
+        help_text="Número de horas de trabajo estándar que una persona tiene disponibles en un mes. Se usa para calcular la capacidad del equipo."
+    )
+    # === FIN DEL NUEVO CAMPO ===
+
+    def __str__(self):
+        return "Configuración General de la Empresa"
 
     class Meta:
         verbose_name_plural = "Configuraciones de Empresa"
 
     def save(self, *args, **kwargs):
         self.pk = 1
-        super(ConfiguracionEmpresa, self).save(*args, **kwargs)    
+        super(ConfiguracionEmpresa, self).save(*args, **kwargs)
+    
     @classmethod
     def load(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
-
-# ==============================================================================
-#                      MODELOS DE INVENTARIO
-# ==============================================================================
-
 class Repuesto(models.Model):
     CALIDAD_CHOICES = [
         ('ORIGINAL', 'Original'), 
@@ -194,14 +218,25 @@ class RepuestoRequeridoPorTarea(models.Model):
     def __str__(self):
         return f"{self.cantidad_requerida} x {self.repuesto.nombre} para la tarea '{self.tarea.descripcion}'"
 
+# Reemplaza la clase Tarea completa en flota/models.py
+
 class Tarea(models.Model):
     descripcion = models.CharField(max_length=255, unique=True)
-    horas_hombre = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
-    costo_base = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    # Nueva relación para repuestos requeridos por esta tarea
+    
+    # === CAMBIO PRINCIPAL AQUÍ ===
+    # Renombramos 'horas_hombre' a 'tiempo_estandar_minutos' para mayor claridad y precisión.
+    # Guardaremos el tiempo en minutos para evitar problemas con decimales.
+    tiempo_estandar_minutos = models.PositiveIntegerField(
+        default=60,
+        help_text="Tiempo estándar para completar esta tarea, en minutos."
+    )
+    # === FIN DEL CAMBIO ===
+
+    costo_base = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Costo base de mano de obra para esta tarea, sin incluir repuestos.")
     repuestos_requeridos = models.ManyToManyField(Repuesto, through=RepuestoRequeridoPorTarea, blank=True, related_name='tareas_que_lo_requieren')
 
-    def __str__(self): return self.descripcion
+    def __str__(self):
+        return self.descripcion
 
 class PautaMantenimiento(models.Model):
     nombre = models.CharField(max_length=100)

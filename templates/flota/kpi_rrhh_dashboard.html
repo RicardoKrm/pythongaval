@@ -1,0 +1,171 @@
+{% extends "flota/base.html" %}
+{% load humanize %}
+
+{% block title %}KPIs de Recursos Humanos{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Dashboard de KPIs de RR.HH.</h1>
+
+    <!-- Sección de Filtros de Fecha -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4><i class="fas fa-calendar-alt me-2"></i> Filtrar Período de las Tarjetas</h4>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label for="id_start_date" class="form-label">Fecha de Inicio</label>
+                    <input type="date" name="start_date" id="id_start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-5">
+                    <label for="id_end_date" class="form-label">Fecha de Fin</label>
+                    <input type="date" name="end_date" id="id_end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-primary">Aplicar Filtro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fila para las tarjetas de KPIs principales -->
+    <div class="row">
+        <!-- Tarjeta KPI Productividad -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="fas fa-tachometer-alt me-2"></i> Productividad del Equipo</h4>
+                </div>
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <p class="display-4 fw-bold {% if kpi_productividad >= 100 %}text-success{% elif kpi_productividad >= 85 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ kpi_productividad|floatformat:1 }}%
+                    </p>
+                    <small class="text-muted">(Tiempo Estándar / Tiempo Real) x 100</small>
+                </div>
+            </div>
+        </div>
+        <!-- Tarjeta KPI Cumplimiento -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h4><i class="fas fa-calendar-check me-2"></i> Cumplimiento del Plan</h4>
+                </div>
+                <div class="card-body text-center d-flex flex-column justify-content-center">
+                    <p class="display-4 fw-bold {% if kpi_cumplimiento >= 95 %}text-success{% elif kpi_cumplimiento >= 80 %}text-warning{% else %}text-danger{% endif %}">
+                        {{ kpi_cumplimiento|floatformat:1 }}%
+                    </p>
+                    <small class="text-muted">(OTs a Tiempo / OTs Programadas) x 100</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta para el Gráfico de Productividad -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4><i class="fas fa-chart-line me-2"></i> Evolución Mensual de la Productividad (Último Año)</h4>
+        </div>
+        <div class="card-body" style="height: 400px;">
+            <canvas id="graficoProductividad"></canvas>
+        </div>
+    </div>
+
+    <!-- Tarjeta para el Gráfico de Cumplimiento -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4><i class="fas fa-chart-pie me-2"></i> Evolución Mensual del Cumplimiento (Último Año)</h4>
+        </div>
+        <div class="card-body" style="height: 400px;">
+            <canvas id="graficoCumplimiento"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- Contenedores de datos JSON para los gráficos -->
+<script id="grafico-productividad-data" type="application/json">
+    {
+        "labels": {{ labels_grafico_productividad|safe }},
+        "data": {{ data_grafico_productividad|safe }}
+    }
+</script>
+<script id="grafico-cumplimiento-data" type="application/json">
+    {
+        "labels": {{ labels_grafico_cumplimiento|safe }},
+        "data": {{ data_grafico_cumplimiento|safe }}
+    }
+</script>
+{% endblock %}
+
+
+{% block extra_scripts %}
+<!-- Incluir la librería Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    
+    // === GRÁFICO 1: PRODUCTIVIDAD ===
+    const dataElementProd = document.getElementById('grafico-productividad-data');
+    const ctxProductividad = document.getElementById('graficoProductividad');
+    if (ctxProductividad && dataElementProd) {
+        const chartDataProd = JSON.parse(dataElementProd.textContent);
+        new Chart(ctxProductividad, {
+            type: 'bar',
+            data: {
+                labels: chartDataProd.labels,
+                datasets: [{
+                    label: '% de Productividad',
+                    data: chartDataProd.data,
+                    backgroundColor: 'rgba(74, 144, 226, 0.6)',
+                    borderColor: 'rgba(74, 144, 226, 1)',
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, ticks: { callback: value => value + '%' } } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: context => ' Productividad: ' + context.parsed.y.toFixed(1) + '%' } }
+                }
+            }
+        });
+    }
+
+    // === GRÁFICO 2: CUMPLIMIENTO ===
+    const dataElementCump = document.getElementById('grafico-cumplimiento-data');
+    const ctxCumplimiento = document.getElementById('graficoCumplimiento');
+    if (ctxCumplimiento && dataElementCump) {
+        const chartDataCump = JSON.parse(dataElementCump.textContent);
+        new Chart(ctxCumplimiento, {
+            type: 'line',
+            data: {
+                labels: chartDataCump.labels,
+                datasets: [{
+                    label: '% de Cumplimiento',
+                    data: chartDataCump.data,
+                    backgroundColor: 'rgba(22, 163, 74, 0.2)',
+                    borderColor: 'rgba(22, 163, 74, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => value + '%' } } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: context => ' Cumplimiento: ' + context.parsed.y.toFixed(1) + '%' } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

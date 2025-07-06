@@ -170,11 +170,16 @@ class AsignarPersonalOTForm(forms.ModelForm):
 class ManualTareaForm(forms.ModelForm):
     class Meta:
         model = Tarea
-        fields = ['descripcion', 'horas_hombre', 'costo_base']
+        # Usamos el nuevo nombre del campo: 'tiempo_estandar_minutos'
+        fields = ['descripcion', 'tiempo_estandar_minutos', 'costo_base']
         widgets = {
             'descripcion': forms.TextInput(attrs={'class': 'form-control'}),
-            'horas_hombre': forms.NumberInput(attrs={'class': 'form-control'}),
+            'tiempo_estandar_minutos': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 90'}),
             'costo_base': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'tiempo_estandar_minutos': 'Tiempo Estándar (minutos)',
+            'costo_base': 'Costo Mano de Obra ($)'
         }
 
 # --- ¡NUEVA CLASE A AÑADIR! ---

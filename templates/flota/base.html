@@ -83,6 +83,7 @@
             <!-- Estos son para roles de alto nivel (Admin/Gerente) -->
             {% if es_administrador or es_gerente %}
                 <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
+                <a href="{% url 'kpi_rrhh_dashboard' %}">KPIs de RR.HH.</a>
                 <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
                 <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
                 <a href="#">Reportes</a>

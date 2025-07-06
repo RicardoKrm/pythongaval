@@ -197,7 +197,7 @@
             background-color: var(--dark-bg) !important; 
             border: 1px solid var(--border-color) !important; 
             border-radius: 0.5rem !important;
-            height: calc(2.25rem + 2px) !important; /* Ajustar altura para que coincida con form-control */
+            height: calc(2.25rem + 2px) !important;
             display: flex !important;
             align-items: center !important;
         }
@@ -235,13 +235,13 @@
 
         /* KPI Boxes */
         .kpi-box { 
-            background-color: #1A202C; /* Fondo ligeramente más oscuro para los KPI */
+            background-color: #1A202C;
             padding: 1.5rem; 
             border-radius: 0.75rem; 
             text-align: center; 
             box-shadow: var(--shadow-light);
             border: 1px solid var(--border-color);
-            height: 100%; /* Asegura que todos los KPI boxes tengan la misma altura */
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -253,9 +253,9 @@
             font-weight: 500;
         }
         .kpi-box .value { 
-            font-size: 2.3em; /* Tamaño de fuente ligeramente más grande para los valores */
+            font-size: 2.3em;
             font-weight: 700; 
-            color: var(--accent-color); /* Color de acento para los valores */
+            color: var(--accent-color);
             line-height: 1.1;
         }
         .kpi-box .value small {
@@ -268,7 +268,7 @@
         .prediction-result { 
             border-left: 5px solid var(--accent-color); 
             padding: 1.5rem; 
-            background-color: #1A202C; /* Fondo consistente */
+            background-color: #1A202C;
             margin-top: 1.5rem; 
             border-radius: 0.75rem;
             box-shadow: var(--shadow-light);
@@ -278,7 +278,7 @@
             color: var(--text-primary);
         }
         .prediction-result p.fs-3 {
-            font-size: 1.75rem !important; /* Ajuste para que no sea demasiado grande */
+            font-size: 1.75rem !important;
             color: var(--accent-color) !important;
         }
         .prediction-result small.text-muted {
@@ -291,246 +291,86 @@
         /* Tablas - Estilo Excel-like */
         .table-excel {
             width: 100%;
-            border-collapse: separate; /* Permite border-spacing */
+            border-collapse: separate;
             border-spacing: 0;
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 0.75rem;
-            overflow: hidden; /* Para que los bordes redondeados se apliquen correctamente */
+            overflow: hidden;
             box-shadow: var(--shadow-light);
-            margin-bottom: 1.5rem; /* Espacio debajo de la tabla */
+            margin-bottom: 1.5rem;
         }
         .table-excel thead th {
-            position: sticky; /* Fija el encabezado */
+            position: sticky;
             top: 0;
-            background-color: #1A202C; /* Fondo del encabezado de la tabla */
+            background-color: #1A202C;
             color: var(--text-secondary);
             font-weight: 600;
             border-bottom: 1px solid var(--border-color);
             padding: 0.75rem 1rem;
             text-align: left;
-            z-index: 1; /* Asegura que el encabezado esté sobre el contenido al hacer scroll */
+            z-index: 1;
         }
-        .table-excel tbody tr {
-            transition: background-color 0.2s ease;
-        }
-        .table-excel tbody tr:nth-child(even) { /* Filas rayadas */
-            background-color: #1A202C; /* Tono ligeramente más oscuro para filas pares */
-        }
-        .table-excel tbody tr:hover {
-            background-color: #2A384A; /* Fondo al pasar el ratón por las filas */
-        }
+        .table-excel tbody tr { transition: background-color 0.2s ease; }
+        .table-excel tbody tr:nth-child(even) { background-color: #1A202C; }
+        .table-excel tbody tr:hover { background-color: #2A384A; }
         .table-excel td { 
-            padding: 0.75rem 1rem; /* Más padding para celdas */
+            padding: 0.75rem 1rem;
             vertical-align: middle;
-            border-bottom: 1px solid var(--border-color); /* Borde inferior para cada celda */
-            border-right: 1px solid var(--border-color); /* Borde derecho para cada celda */
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
             color: var(--text-primary);
         }
-        .table-excel td:last-child {
-            border-right: none; /* Eliminar borde derecho de la última columna */
-        }
-        .table-excel tbody tr:last-child td {
-            border-bottom: none; /* Eliminar borde inferior de la última fila */
-        }
-        .table-excel .text-success {
-            color: var(--success-color) !important;
-        }
-        .table-excel .text-muted.small {
-            font-size: 0.8em;
-            color: var(--text-secondary) !important;
-        }
-        .table-excel .text-secondary { /* Para mensajes de "Sin datos" */
-             color: var(--text-secondary) !important;
-        }
+        .table-excel td:last-child { border-right: none; }
+        .table-excel tbody tr:last-child td { border-bottom: none; }
+        .table-excel .text-success { color: var(--success-color) !important; }
+        .table-excel .text-muted.small { font-size: 0.8em; color: var(--text-secondary) !important; }
+        .table-excel .text-secondary { color: var(--text-secondary) !important; }
 
-        /* Table Responsive Wrapper para la tabla Excel-like */
-        .table-excel-responsive {
-            max-height: 500px; /* Altura máxima para el scroll de la tabla principal */
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch; /* Suavizar el scroll en iOS */
-        }
-        .table-excel-responsive table {
-            margin-bottom: 0; /* Eliminar margen inferior de la tabla dentro del wrapper */
-        }
-
-        /* Contenedores para gráficos (placeholders) */
-        .chart-container {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            box-shadow: var(--shadow-light);
-            padding: 1.5rem;
-            min-height: 300px; /* Altura mínima para los gráficos */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            font-style: italic;
-            text-align: center;
-        }
-        .chart-container h5 {
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-        .chart-placeholder {
-            font-size: 1.2rem;
-            margin-top: 1rem;
-            color: var(--text-secondary);
-        }
-        .chart-container i {
-            font-size: 3rem;
-            color: var(--accent-color);
-            margin-bottom: 1rem;
-        }
-
-        /* Mensaje de selección de vehículo */
-        .card.text-center {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            box-shadow: var(--shadow-light);
-            padding: 3rem; /* Más padding para un mensaje central */
-        }
-        .card.text-center h3 {
-            color: var(--text-primary);
-            font-size: 1.75rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-        }
-        .card.text-center p {
-            color: var(--text-secondary);
-            font-size: 1rem;
-        }
-
-        /* Botones generales */
-        .btn {
-            font-weight: 500;
-            border-radius: 0.5rem;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            font-size: 0.95rem;
-            padding: 0.6rem 1.5rem;
-            text-decoration: none;
-        }
-        .btn-primary {
-            background-color: var(--accent-color);
-            border: none;
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: var(--accent-color-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
-            color: white;
-        }
-        .btn-info { 
-            background-color: var(--accent-color);
-            border: none;
-            color: white;
-        }
-        .btn-info:hover {
-            background-color: var(--accent-color-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
-            color: white;
-        }
-
-
+        .table-excel-responsive { max-height: 500px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .table-excel-responsive table { margin-bottom: 0; }
+        .chart-container { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 0.75rem; box-shadow: var(--shadow-light); padding: 1.5rem; min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); font-style: italic; text-align: center; }
+        .chart-container h5 { color: var(--text-primary); margin-bottom: 1rem; font-weight: 600; }
+        .chart-placeholder { font-size: 1.2rem; margin-top: 1rem; color: var(--text-secondary); }
+        .chart-container i { font-size: 3rem; color: var(--accent-color); margin-bottom: 1rem; }
+        .card.text-center { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 0.75rem; box-shadow: var(--shadow-light); padding: 3rem; }
+        .card.text-center h3 { color: var(--text-primary); font-size: 1.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.75rem; }
+        .card.text-center p { color: var(--text-secondary); font-size: 1rem; }
+        .btn { font-weight: 500; border-radius: 0.5rem; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.95rem; padding: 0.6rem 1.5rem; text-decoration: none; }
+        .btn-primary, .btn-info { background-color: var(--accent-color); border: none; color: white; }
+        .btn-primary:hover, .btn-info:hover { background-color: var(--accent-color-dark); transform: translateY(-2px); box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2); color: white; }
+        .btn-info { padding: 0.6rem 1.1rem; font-size: 0.9em; }
+        
         /* Responsive adjustments */
         @media (max-width: 992px) {
-            .layout-container {
-                flex-direction: column;
-                gap: 1.5rem;
-            }
-            .sidebar-menu {
-                width: 100%;
-                flex: none; /* Eliminar flex-basis fijo */
-                max-height: 300px; /* Reducir altura máxima del sidebar en móvil */
-            }
-            .page-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-                padding: 1.5rem;
-            }
-            .page-header h1 {
-                font-size: 1.75rem;
-            }
-            .kpi-box {
-                margin-bottom: 1.5rem; /* Espacio entre KPI boxes en columnas apiladas */
-            }
+            .layout-container { flex-direction: column; }
+            .sidebar-menu { width: 100%; flex: none; max-height: 300px; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem; }
+            .page-header h1 { font-size: 1.75rem; }
         }
-
-        @media (max-width: 768px) {
-            .page-header {
-                padding: 1rem;
-            }
-            .page-header h1 {
-                font-size: 1.5rem;
-            }
-            .card {
-                padding: 1rem;
-            }
-            .card h3 {
-                font-size: 1.5rem;
-            }
-            .card h5 {
-                font-size: 1.1rem;
-            }
-            .kpi-box {
-                padding: 1rem;
-            }
-            .kpi-box .value {
-                font-size: 1.8em;
-            }
-            .prediction-result {
-                padding: 1rem;
-            }
-            .table-excel-responsive {
-                max-height: 400px; /* Ajuste para pantallas más pequeñas */
-            }
-            .table-excel td, .table-excel th {
-                padding: 0.5rem 0.75rem;
-            }
-            .chart-container {
-                min-height: 250px;
-            }
+        
+        /* === NUEVOS ESTILOS PARA EL SEMÁFORO DE RENDIMIENTO === */
+        .status-pill {
+            display: inline-block;
+            padding: .4rem 1rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            color: white;
+            font-size: 0.9em;
+            margin-top: 0.5rem;
+            text-transform: capitalize;
         }
-
-        @media (max-width: 576px) {
-            .container-fluid {
-                padding-left: 0.75rem;
-                padding-right: 0.75rem;
-            }
-            .page-header {
-                border-radius: 0; /* Sin bordes redondeados en pantallas muy pequeñas */
-            }
-            .page-header .btn {
-                width: 100%; /* Botón de registrar nueva carga ocupa todo el ancho */
-            }
-            .kpi-box {
-                margin-bottom: 1rem;
-            }
-            .chart-container {
-                min-height: 200px;
-            }
-        }
+        .status-OPTIMO { background-color: var(--success-color); }
+        .status-REGULAR { background-color: var(--warning-color); }
+        .status-DEFICIENTE { background-color: var(--danger-color); }
+        .status-SIN_DATOS { background-color: var(--text-secondary); }
     </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <div class="page-header">
-        <h1><i class="fas fa-chart-line me-2"></i>Análisis de Rendimiento y Combustible</h1>
+        <h1><i class="fas fa-gas-pump me-2"></i>Análisis de Rendimiento y Combustible</h1>
         <a href="{% url 'registrar_carga_combustible' %}" class="btn btn-primary"><i class="fas fa-plus-circle me-2"></i>Registrar Nueva Carga</a>
     </div>
 
@@ -558,6 +398,12 @@
                             <div class="kpi-box">
                                 <div class="label">Rendimiento Promedio</div>
                                 <div class="value">{{ analisis.rendimiento_general|floatformat:2|default:"N/A" }} <small>Km/L</small></div>
+                                
+                                <!-- ===== INICIO DE LA MEJORA: SEMÁFORO ===== -->
+                                <div class="status-pill status-{{ analisis.estado_rendimiento }}">
+                                    {{ analisis.estado_rendimiento }}
+                                </div>
+                                <!-- ===== FIN DE LA MEJORA: SEMÁFORO ===== -->
                             </div>
                         </div>
                         <div class="col-md-4 mb-3 mb-md-0">
