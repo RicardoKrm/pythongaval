@@ -1,4 +1,3 @@
-# tms_gaval/urls.py
 from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
@@ -9,13 +8,17 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', auth_views.LoginView.as_view(template_name='cuentas/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    
+    # Esta es la ruta principal que ahora contiene la lógica de redirección
     path('', flota_views.dashboard_flota, name='dashboard'),
+    
+    # El resto de tus rutas permanecen igual
     path('api/ot-eventos/', flota_views.ot_eventos_api, name='ot_eventos_api'),
     path('inventario/', flota_views.repuesto_list, name='repuesto_list'),
     path('inventario/nuevo/', flota_views.repuesto_create, name='repuesto_create'),
-    path('inventario/<int:pk>/', flota_views.repuesto_detail, name='repuesto_detail'), # URL de detalle
+    path('inventario/<int:pk>/', flota_views.repuesto_detail, name='repuesto_detail'),
     path('inventario/<int:pk>/editar/', flota_views.repuesto_update, name='repuesto_update'),
-    path('inventario/<int:repuesto_pk>/registrar-movimiento/', flota_views.registrar_movimiento, name='registrar_movimiento'), # URL para movimientos
+    path('inventario/<int:repuesto_pk>/registrar-movimiento/', flota_views.registrar_movimiento, name='registrar_movimiento'),
     path('ordenes/', flota_views.orden_trabajo_list, name='ot_list'),
     path('ordenes/<int:pk>/', flota_views.orden_trabajo_detail, name='ot_detail'),
     path('ordenes/<int:pk>/cambiar-estado/', flota_views.cambiar_estado_ot, name='cambiar_estado_ot'),
@@ -27,7 +30,6 @@ urlpatterns = [
     path('analisis-avanzado/', flota_views.analisis_avanzado, name='analisis_avanzado'),
     path('carga-masiva/', flota_views.carga_masiva, name='carga_masiva'),
     path('vehiculo/<int:pk>/historial/', flota_views.historial_vehiculo, name='historial_vehiculo'),
-    path('vehiculo/<int:pk>/actualizar-km/', flota_views.actualizar_km_vehiculo, name='actualizar_km'),
     path('vehiculo/<int:pk>/analisis-km/', views.analisis_km_vehiculo, name='analisis_km_vehiculo'),
     path('orden-trabajo/<int:ot_pk>/eliminar-tarea/<int:tarea_pk>/', views.eliminar_tarea_ot, name='eliminar_tarea_ot'),
     path('orden-trabajo/<int:ot_pk>/eliminar-insumo/<int:detalle_pk>/', views.eliminar_insumo_ot, name='eliminar_insumo_ot'),
@@ -43,7 +45,4 @@ urlpatterns = [
     path('administracion/usuarios/', views.lista_usuarios, name='lista_usuarios'),
     path('administracion/usuarios/crear/', views.crear_usuario, name='crear_usuario'),
     path('administracion/usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
-    
-
-    
 ]

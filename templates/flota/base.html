@@ -65,24 +65,34 @@
 <body>
     <nav>
         <div class="nav-links">
-            <a href="{% url 'dashboard' %}">Pizarra de Mantenimiento</a>
-            <a href="{% url 'ot_list' %}">Órdenes de Trabajo</a>
-            <a href="{% url 'pizarra_programacion' %}">Pizarra de Programación</a>
-            <a href="{% url 'pizarra_combustible' %}">Control de Combustible</a>
-            <a href="{% url 'repuesto_list' %}">Inventario</a>
-            <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
-            <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
-            <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
-            <a href="#">Reportes</a>
-            {% if user.is_staff %}
-                <a href="{% url 'carga_masiva' %}">Carga Masiva</a>
+            <!-- El enlace a la Pizarra solo se muestra si NO eres mecánico -->
+            {% if not es_mecanico %}
+                <a href="{% url 'dashboard' %}">Pizarra de Mantenimiento</a>
             {% endif %}
 
-            <!-- ===== INICIO DEL CAMBIO CORREGIDO ===== -->
+            <!-- Este enlace lo ven todos, pero la vista filtra los datos -->
+            <a href="{% url 'ot_list' %}">Órdenes de Trabajo</a>
+
+            <!-- Estos enlaces solo los ven los roles operativos (Admin/Super) -->
+            {% if es_personal_operativo %}
+                <a href="{% url 'pizarra_programacion' %}">Pizarra de Programación</a>
+                <a href="{% url 'pizarra_combustible' %}">Control de Combustible</a>
+                <a href="{% url 'repuesto_list' %}">Inventario</a>
+            {% endif %}
+
+            <!-- Estos son para roles de alto nivel (Admin/Gerente) -->
+            {% if es_administrador or es_gerente %}
+                <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
+                <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
+                <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
+                <a href="#">Reportes</a>
+            {% endif %}
+
+            <!-- Y estos solo para el Administrador -->
             {% if es_administrador %}
+                <a href="{% url 'carga_masiva' %}">Carga Masiva</a>
                 <a href="{% url 'lista_usuarios' %}">Gestionar Usuarios</a>
             {% endif %}
-            <!-- ===== FIN DEL CAMBIO CORREGIDO ===== -->
         </div>
         <div class="user-menu">
             {% if user.is_authenticated %}

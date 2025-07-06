@@ -452,8 +452,11 @@
 
 {% block content %}
 <div class="container">
-    <h1 class="mb-4">Órdenes de Trabajo</h1>
-
+        {% if es_mecanico %}
+            <h1 class="mb-4">Mis Órdenes de Trabajo Asignadas</h1>
+        {% else %}
+            <h1 class="mb-4">Órdenes de Trabajo</h1>
+        {% endif %}
     <!-- ================== INICIO DEL BLOQUE CORREGIDO ================== -->
     <!-- Este 'if' ahora envuelve toda la tarjeta de creación de OT -->
     {% if es_personal_operativo %}

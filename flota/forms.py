@@ -136,13 +136,13 @@ class CerrarOtMecanicoForm(forms.ModelForm):
 
 class AsignarPersonalOTForm(forms.ModelForm):
     responsable = forms.ModelChoiceField(
-        queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']),
+        queryset=User.objects.none(),
         widget=forms.Select(attrs={'class': 'select2', 'style': 'width: 100%;'}), 
         label="Responsable Principal",
         required=False
     )
     personal_asignado = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor', 'Asistente']),
+        queryset=User.objects.none(),
         widget=forms.SelectMultiple(attrs={'class': 'select2', 'style': 'width: 100%;'}),
         label="Personal de Apoyo (Ayudantes)",
         required=False
@@ -151,6 +151,21 @@ class AsignarPersonalOTForm(forms.ModelForm):
     class Meta:
         model = OrdenDeTrabajo
         fields = ['responsable', 'personal_asignado']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Esta es la consulta limpia y correcta, que ahora funcionará
+        # porque los nombres de los grupos en la BD coinciden.
+        roles_responsable = ['Mecánico', 'Supervisor']
+        self.fields['responsable'].queryset = User.objects.filter(
+            groups__name__in=roles_responsable
+        ).order_by('username')
+        
+        roles_ayudante = ['Mecánico', 'Supervisor', 'Asistente']
+        self.fields['personal_asignado'].queryset = User.objects.filter(
+            groups__name__in=roles_ayudante
+        ).order_by('username')
 
 class ManualTareaForm(forms.ModelForm):
     class Meta:

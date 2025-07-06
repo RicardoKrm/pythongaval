@@ -75,28 +75,30 @@
 {% endif %}
 
 <div class="mb-4">
-    {% if es_admin_o_super and ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}
-        <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#pausarOTModal"><i class="fas fa-pause me-1"></i> Pausar OT</button>
+    {% if puede_gestionar_ots %}
+        {% if ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#pausarOTModal"><i class="fas fa-pause me-1"></i> Pausar OT</button>
+        {% endif %}
+
+        {% if ot.estado == 'PAUSADA' %}
+            <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="estado" value="EN_PROCESO">
+                <button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button>
+            </form>
+        {% endif %}
+
+        {% if not ot.horas_extra_autorizadas and ot.estado in "PAUSADA,EN_PROCESO" %}
+            <form method="post" action="{% url 'autorizar_horas_extra' pk=ot.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres autorizar horas extra para esta OT?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info">
+                    <i class="fas fa-clock me-1"></i> Autorizar Horas Extra
+                </button>
+            </form>
+        {% endif %}
     {% endif %}
 
-    {% if es_admin_o_super and ot.estado == 'PAUSADA' %}
-        <form method="post" class="d-inline">
-            {% csrf_token %}
-            <input type="hidden" name="estado" value="EN_PROCESO">
-            <button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button>
-        </form>
-    {% endif %}
-
-    {% if es_admin_o_super and not ot.horas_extra_autorizadas and ot.estado in "PAUSADA,EN_PROCESO" %}
-        <form method="post" action="{% url 'autorizar_horas_extra' pk=ot.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres autorizar horas extra para esta OT?');">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-info">
-                <i class="fas fa-clock me-1"></i> Autorizar Horas Extra
-            </button>
-        </form>
-    {% endif %}
-    
-    {% if ot.tipo == 'EVALUATIVA' %}
+    {% if ot.tipo == 'EVALUATIVA' and puede_gestionar_ots %}
         <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#diagnosticoModal"><i class="fas fa-stethoscope me-1"></i> Añadir Diagnóstico</button>
     {% endif %}
 </div>
@@ -140,36 +142,28 @@
 
     <div class="right-column">
         <div class="accordion" id="accordionOT">
-            {% if ot.tipo == 'PREVENTIVA' %}<div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePauta">Cargar Tareas de Pauta</button></h2><div id="collapsePauta" class="accordion-collapse collapse show" data-bs-parent="#accordionOT"><div class="accordion-body">{% if ot.pauta_mantenimiento %}<p>Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post">{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn btn-success w-100">Cargar Tareas</button></form>{% else %}<p class="text-warning">No hay pauta asignada.</p>{% endif %}</div></div></div>{% endif %}
             
-            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAsignarTarea">Añadir Tarea Adicional</button></h2><div id="collapseAsignarTarea" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><p class="text-muted small">Selecciona una tarea del catálogo para añadirla a la Orden de Trabajo.</p><form method="post">{% csrf_token %}<div class="mb-3"><label for="{{ asignar_tarea_form.tarea.id_for_label }}" class="form-label">{{ asignar_tarea_form.tarea.label }}</label>{{ asignar_tarea_form.tarea }}{% if asignar_tarea_form.tarea.help_text %}<small class="form-text text-muted">{{ asignar_tarea_form.tarea.help_text }}</small>{% endif %}</div><button type="submit" name="asignar_tarea_existente" class="btn btn-primary w-100 mt-2"><i class="fas fa-plus-circle me-2"></i>Añadir Tarea a la OT</button></form></div></div></div>
+            <!-- Acciones para Supervisor y Administrador -->
+            {% if puede_gestionar_ots %}
+                {% if ot.tipo == 'PREVENTIVA' %}
+                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePauta">Cargar Tareas de Pauta</button></h2><div id="collapsePauta" class="accordion-collapse collapse show" data-bs-parent="#accordionOT"><div class="accordion-body">{% if ot.pauta_mantenimiento %}<p>Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post">{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn btn-success w-100">Cargar Tareas</button></form>{% else %}<p class="text-warning">No hay pauta asignada.</p>{% endif %}</div></div></div>
+                {% endif %}
             
+                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAsignarTarea">Añadir Tarea Adicional</button></h2><div id="collapseAsignarTarea" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><p class="text-muted small">Selecciona una tarea del catálogo para añadirla a la Orden de Trabajo.</p><form method="post">{% csrf_token %}<div class="mb-3"><label for="{{ asignar_tarea_form.tarea.id_for_label }}" class="form-label">{{ asignar_tarea_form.tarea.label }}</label>{{ asignar_tarea_form.tarea }}{% if asignar_tarea_form.tarea.help_text %}<small class="form-text text-muted">{{ asignar_tarea_form.tarea.help_text }}</small>{% endif %}</div><button type="submit" name="asignar_tarea_existente" class="btn btn-primary w-100 mt-2"><i class="fas fa-plus-circle me-2"></i>Añadir Tarea a la OT</button></form></div></div></div>
+                
+                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button></h2><div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><h5 class="mb-3"><i class="fas fa-users text-muted"></i> Personal Asignado Actualmente</h5>{% if ot.responsable or ot.personal_asignado.all %}<ul class="list-unstyled mb-4">{% if ot.responsable %}<li class="mb-2"><span class="badge bg-warning text-dark me-2">Responsable</span><i class="fas fa-user-check"></i> {{ ot.responsable.get_full_name|default:ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}{% if ayudante != ot.responsable %}<li class="mb-1"><span class="badge bg-secondary me-2">Ayudante</span><i class="fas fa-user"></i> {{ ayudante.get_full_name|default:ayudante.username }}</li>{% endif %}{% endfor %}</ul>{% else %}<div class="alert alert-secondary border-0" style="background-color: #4a5568;"><i class="fas fa-info-circle me-1"></i> No hay personal asignado a esta OT.</div>{% endif %}<hr><h5 class="mt-3 mb-3"><i class="fas fa-edit text-muted"></i> Modificar Asignación</h5><form method="post">{% csrf_token %}<div class="mb-3"><label for="id_responsable" class="form-label">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div class="mb-3"><label for="id_personal_asignado" class="form-label">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-2"><i class="fas fa-save me-2"></i>Guardar Asignación</button></form></div></div></div>
+                
+                <div class="accordion-item"><h2 class="accordion-header" id="headingEstado"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstado">Cambiar Estado (Admin)</button></h2><div id="collapseEstado" class="accordion-collapse collapse" aria-labelledby="headingEstado" data-bs-parent="#accordionOT"><div class="accordion-body"><form id="formCambiarEstado" method="post">{% csrf_token %}<div class="mb-3"><label for="{{ cambiar_estado_form.estado.id_for_label }}" class="form-label">Nuevo Estado</label>{{ cambiar_estado_form.estado }}</div><input type="hidden" name="cambiar_estado" value="1"><button type="submit" class="btn btn-success w-100">Actualizar Estado</button></form></div></div></div>
+            {% endif %}
+
+            <!-- Acción para TODOS los roles que pueden ver la OT (Mecánico incluido) -->
             <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsumo">Gestión de Insumos/Repuestos</button></h2><div id="collapseInsumo" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><p class="text-muted small">Añada repuestos desde el inventario o registre un insumo que no está en stock.</p><button type="button" class="btn btn-info w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalBuscarRepuesto"><i class="fas fa-search me-2"></i> Añadir Repuesto desde Inventario</button><hr><h6 class="mt-3">Añadir Insumo Manual</h6><form method="post">{% csrf_token %}<div class="mb-2"><label class="form-label">{{ manual_insumo_form.nombre.label }}</label>{{ manual_insumo_form.nombre }}</div><div class="row"><div class="col-6 mb-2"><label class="form-label">{{ manual_insumo_form.cantidad.label }}</label>{{ manual_insumo_form.cantidad }}</div><div class="col-6 mb-2"><label class="form-label">{{ manual_insumo_form.precio_unitario.label }}</label>{{ manual_insumo_form.precio_unitario }}</div></div><button type="submit" name="add_manual_insumo" class="btn btn-outline-success w-100 mt-2">Guardar Insumo Manual</button></form></div></div></div>
             
-            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button></h2><div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><h5 class="mb-3"><i class="fas fa-users text-muted"></i> Personal Asignado Actualmente</h5>{% if ot.responsable or ot.personal_asignado.all %}<ul class="list-unstyled mb-4">{% if ot.responsable %}<li class="mb-2"><span class="badge bg-warning text-dark me-2">Responsable</span><i class="fas fa-user-check"></i> {{ ot.responsable.get_full_name|default:ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}{% if ayudante != ot.responsable %}<li class="mb-1"><span class="badge bg-secondary me-2">Ayudante</span><i class="fas fa-user"></i> {{ ayudante.get_full_name|default:ayudante.username }}</li>{% endif %}{% endfor %}</ul>{% else %}<div class="alert alert-secondary border-0" style="background-color: #4a5568;"><i class="fas fa-info-circle me-1"></i> No hay personal asignado a esta OT.</div>{% endif %}<hr><h5 class="mt-3 mb-3"><i class="fas fa-edit text-muted"></i> Modificar Asignación</h5><form method="post">{% csrf_token %}<div class="mb-3"><label for="{{ asignar_form.responsable.id_for_label }}" class="form-label">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div class="mb-3"><label for="{{ asignar_form.personal_asignado.id_for_label }}" class="form-label">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-2"><i class="fas fa-save me-2"></i>Guardar Asignación</button></form></div></div></div>
-            
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="headingEstado">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstado" aria-expanded="false" aria-controls="collapseEstado">
-                        Cambiar Estado (Admin)
-                    </button>
-                </h2>
-                <div id="collapseEstado" class="accordion-collapse collapse" aria-labelledby="headingEstado" data-bs-parent="#accordionOT">
-                    <div class="accordion-body">
-                        <form id="formCambiarEstado" method="post">
-                            {% csrf_token %}
-                            <div class="mb-3">
-                                <label for="{{ cambiar_estado_form.estado.id_for_label }}" class="form-label">Nuevo Estado</label>
-                                {{ cambiar_estado_form.estado }}
-                            </div>
-                            <input type="hidden" name="cambiar_estado" value="1">
-                            <button type="submit" class="btn btn-success w-100">Actualizar Estado</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFinalizar">Cerrar para Revisión</button></h2><div id="collapseFinalizar" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}<small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small></div><button type="submit" name="cerrar_mecanico" class="btn btn-success w-100">Marcar como Realizado</button></form></div></div></div>
+            <!-- Acción EXCLUSIVA para el Mecánico -->
+            {% if es_mecanico %}
+                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFinalizar">Cerrar para Revisión</button></h2><div id="collapseFinalizar" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}<div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}<small class="form-text text-muted">Motivo por el cual el mecánico deja la OT pendiente o cerrada para revisión.</small></div><button type="submit" name="cerrar_mecanico" class="btn btn-success w-100">Marcar como Realizado</button></form></div></div></div>
+            {% endif %}
+
         </div>
     </div>
 </div>
@@ -186,8 +180,8 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
     $(document).ready(function() {
-        // Inicialización de Select2
-        $('.select2').select2({
+        // Inicialización de Select2 para campos que siempre son visibles (si los hubiera)
+        $('.select2').not('#id_responsable, #id_personal_asignado').select2({
             dropdownParent: $('body')
         });
 
@@ -231,7 +225,7 @@
             }, 300);
         });
 
-        // ===== INICIO DEL NUEVO CÓDIGO DE CONFIRMACIÓN =====
+        // Confirmación para finalizar OT
         $('#formCambiarEstado').on('submit', function(event) {
             const estadoSeleccionado = $(this).find('select[name="estado"]').val();
             
@@ -242,11 +236,10 @@
                 );
 
                 if (!confirmacion) {
-                    event.preventDefault(); // Detiene el envío del formulario si el usuario cancela
+                    event.preventDefault(); 
                 }
             }
         });
-        // ===== FIN DEL NUEVO CÓDIGO DE CONFIRMACIÓN =====
 
         // Lógica para añadir repuesto
         window.addRepuesto = function(button) {
@@ -263,22 +256,11 @@
             fetch(addUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    ot_id: otId,
-                    repuesto_id: repuestoId,
-                    cantidad: cantidad
-                })
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ ot_id: otId, repuesto_id: repuestoId, cantidad: cantidad })
             })
             .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.message || 'Error desconocido del servidor.');
-                    });
-                }
+                if (!response.ok) { return response.json().then(err => { throw new Error(err.message || 'Error desconocido del servidor.'); }); }
                 return response.json();
             })
             .then(data => {
@@ -286,9 +268,7 @@
                     button.classList.remove('btn-outline-primary');
                     button.classList.add('btn-success');
                     button.innerHTML = '<i class="fas fa-check"></i> Añadido';
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                    setTimeout(() => { location.reload(); }, 1000);
                 } else {
                     throw new Error(data.message);
                 }
@@ -299,7 +279,22 @@
                 button.disabled = false;
                 button.innerHTML = 'Añadir';
             });
+        };
+
+        // --- INICIO DEL SCRIPT CORREGIDO PARA SELECT2 EN ACORDEÓN ---
+        var acordeonPersonal = document.getElementById('collapsePersonal');
+        if (acordeonPersonal) {
+            acordeonPersonal.addEventListener('shown.bs.collapse', function () {
+                // Este evento se dispara DESPUÉS de que el acordeón se ha abierto completamente.
+                // Solo en ese momento, inicializamos los select2 que están dentro.
+                $('#id_responsable, #id_personal_asignado').select2({
+                    // Es importante adjuntar el dropdown al cuerpo del acordeón
+                    // para que no quede cortado o escondido.
+                    dropdownParent: $('#collapsePersonal .accordion-body')
+                });
+            }, { once: true }); // { once: true } asegura que solo se ejecute la primera vez que se abre.
         }
+        // --- FIN DEL SCRIPT CORREGIDO ---
     });
     </script>
 {% endblock %}

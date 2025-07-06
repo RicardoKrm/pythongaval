@@ -17,3 +17,14 @@ def es_gerente(user):
 def es_personal_operativo(user):
     """Verifica si el usuario es Admin, Supervisor o Gerente."""
     return user.groups.filter(name__in=['Administrador', 'Supervisor', 'Gerente']).exists()
+
+def es_personal_operativo(user):
+    """Verifica si el usuario es Admin o Supervisor (los que operan el día a día)."""
+    return user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()
+
+# Añade esta función al final de flota/decorators.py
+
+def puede_gestionar_ots(user):
+    """Verifica si el usuario puede gestionar activamente OTs (crear, pausar, asignar).
+       Esto excluye al Gerente."""
+    return user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()

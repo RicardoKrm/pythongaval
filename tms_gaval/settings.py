@@ -107,7 +107,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 
-                # === LÍNEA AÑADIDA PARA NOTIFICACIONES ===
                 'flota.context_processors.notificaciones_processor',
             ],
         },
@@ -134,7 +133,12 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
+
+# === INICIO DEL CAMBIO IMPORTANTE ===
+# Ahora redirigimos a una vista especial que decidirá a dónde enviar al usuario.
 LOGIN_REDIRECT_URL = 'dashboard'
+# === FIN DEL CAMBIO IMPORTANTE ===
+
 LOGOUT_REDIRECT_URL = 'login'
 
 AUTHENTICATION_BACKENDS = [

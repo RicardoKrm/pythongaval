@@ -1,26 +1,18 @@
+# Reemplaza el contenido completo de flota/context_processors.py con esto:
+
 from .models import Notificacion
-# Importamos las funciones de verificación de roles desde decorators.py
-from .decorators import es_personal_operativo, es_administrador
+from .decorators import es_personal_operativo, es_administrador, es_gerente, es_mecanico, puede_gestionar_ots
 
 def notificaciones_processor(request):
-    """
-    Añade información global al contexto de todas las plantillas,
-    incluyendo notificaciones y variables de rol.
-    """
     if not request.user.is_authenticated:
-        return {} # No hacer nada si el usuario no está logueado
+        return {}
 
-    # 1. Lógica de Notificaciones
-    notificaciones_recientes = request.user.notificaciones.all()[:5]
-    notificaciones_no_leidas_count = request.user.notificaciones.filter(leida=False).count()
-
-    # 2. Lógica de Roles
-    # Estas variables estarán disponibles en todas las plantillas como {{ es_administrador }}
-    # y {{ es_personal_operativo }}
-    
     return {
-        'notificaciones_recientes': notificaciones_recientes,
-        'notificaciones_no_leidas_count': notificaciones_no_leidas_count,
+        'notificaciones_recientes': request.user.notificaciones.all()[:5],
+        'notificaciones_no_leidas_count': request.user.notificaciones.filter(leida=False).count(),
         'es_administrador': es_administrador(request.user),
-        'es_personal_operativo': es_personal_operativo(request.user),
+        'es_supervisor_o_admin': es_personal_operativo(request.user), # Mantenemos el nombre anterior por si lo usas
+        'puede_gestionar_ots': puede_gestionar_ots(request.user), # Para acciones de gestión
+        'es_gerente': es_gerente(request.user),
+        'es_mecanico': es_mecanico(request.user),
     }

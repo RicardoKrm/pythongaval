@@ -25,6 +25,7 @@ from django.contrib.auth.models import User, Group
 from .decorators import es_personal_operativo
 from django.db.models import Q
 from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
 
 from .models import (
     Vehiculo, PautaMantenimiento, OrdenDeTrabajo, BitacoraDiaria, ModeloVehiculo,
@@ -48,10 +49,21 @@ def es_supervisor_o_admin(user):
     return user.groups.filter(name__in=['Supervisor', 'Administrador']).exists()
 
 
-# --- Vistas Principales de la Aplicación ---
-
 @login_required
 def dashboard_flota(request):
+    """
+    Dashboard principal (Pizarra de Mantenimiento).
+    Ahora incluye una lógica de redirección al principio para los mecánicos.
+    """
+    # === INICIO DEL CAMBIO: REDIRECCIÓN POR ROL ===
+    # Verificamos si el usuario actual pertenece al grupo 'Mecánico'.
+    if request.user.groups.filter(name='Mecánico').exists():
+        # Si es un mecánico, no debe ver este dashboard.
+        # Lo redirigimos a su lista de OTs, que es su verdadero panel principal.
+        return redirect('ot_list')
+    # === FIN DEL CAMBIO ===
+
+    # El resto de la función solo se ejecutará si el usuario NO es un mecánico.
     connection.set_tenant(request.tenant)
     
     porcentaje_alerta = 90
@@ -1403,3 +1415,16 @@ def editar_usuario(request, user_id):
         'usuario_a_editar': usuario_a_editar
     }
     return render(request, 'flota/administracion/editar_usuario.html', context)
+
+@login_required
+def login_redirect_view(request):
+    """
+    Redirige al usuario a su dashboard correspondiente según su rol
+    justo después de iniciar sesión.
+    """
+    if request.user.groups.filter(name='Mecánico').exists():
+        # Si es mecánico, va a su lista de OTs
+        return redirect('ot_list')
+    else:
+        # Cualquier otro rol (Admin, Supervisor, Gerente) va al dashboard principal
+        return redirect('dashboard')
