@@ -135,37 +135,35 @@ class CerrarOtMecanicoForm(forms.ModelForm):
         }
 
 class AsignarPersonalOTForm(forms.ModelForm):
+    # Definimos los campos aquí para que siempre existan en la clase
     responsable = forms.ModelChoiceField(
-        queryset=User.objects.none(),
-        widget=forms.Select(attrs={'class': 'select2', 'style': 'width: 100%;'}), 
+        queryset=User.objects.none(), # Empezamos con un queryset vacío
+        required=False,
         label="Responsable Principal",
-        required=False
+        widget=forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'})
     )
     personal_asignado = forms.ModelMultipleChoiceField(
-        queryset=User.objects.none(),
-        widget=forms.SelectMultiple(attrs={'class': 'select2', 'style': 'width: 100%;'}),
+        queryset=User.objects.none(), # Empezamos con un queryset vacío
+        required=False,
         label="Personal de Apoyo (Ayudantes)",
-        required=False
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2', 'style': 'width: 100%;'})
     )
 
     class Meta:
         model = OrdenDeTrabajo
-        fields = ['responsable', 'personal_asignado']
+        fields = ['responsable', 'personal_asignado'] 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Esta es la consulta limpia y correcta, que ahora funcionará
-        # porque los nombres de los grupos en la BD coinciden.
-        roles_responsable = ['Mecánico', 'Supervisor']
-        self.fields['responsable'].queryset = User.objects.filter(
-            groups__name__in=roles_responsable
-        ).order_by('username')
+        # --- ESTA ES LA PARTE QUE SE MANTIENE PERO AHORA ES MÁS ROBUSTA ---
+        # Ahora, en lugar de crear los campos, simplemente actualizamos sus querysets.
         
-        roles_ayudante = ['Mecánico', 'Supervisor', 'Asistente']
-        self.fields['personal_asignado'].queryset = User.objects.filter(
-            groups__name__in=roles_ayudante
-        ).order_by('username')
+        roles_permitidos = Group.objects.filter(name__in=['Mecánico', 'Supervisor', 'Administrador'])
+        usuarios_asignables = User.objects.filter(groups__in=roles_permitidos).distinct().order_by('username')
+        
+        self.fields['responsable'].queryset = usuarios_asignables
+        self.fields['personal_asignado'].queryset = usuarios_asignables
 
 class ManualTareaForm(forms.ModelForm):
     class Meta:

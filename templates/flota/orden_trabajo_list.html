@@ -3,462 +3,45 @@
 {% block title %}Órdenes de Trabajo{% endblock %}
 
 {% block extra_head %}
-    <!-- Tus estilos CSS (sin cambios) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Usando Bootstrap 5.3.0 para consistencia con la paleta de colores -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     <style>
-        /* Variables CSS optimizadas para un tema oscuro profesional y pulido */
-        :root {
-            --dark-bg: #1C2431; /* Fondo principal más suave y oscuro */
-            --card-bg: #27303F; /* Fondo de tarjetas, más claro que el fondo principal */
-            --input-bg: #343E4F; /* Fondo para campos de entrada, claramente visible */
-            --accent-color: #4A90E2; /* Azul brillante, tu color de acento principal */
-            --accent-color-dark: #3A7BCF; /* Variante más oscura del acento para estados hover/active */
-            --text-primary: #E2E8F0; /* Blanco suave para texto principal, mejor legibilidad */
-            --text-secondary: #A0B0C4; /* Gris azulado para texto secundario o descripciones */
-            --border-color: #3D4A5E; /* Borde sutil entre elementos, más oscuro */
-            --header-gradient-start: #2A60B0; /* Inicio del degradado para el encabezado */
-            --header-gradient-end: #1E40AF; /* Fin del degradado para el encabezado */
-            --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.25); /* Sombra ligera para elementos */
-            --shadow-medium: 0 8px 20px rgba(0, 0, 0, 0.35); /* Sombra más pronunciada para el header */
-            --success-color: #10B981; /* Verde para éxito */
-            --warning-color: #F59E0B; /* Naranja para advertencia */
-            --danger-color: #EF4444; /* Rojo para crítico/peligro */
-            --alert-danger-bg: rgba(239, 68, 68, 0.2); /* Fondo suave para alertas de peligro */
-        }
-
-        body {
-            background-color: var(--dark-bg) !important;
-            color: var(--text-primary) !important;
-            font-family: 'Inter', sans-serif; /* Asegurar la fuente Inter */
-            line-height: 1.6; /* Mejorar legibilidad */
-            padding-top: 2rem; /* Espacio superior general */
-            padding-bottom: 2rem; /* Espacio inferior general */
-        }
-
-        /* Contenedor principal del contenido */
-        .container {
-            max-width: 1200px; /* Ancho máximo para el contenido principal */
-            margin: 0 auto; /* Centrar el contenedor */
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-
-        h1 {
-            font-size: 2.8rem; /* Tamaño de título más grande */
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 2.5rem; /* Más espacio debajo del título */
-            text-align: center;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem; /* Consistente con el otro diseño */
-            box-shadow: var(--shadow-light); /* Sombra ligera */
-            margin-bottom: 2.5rem; /* Más espacio entre tarjetas */
-        }
-        .card-header {
-            background-color: var(--input-bg); /* Fondo del encabezado de la tarjeta */
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-            font-weight: 600;
-            font-size: 1.4rem; /* Tamaño de fuente más grande */
-            padding: 1.25rem 2rem; /* Ajustar padding */
-            border-top-left-radius: 0.75rem;
-            border-top-right-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem; /* Más espacio entre icono y texto */
-        }
-        .card-header h4 {
-            margin-bottom: 0;
-            color: var(--text-primary);
-        }
-        .card-header i {
-            color: var(--accent-color);
-            font-size: 1.6rem; /* Iconos más grandes en los encabezados */
-        }
-        .card-body {
-            padding: 2rem; /* Más padding interno */
-        }
-
-        .table {
-            color: var(--text-primary);
-            margin-bottom: 0; /* Eliminar margen inferior predeterminado */
-        }
-        .table thead th {
-            border-bottom: 2px solid var(--border-color);
-            color: var(--text-secondary); /* Color de encabezados de tabla */
-            font-weight: 600; /* Más negrita */
-            padding: 1rem 0.75rem; /* Más padding para los encabezados */
-        }
-        .table th, .table td {
-            border-top: 1px solid var(--border-color);
-            padding: 0.85rem 0.75rem; /* Ajustar padding de celdas */
-            vertical-align: middle; /* Centrar verticalmente el contenido de las celdas */
-        }
-        .table-hover tbody tr:hover {
-            background-color: color-mix(in srgb, var(--card-bg) 80%, black); /* Un tono ligeramente más oscuro */
-        }
-        .form-label {
-            font-weight: 500; /* Menos bold para las etiquetas */
-            color: var(--text-secondary);
-            margin-bottom: 0.6rem; /* Más espacio */
-            font-size: 0.95em; /* Ligeramente más grande */
-        }
-        .form-control, .form-select {
-            background-color: var(--input-bg);
-            color: var(--text-primary);
-            border-color: var(--border-color);
-            padding: 0.75rem 1.2rem; /* Ajustar padding */
-            border-radius: 0.5rem; /* Bordes redondeados */
-            font-size: 1rem; /* Tamaño de fuente estándar */
-        }
-        .form-control:focus, .form-select:focus {
-            background-color: var(--input-bg); /* Mantener el mismo fondo al enfocar */
-            color: var(--text-primary);
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.3); /* Sombra de foco más suave */
-        }
-        .select2-container--default .select2-selection--single {
-            background-color: var(--input-bg) !important;
-            border: 1px solid var(--border-color) !important;
-            height: calc(1.5em + 1.5rem + 2px) !important; /* Ajustar altura para que coincida con .form-control */
-            border-radius: 0.5rem !important; /* Consistente con otros inputs */
-        }
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            color: var(--text-primary) !important;
-            line-height: calc(1.5em + 1.5rem) !important; /* Ajustar altura de línea */
-            padding-left: 1.2rem !important; /* Ajustar padding izquierdo */
-        }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: calc(1.5em + 1.5rem) !important; /* Ajustar altura de la flecha */
-            right: 0.8rem !important; /* Posición ajustada */
-            color: var(--text-secondary); /* Color de la flecha */
-        }
-        /* Estilos para el dropdown de Select2 */
-        .select2-dropdown {
-            background-color: var(--card-bg) !important;
-            border: 1px solid var(--border-color) !important;
-            border-radius: 0.5rem !important;
-            box-shadow: var(--shadow-light);
-        }
-        .select2-container--default .select2-search--dropdown .select2-search__field {
-            background-color: var(--input-bg) !important;
-            color: var(--text-primary) !important;
-            border: 1px solid var(--border-color) !important;
-            border-radius: 0.5rem !important;
-            padding: 0.6rem 1rem !important;
-        }
-        .select2-container--default .select2-results__option {
-            padding: 0.75rem 1.2rem !important; /* Ajustar padding de opciones */
-            color: var(--text-primary) !important;
-        }
-        .select2-container--default .select2-results__option--highlighted[aria-selected] {
-            background-color: var(--accent-color) !important;
-            color: white !important;
-        }
-        .select2-container--default .select2-results__option[aria-selected=true] {
-            background-color: color-mix(in srgb, var(--input-bg) 80%, black) !important; /* Fondo para opciones seleccionadas no resaltadas */
-            color: var(--text-primary) !important;
-        }
-
-
-        .ot-status {
-            padding: .4rem 1rem; /* Más padding */
-            border-radius: 9999px;
-            font-weight: 700; /* Más bold */
-            color: white;
-            font-size: 0.85em; /* Ligeramente más grande */
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2); /* Sombra para el badge */
-            display: inline-block; /* Asegurar que el padding funcione bien */
-            min-width: 100px; /* Ancho mínimo para consistencia */
-            text-align: center;
-        }
+        :root { --dark-bg: #1C2431; --card-bg: #27303F; --input-bg: #343E4F; --accent-color: #4A90E2; --accent-color-dark: #3A7BCF; --text-primary: #E2E8F0; --text-secondary: #A0B0C4; --border-color: #3D4A5E; --header-gradient-start: #2A60B0; --header-gradient-end: #1E40AF; --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.25); --shadow-medium: 0 8px 20px rgba(0, 0, 0, 0.35); --success-color: #10B981; --warning-color: #F59E0B; --danger-color: #EF4444; --alert-danger-bg: rgba(239, 68, 68, 0.2); }
+        body { background-color: var(--dark-bg) !important; color: var(--text-primary) !important; font-family: 'Inter', sans-serif; line-height: 1.6; padding-top: 2rem; padding-bottom: 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
+        h1 { font-size: 2.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2.5rem; text-align: center; }
+        .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 0.75rem; box-shadow: var(--shadow-light); margin-bottom: 2.5rem; }
+        .card-header { background-color: var(--input-bg); border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 600; font-size: 1.4rem; padding: 1.25rem 2rem; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; display: flex; align-items: center; gap: 1rem; }
+        .card-header h4 { margin-bottom: 0; color: var(--text-primary); }
+        .card-header i { color: var(--accent-color); font-size: 1.6rem; }
+        .card-body { padding: 2rem; }
+        .table { color: var(--text-primary); margin-bottom: 0; }
+        .table thead th { border-bottom: 2px solid var(--border-color); color: var(--text-secondary); font-weight: 600; padding: 1rem 0.75rem; }
+        .table th, .table td { border-top: 1px solid var(--border-color); padding: 0.85rem 0.75rem; vertical-align: middle; }
+        .table-hover tbody tr:hover { background-color: color-mix(in srgb, var(--card-bg) 80%, black); }
+        .form-label { font-weight: 500; color: var(--text-secondary); margin-bottom: 0.6rem; font-size: 0.95em; }
+        .form-control, .form-select { background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color); padding: 0.75rem 1.2rem; border-radius: 0.5rem; font-size: 1rem; }
+        .form-control:focus, .form-select:focus { background-color: var(--input-bg); color: var(--text-primary); border-color: var(--accent-color); box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.3); }
+        .ot-status { padding: .4rem 1rem; border-radius: 9999px; font-weight: 700; color: white; font-size: 0.85em; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: inline-block; min-width: 100px; text-align: center; }
         .status-PENDIENTE { background-color: var(--warning-color); }
         .status-EN_PROCESO { background-color: var(--accent-color); }
-        .status-PAUSADA { background-color: #D69E2E; } /* Mantener este color específico si es deseado */
+        .status-PAUSADA { background-color: #D69E2E; }
         .status-CERRADA_MECANICO { background-color: var(--text-secondary); }
         .status-FINALIZADA { background-color: var(--success-color); }
-        
-        .errorlist {
-            color: var(--danger-color);
-            margin: 5px 0 0 0;
-            padding: 0;
-            list-style-type: none;
-            font-size: 0.9em;
-            font-weight: bold;
-        }
-        .alert-danger {
-            background-color: var(--alert-danger-bg); /* Usar la nueva variable para el fondo de alerta */
-            border-color: var(--danger-color);
-            color: var(--danger-color);
-            padding: 1.25rem 1.75rem; /* Más padding */
-            border-radius: 0.75rem; /* Bordes más redondeados */
-            margin-bottom: 1.5rem; /* Más espacio */
-        }
-        .alert-danger strong {
-            color: var(--danger-color);
-        }
-        .pagination .page-link {
-            background-color: var(--card-bg);
-            border-color: var(--border-color);
-            color: var(--text-primary);
-            transition: all 0.3s ease;
-            padding: 0.75rem 1.25rem; /* Más padding */
-            border-radius: 0.5rem; /* Bordes redondeados */
-        }
-        .pagination .page-link:hover {
-            background-color: var(--input-bg);
-            border-color: var(--accent-color);
-            color: var(--accent-color);
-        }
-        .pagination .page-item.active .page-link {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-            color: white;
-        }
-        .pagination .page-item.disabled .page-link {
-            background-color: var(--dark-bg);
-            border-color: var(--border-color);
-            color: var(--text-secondary);
-        }
-
-        /* Estilos para botones de acción */
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            text-decoration: none; /* Asegurar que no haya subrayado */
-        }
-        .btn-success {
-            background-color: var(--success-color);
-            border-color: var(--success-color);
-            color: white;
-        }
-        .btn-success:hover {
-            background-color: color-mix(in srgb, var(--success-color) 80%, black);
-            border-color: color-mix(in srgb, var(--success-color) 80%, black);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3);
-        }
-        .btn-primary {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: var(--accent-color-dark);
-            border-color: var(--accent-color-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(59, 130, 246, 0.3);
-        }
-        .btn-info {
-            background-color: var(--accent-color); /* Usar el color de acento para info */
-            border-color: var(--accent-color);
-            color: white;
-            padding: 0.6rem 1.1rem; /* Ajustar padding para el botón de la tabla */
-            font-size: 0.9em; /* Ajustar tamaño de fuente */
-        }
-        .btn-info:hover {
-            background-color: var(--accent-color-dark);
-            border-color: var(--accent-color-dark);
-            transform: translateY(-1px);
-        }
-        
-        /* Estilos para el formulario de filtros */
-        form.mb-4.p-3.rounded {
-            background-color: var(--input-bg) !important; /* Fondo para el área de filtros */
-            border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-light);
-            padding: 1.5rem !important; /* Más padding */
-        }
-        form.mb-4.p-3.rounded .form-group {
-            margin-bottom: 0.75rem; /* Espacio entre grupos de formulario */
-        }
-        form.mb-4.p-3.rounded .form-group:last-child {
-            margin-bottom: 0;
-        }
-        form.mb-4.p-3.rounded .form-group label {
-            margin-bottom: 0.4rem; /* Ajuste para etiquetas de filtro */
-        }
-        form.mb-4.p-3.rounded hr {
-            border-color: var(--border-color);
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            h1 {
-                font-size: 2.4rem;
-                margin-bottom: 2rem;
-            }
-            .card-header {
-                font-size: 1.2rem;
-                padding: 1rem 1.5rem;
-                gap: 0.8rem;
-            }
-            .card-header i {
-                font-size: 1.4rem;
-            }
-            .card-body {
-                padding: 1.5rem;
-            }
-            .table th, .table td {
-                padding: 0.7rem 0.6rem;
-            }
-            .form-label {
-                font-size: 0.9em;
-                margin-bottom: 0.5rem;
-            }
-            .form-control, .form-select {
-                padding: 0.6rem 1rem;
-                font-size: 0.95rem;
-            }
-            .select2-container--default .select2-selection--single {
-                height: calc(1.5em + 1.2rem + 2px) !important; /* Ajustar altura para .form-control */
-            }
-            .select2-container--default .select2-selection--single .select2-selection__rendered {
-                line-height: calc(1.5em + 1.2rem) !important;
-                padding-left: 1rem !important;
-            }
-            .select2-container--default .select2-selection--single .select2-selection__arrow {
-                height: calc(1.5em + 1.2rem) !important;
-            }
-            .btn {
-                padding: 0.6rem 1.2rem;
-                font-size: 0.95rem;
-            }
-            .btn-info {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.8em;
-            }
-            .alert-danger {
-                padding: 1rem 1.25rem;
-            }
-            .pagination .page-link {
-                padding: 0.6rem 1rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding-top: 1rem;
-                padding-bottom: 1rem;
-            }
-            h1 {
-                font-size: 2em;
-                margin-bottom: 1.5rem;
-            }
-            .card {
-                border-radius: 0.5rem;
-                margin-bottom: 1.5rem;
-            }
-            .card-header {
-                font-size: 1.1rem;
-                padding: 0.8rem 1rem;
-                gap: 0.6rem;
-            }
-            .card-header i {
-                font-size: 1.2rem;
-            }
-            .card-body {
-                padding: 1.25rem;
-            }
-            .table th, .table td {
-                padding: 0.5rem;
-                font-size: 0.9em;
-            }
-            .ot-status {
-                font-size: 0.75em;
-                padding: .3rem .8rem;
-                min-width: 80px;
-            }
-            .form-label {
-                font-size: 0.85em;
-                margin-bottom: 0.4rem;
-            }
-            .form-control, .form-select {
-                padding: 0.5rem 0.8rem;
-                font-size: 0.9em;
-            }
-            .select2-container--default .select2-selection--single {
-                height: calc(1.5em + 1rem + 2px) !important;
-            }
-            .select2-container--default .select2-selection--single .select2-selection__rendered {
-                line-height: calc(1.5em + 1rem) !important;
-                padding-left: 0.8rem !important;
-            }
-            .select2-container--default .select2-selection--single .select2-selection__arrow {
-                height: calc(1.5em + 1rem) !important;
-            }
-            .btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.9em;
-            }
-            .btn-info {
-                padding: 0.3rem 0.6rem;
-                font-size: 0.7em;
-            }
-            .alert-danger {
-                padding: 0.8rem 1rem;
-                margin-bottom: 1rem;
-            }
-            .pagination .page-link {
-                padding: 0.5rem 0.8rem;
-                font-size: 0.9em;
-            }
-            form.mb-4.p-3.rounded {
-                padding: 1rem !important;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .card {
-                border-radius: 0; /* Sin bordes redondeados en móviles para ocupar todo el ancho */
-            }
-            .card-header {
-                border-radius: 0;
-            }
-            .table-responsive {
-                border: 1px solid var(--border-color); /* Añadir borde a la tabla en móviles */
-                border-radius: 0.5rem;
-                overflow-x: auto;
-            }
-            .table {
-                margin-bottom: 0;
-            }
-            .btn {
-                width: 100%; /* Botones de acción ocupan todo el ancho en móviles */
-                margin-bottom: 0.5rem; /* Espacio entre botones apilados */
-            }
-            .btn:last-child {
-                margin-bottom: 0;
-            }
-            .col-md-auto.d-grid {
-                width: 100%; /* El botón de filtrar también ocupa todo el ancho */
-            }
-        }
-
+        .alert-danger { background-color: var(--alert-danger-bg); border-color: var(--danger-color); color: var(--danger-color); padding: 1.25rem 1.75rem; border-radius: 0.75rem; margin-bottom: 1.5rem; }
     </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-        {% if es_mecanico %}
-            <h1 class="mb-4">Mis Órdenes de Trabajo Asignadas</h1>
-        {% else %}
-            <h1 class="mb-4">Órdenes de Trabajo</h1>
-        {% endif %}
-    <!-- ================== INICIO DEL BLOQUE CORREGIDO ================== -->
-    <!-- Este 'if' ahora envuelve toda la tarjeta de creación de OT -->
+    {% if es_mecanico %}
+        <h1 class="mb-4">Mis Órdenes de Trabajo Asignadas</h1>
+    {% else %}
+        <h1 class="mb-4">Órdenes de Trabajo</h1>
+    {% endif %}
+    
     {% if es_personal_operativo %}
     <div id="crear-ot-seccion" class="card mb-5">
         <div class="card-header">
@@ -470,80 +53,31 @@
                 {% if form.errors %}
                     <div class="alert alert-danger">
                         <strong>Por favor, corrija los siguientes errores:</strong>
-                        {{ form.non_field_errors }}
                         <ul class="mb-0 mt-2">
-                            {% for field in form %}{% for error in field.errors %}<li><strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}{% endfor %}
+                            {% for field in form %}{% if field.errors %}{% for error in field.errors %}<li><strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}{% endif %}{% endfor %}
+                            {{ form.non_field_errors }}
                         </ul>
                     </div>
                 {% endif %}
 
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.vehiculo.id_for_label }}" class="form-label">{{ form.vehiculo.label }}</label>
-                        {{ form.vehiculo }}
-                        <div class="text-danger small mt-1">{{ form.vehiculo.errors|striptags }}</div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.kilometraje_apertura.id_for_label }}" class="form-label">{{ form.kilometraje_apertura.label }}</label>
-                        {{ form.kilometraje_apertura }}
-                        <div class="text-danger small mt-1">{{ form.kilometraje_apertura.errors|striptags }}</div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ form.tipo.id_for_label }}" class="form-label">{{ form.tipo.label }}</label>
-                        {{ form.tipo }}
-                        <div class="text-danger small mt-1">{{ form.tipo.errors|striptags }}</div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ form.formato.id_for_label }}" class="form-label">{{ form.formato.label }}</label>
-                        {{ form.formato }}
-                        <div class="text-danger small mt-1">{{ form.formato.errors|striptags }}</div>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ form.prioridad.id_for_label }}" class="form-label">{{ form.prioridad.label }}</label>
-                        {{ form.prioridad }}
-                        <div class="text-danger small mt-1">{{ form.prioridad.errors|striptags }}</div>
-                    </div>
+                    <div class="col-md-6 mb-3"><label for="{{ form.vehiculo.id_for_label }}" class="form-label">{{ form.vehiculo.label }}</label>{{ form.vehiculo }}</div>
+                    <div class="col-md-6 mb-3"><label for="{{ form.kilometraje_apertura.id_for_label }}" class="form-label">{{ form.kilometraje_apertura.label }}</label>{{ form.kilometraje_apertura }}</div>
+                    <div class="col-md-4 mb-3"><label for="{{ form.tipo.id_for_label }}" class="form-label">{{ form.tipo.label }}</label>{{ form.tipo }}</div>
+                    <div class="col-md-4 mb-3"><label for="{{ form.formato.id_for_label }}" class="form-label">{{ form.formato.label }}</label>{{ form.formato }}</div>
+                    <div class="col-md-4 mb-3"><label for="{{ form.prioridad.id_for_label }}" class="form-label">{{ form.prioridad.label }}</label>{{ form.prioridad }}</div>
+                    <div class="col-md-4 mb-3"><label for="{{ form.fecha_programada.id_for_label }}" class="form-label">{{ form.fecha_programada.label }}</label>{{ form.fecha_programada }}</div>
                 </div>
-
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ form.fecha_programada.id_for_label }}" class="form-label">{{ form.fecha_programada.label }}</label>
-                        {{ form.fecha_programada }}
-                        <div class="text-danger small mt-1">{{ form.fecha_programada.errors|striptags }}</div>
-                    </div>
-                </div>
-
-                <div class="form-group mb-3" id="campo-pauta_mantenimiento" style="display: none;">
-                    <label for="{{ form.pauta_mantenimiento.id_for_label }}" class="form-label">{{ form.pauta_mantenimiento.label }}</label>
-                    {{ form.pauta_mantenimiento }}
-                    <div class="text-danger small mt-1">{{ form.pauta_mantenimiento.errors|striptags }}</div>
-                </div>
-                <div class="form-group mb-3" id="campo-tipo_falla" style="display: none;">
-                    <label for="{{ form.tipo_falla.id_for_label }}" class="form-label">{{ form.tipo_falla.label }}</label>
-                    {{ form.tipo_falla }}
-                    <div class="text-danger small mt-1">{{ form.tipo_falla.errors|striptags }}</div>
-                </div>
-                <div class="form-group mb-3" id="campo-sintomas_reportados" style="display: none;">
-                    <label for="{{ form.sintomas_reportados.id_for_label }}" class="form-label">{{ form.sintomas_reportados.label }}</label>
-                    {{ form.sintomas_reportados }}
-                    <div class="text-danger small mt-1">{{ form.sintomas_reportados.errors|striptags }}</div>
-                </div>
-                
-                <div class="form-group mb-3">
-                    <label for="{{ form.observacion_inicial.id_for_label }}" class="form-label">{{ form.observacion_inicial.label }}</label>
-                    {{ form.observacion_inicial }}
-                    <div class="text-danger small mt-1">{{ form.observacion_inicial.errors|striptags }}</div>
-                </div>
-                
+                <div class="form-group mb-3" id="campo-pauta_mantenimiento" style="display: none;"><label for="{{ form.pauta_mantenimiento.id_for_label }}" class="form-label">{{ form.pauta_mantenimiento.label }}</label>{{ form.pauta_mantenimiento }}</div>
+                <div class="form-group mb-3" id="campo-tipo_falla" style="display: none;"><label for="{{ form.tipo_falla.id_for_label }}" class="form-label">{{ form.tipo_falla.label }}</label>{{ form.tipo_falla }}</div>
+                <div class="form-group mb-3" id="campo-sintomas_reportados" style="display: none;"><label for="{{ form.sintomas_reportados.id_for_label }}" class="form-label">{{ form.sintomas_reportados.label }}</label>{{ form.sintomas_reportados }}</div>
+                <div class="form-group mb-3"><label for="{{ form.observacion_inicial.id_for_label }}" class="form-label">{{ form.observacion_inicial.label }}</label>{{ form.observacion_inicial }}</div>
                 <button type="submit" class="btn btn-success mt-3"><i class="fas fa-save me-2"></i>Crear OT</button>
             </form>
         </div>
     </div>
     {% endif %}
-    <!-- ================== FIN DEL BLOQUE CORREGIDO ================== -->
-
-
-    <!-- Listado y filtros (esta parte es visible para todos los roles) -->
+    
     <div class="card">
         <div class="card-header">
             <h4><i class="fas fa-filter me-2"></i> Filtros y Listado de OTs</h4>
@@ -551,11 +85,11 @@
         <div class="card-body">
             <form method="get" class="mb-4 p-3 rounded" style="background-color: var(--dark-bg);">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-3"><div class="form-group">{{ filtro_form.vehiculo.label_tag }}{{ filtro_form.vehiculo }}</div></div>
-                    <div class="col-md"><div class="form-group">{{ filtro_form.tipo.label_tag }}{{ filtro_form.tipo }}</div></div>
-                    <div class="col-md"><div class="form-group">{{ filtro_form.estado.label_tag }}{{ filtro_form.estado }}</div></div>
-                    <div class="col-md"><div class="form-group">{{ filtro_form.fecha_desde.label_tag }}{{ filtro_form.fecha_desde }}</div></div>
-                    <div class="col-md"><div class="form-group">{{ filtro_form.fecha_hasta.label_tag }}{{ filtro_form.fecha_hasta }}</div></div>
+                    <div class="col-md-3"><div class="form-group"><label for="{{ filtro_form.vehiculo.id_for_label }}">{{ filtro_form.vehiculo.label }}</label>{{ filtro_form.vehiculo }}</div></div>
+                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.tipo.id_for_label }}">{{ filtro_form.tipo.label }}</label>{{ filtro_form.tipo }}</div></div>
+                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.estado.id_for_label }}">{{ filtro_form.estado.label }}</label>{{ filtro_form.estado }}</div></div>
+                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.fecha_desde.id_for_label }}">{{ filtro_form.fecha_desde.label }}</label>{{ filtro_form.fecha_desde }}</div></div>
+                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.fecha_hasta.id_for_label }}">{{ filtro_form.fecha_hasta.label }}</label>{{ filtro_form.fecha_hasta }}</div></div>
                     <div class="col-md-auto d-grid"><button type="submit" class="btn btn-primary">Filtrar</button></div>
                 </div>
             </form>
@@ -574,7 +108,7 @@
                             <td><a href="{% url 'ot_detail' pk=ot.pk %}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a></td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="6" class="text-center">No se encontraron órdenes de trabajo con los filtros aplicados.</td></tr>
+                        <tr><td colspan="6" class="text-center">No se encontraron órdenes de trabajo.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -592,22 +126,28 @@
 {% endblock %}
 
 {% block extra_scripts %}
-    <!-- Tu script de jQuery que ya funcionaba (sin cambios) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(document).ready(function() {
+            $('.select2').select2({
+                theme: "bootstrap-5",
+            });
             const tipoSelect = $('#id_tipo');
             const pautaField = $('#campo-pauta_mantenimiento');
             const tipoFallaField = $('#campo-tipo_falla');
             const sintomasField = $('#campo-sintomas_reportados');
-
             function toggleFields() {
                 const tipo = tipoSelect.val();
                 pautaField.hide();
                 tipoFallaField.hide();
                 sintomasField.hide();
-                if (tipo === 'PREVENTIVA') pautaField.show();
-                else if (tipo === 'CORRECTIVA') tipoFallaField.show();
-                else if (tipo === 'EVALUATIVA') {
+                if (tipo === 'PREVENTIVA') {
+                    pautaField.show();
+                } else if (tipo === 'CORRECTIVA') {
+                    tipoFallaField.show();
+                } else if (tipo === 'EVALUATIVA') {
                     tipoFallaField.show();
                     sintomasField.show();
                 }

@@ -58,7 +58,7 @@
             <a href="{% url 'ot_list' %}">Órdenes de Trabajo</a>
 
             <!-- Paneles Operativos: Roles que gestionan el día a día (Admin, Supervisor) -->
-            {% if es_supervisor_o_admin %}
+            {% if es_personal_operativo %}
                 <a href="{% url 'pizarra_programacion' %}">Pizarra de Programación</a>
                 <a href="{% url 'pizarra_combustible' %}">Control de Combustible</a>
                 <a href="{% url 'repuesto_list' %}">Inventario</a>

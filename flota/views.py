@@ -299,7 +299,20 @@ def ot_eventos_api(request):
 def orden_trabajo_detail(request, pk):
     connection.set_tenant(request.tenant)
     ot = get_object_or_404(OrdenDeTrabajo, pk=pk)
-    es_admin_o_super = request.user.groups.filter(name__in=['Administrador', 'Supervisor']).exists()
+    
+    # --- LÓGICA DE PERMISOS SIMPLE Y DIRECTA ---
+    user_groups = set(request.user.groups.values_list('name', flat=True))
+    
+    es_mecanico = 'Mecánico' in user_groups
+    es_supervisor = 'Supervisor' in user_groups
+    es_administrador = 'Administrador' in user_groups
+
+    # PERMISO 1: Supervisores y Admins pueden gestionar tareas y personal.
+    puede_gestionar_tareas_y_personal = es_supervisor or es_administrador
+    
+    # PERMISO 2: SOLO el Administrador puede realizar acciones críticas.
+    puede_realizar_acciones_criticas = es_administrador
+    # --- FIN DE LA LÓGICA DE PERMISOS ---
     
     # Inicialización de todos los formularios
     asignar_form = AsignarPersonalOTForm(instance=ot)
@@ -311,7 +324,6 @@ def orden_trabajo_detail(request, pk):
     asignar_tarea_form = AsignarTareaForm()
 
     if request.method == 'POST':
-        # --- Lógica para Cargar Tareas de una Pauta ---
         if 'cargar_tareas_pauta' in request.POST:
             if ot.tipo == 'PREVENTIVA' and ot.pauta_mantenimiento:
                 tareas_de_pauta = ot.pauta_mantenimiento.tareas.all()
@@ -322,9 +334,8 @@ def orden_trabajo_detail(request, pk):
                 messages.error(request, "Esta acción solo es válida para OTs Preventivas con una pauta asignada.")
             return redirect('ot_detail', pk=ot.pk)
 
-        # --- Lógica para Pausar la OT (MODIFICADA PARA CREAR NOTIFICACIONES) ---
         elif 'pausar_ot' in request.POST:
-            if not es_admin_o_super:
+            if not puede_realizar_acciones_criticas:
                 messages.error(request, "No tienes permiso para pausar la OT.")
                 return redirect('ot_detail', pk=ot.pk)
             
@@ -333,42 +344,24 @@ def orden_trabajo_detail(request, pk):
                 instancia = form.save(commit=False)
                 instancia.estado = 'PAUSADA'
                 instancia.save()
-
                 detalle_pausa = f"Motivo: {instancia.get_motivo_pausa_display()}. Notas: {instancia.notas_pausa or 'N/A'}"
                 HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa)
                 
-                # === INICIO DE LA NUEVA LÓGICA DE NOTIFICACIÓN ===
                 try:
-                    destinatarios = User.objects.filter(groups__name='Administrador').exclude(pk=request.user.pk)
-                    
+                    destinatarios = User.objects.filter(groups__name__in=['Administrador', 'Gerente']).exclude(pk=request.user.pk)
                     if destinatarios.exists():
                         mensaje_notificacion = f"La OT #{instancia.folio} fue pausada por {request.user.username}."
                         url_notificacion = reverse('ot_detail', args=[ot.pk])
-                        
-                        notificaciones_a_crear = [
-                            Notificacion(
-                                usuario_destino=admin,
-                                mensaje=mensaje_notificacion,
-                                url_destino=url_notificacion
-                            ) for admin in destinatarios
-                        ]
-                        
+                        notificaciones_a_crear = [ Notificacion(usuario_destino=admin, mensaje=mensaje_notificacion, url_destino=url_notificacion) for admin in destinatarios ]
                         Notificacion.objects.bulk_create(notificaciones_a_crear)
-                        
-                        messages.info(request, f"Se ha enviado una notificación en la aplicación a {destinatarios.count()} administrador(es).")
-                    else:
-                        messages.warning(request, "La OT ha sido pausada, pero no se encontraron otros administradores para notificar.")
-
+                        messages.info(request, f"Se ha enviado una notificación a {destinatarios.count()} gestor(es).")
                 except Exception as e:
-                    messages.error(request, f"La OT ha sido pausada, pero ocurrió un error al crear las notificaciones: {e}")
-                # === FIN DE LA NUEVA LÓGICA DE NOTIFICACIÓN ===
-
-                messages.warning(request, f'La OT #{ot.folio} ha sido pausada con éxito.')
+                    messages.error(request, f"Error al crear notificaciones: {e}")
+                messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
                 return redirect('ot_detail', pk=ot.pk)
             else:
                 pausar_form = form
 
-        # --- Lógica para Guardar Diagnóstico ---
         elif 'guardar_diagnostico' in request.POST:
             form = DiagnosticoEvaluacionForm(request.POST, instance=ot)
             if form.is_valid():
@@ -379,7 +372,6 @@ def orden_trabajo_detail(request, pk):
             else:
                 diagnostico_form = form
         
-        # --- Lógica para Asignar Tarea Existente ---
         elif 'asignar_tarea_existente' in request.POST:
             form = AsignarTareaForm(request.POST)
             if form.is_valid():
@@ -394,7 +386,6 @@ def orden_trabajo_detail(request, pk):
             else:
                 asignar_tarea_form = form
 
-        # --- Lógica para Añadir Insumo Manual ---
         elif 'add_manual_insumo' in request.POST:
             form = ManualInsumoForm(request.POST)
             if form.is_valid():
@@ -408,7 +399,6 @@ def orden_trabajo_detail(request, pk):
             else:
                 manual_insumo_form = form
 
-        # --- Lógica para Asignar Personal ---
         elif 'asignar_personal' in request.POST:
             form = AsignarPersonalOTForm(request.POST, instance=ot)
             if form.is_valid():
@@ -422,7 +412,6 @@ def orden_trabajo_detail(request, pk):
             else:
                 asignar_form = form
         
-        # --- Lógica para Cambiar Estado General ---
         elif 'cambiar_estado' in request.POST:
             form = CambiarEstadoOTForm(request.POST, instance=ot)
             if form.is_valid():
@@ -449,7 +438,6 @@ def orden_trabajo_detail(request, pk):
             else:
                 cambiar_estado_form = form
             
-        # --- Lógica para Cerrar por Mecánico ---
         elif 'cerrar_mecanico' in request.POST:
             form = CerrarOtMecanicoForm(request.POST, instance=ot)
             if form.is_valid():
@@ -462,10 +450,14 @@ def orden_trabajo_detail(request, pk):
             else:
                 cerrar_mecanico_form = form
 
-    # Pasar todos los formularios al contexto
     context = {
         'ot': ot,
-        'es_admin_o_super': es_admin_o_super,
+        # Variables de permiso para la plantilla
+        'es_mecanico': es_mecanico,
+        'puede_gestionar_tareas_y_personal': puede_gestionar_tareas_y_personal,
+        'puede_realizar_acciones_criticas': puede_realizar_acciones_criticas,
+        
+        # Formularios
         'asignar_form': asignar_form,
         'cerrar_mecanico_form': cerrar_mecanico_form,
         'cambiar_estado_form': cambiar_estado_form,
