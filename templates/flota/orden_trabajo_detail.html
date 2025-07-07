@@ -34,25 +34,32 @@
 {% endif %}
 
 <div class="mb-4">
+    {% comment %} SOLO el Administrador puede Pausar y Reanudar {% endcomment %}
     {% if puede_realizar_acciones_criticas %}
         {% if ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}
             <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#pausarOTModal"><i class="fas fa-pause me-1"></i> Pausar OT</button>
         {% endif %}
+
         {% if ot.estado == 'PAUSADA' %}
             <form method="post" class="d-inline">
-                {% csrf_token %}
+                {% csrf_token %}  {# <--- TOKEN AÑADIDO AQUÍ #}
                 <input type="hidden" name="estado" value="EN_PROCESO">
                 <button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button>
             </form>
         {% endif %}
     {% endif %}
+
+    {% comment %} Supervisor y Admin pueden autorizar horas extra {% endcomment %}
     {% if puede_gestionar_tareas_y_personal %}
         {% if not ot.horas_extra_autorizadas and ot.estado in "PAUSADA,EN_PROCESO" %}
             <form method="post" action="{% url 'autorizar_horas_extra' pk=ot.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres autorizar horas extra para esta OT?');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-info"><i class="fas fa-clock me-1"></i> Autorizar Horas Extra</button>
+                {% csrf_token %}  {# <--- TOKEN AÑADIDO AQUÍ #}
+                <button type="submit" class="btn btn-info">
+                    <i class="fas fa-clock me-1"></i> Autorizar Horas Extra
+                </button>
             </form>
         {% endif %}
+
         {% if ot.tipo == 'EVALUATIVA' %}
             <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#diagnosticoModal"><i class="fas fa-stethoscope me-1"></i> Añadir Diagnóstico</button>
         {% endif %}

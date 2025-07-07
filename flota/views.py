@@ -336,7 +336,7 @@ def orden_trabajo_detail(request, pk):
 
         elif 'pausar_ot' in request.POST:
             if not puede_realizar_acciones_criticas:
-                messages.error(request, "No tienes permiso para pausar la OT.")
+                messages.error(request, "Solo un Administrador puede pausar la OT.")
                 return redirect('ot_detail', pk=ot.pk)
             
             form = PausarOTForm(request.POST, instance=ot)
@@ -344,20 +344,46 @@ def orden_trabajo_detail(request, pk):
                 instancia = form.save(commit=False)
                 instancia.estado = 'PAUSADA'
                 instancia.save()
+
                 detalle_pausa = f"Motivo: {instancia.get_motivo_pausa_display()}. Notas: {instancia.notas_pausa or 'N/A'}"
                 HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='PAUSA', descripcion=detalle_pausa)
+                messages.warning(request, f'La OT #{ot.folio} ha sido pausada con éxito.')
                 
                 try:
-                    destinatarios = User.objects.filter(groups__name__in=['Administrador', 'Gerente']).exclude(pk=request.user.pk)
+                    # ================== INICIO DEL BLOQUE DE DEBUG ==================
+                    print("\n--- DEBUG: INICIANDO BÚSQUEDA DE DESTINATARIOS ---")
+                    
+                    usuario_actual = request.user
+                    print(f"Usuario actual que pausa la OT: {usuario_actual.username} (ID: {usuario_actual.pk})")
+
+                    # Buscamos a TODOS los supervisores y administradores
+                    todos_los_gestores = User.objects.filter(
+                        Q(groups__name='Supervisor') | Q(groups__name='Administrador')
+                    ).distinct()
+                    print(f"Gestores encontrados ANTES de excluir: {list(todos_los_gestores)}")
+
+                    # Excluimos al usuario actual
+                    destinatarios = todos_los_gestores.exclude(pk=usuario_actual.pk)
+                    print(f"Destinatarios finales DESPUÉS de excluir: {list(destinatarios)}")
+                    # =================== FIN DEL BLOQUE DE DEBUG ====================
+                    
                     if destinatarios.exists():
-                        mensaje_notificacion = f"La OT #{instancia.folio} fue pausada por {request.user.username}."
+                        mensaje_notificacion = f"OT #{instancia.folio} ({instancia.vehiculo.numero_interno}) pausada por {request.user.username}."
                         url_notificacion = reverse('ot_detail', args=[ot.pk])
-                        notificaciones_a_crear = [ Notificacion(usuario_destino=admin, mensaje=mensaje_notificacion, url_destino=url_notificacion) for admin in destinatarios ]
+                        
+                        notificaciones_a_crear = [
+                            Notificacion(usuario_destino=destinatario, mensaje=mensaje_notificacion, url_destino=url_notificacion) 
+                            for destinatario in destinatarios
+                        ]
+                        
                         Notificacion.objects.bulk_create(notificaciones_a_crear)
-                        messages.info(request, f"Se ha enviado una notificación a {destinatarios.count()} gestor(es).")
+                        messages.info(request, f"Se ha enviado una notificación a {destinatarios.count()} supervisor(es)/administrador(es).")
+                    else:
+                        messages.warning(request, "La OT ha sido pausada, pero no se encontraron otros gestores para notificar.")
+
                 except Exception as e:
-                    messages.error(request, f"Error al crear notificaciones: {e}")
-                messages.warning(request, f'La OT #{ot.folio} ha sido pausada.')
+                    messages.error(request, f"La OT ha sido pausada, pero ocurrió un error al crear las notificaciones: {e}")
+                
                 return redirect('ot_detail', pk=ot.pk)
             else:
                 pausar_form = form
@@ -438,15 +464,50 @@ def orden_trabajo_detail(request, pk):
             else:
                 cambiar_estado_form = form
             
+                # --- Lógica para Cerrar por Mecánico (CON NOTIFICACIÓN) ---
         elif 'cerrar_mecanico' in request.POST:
             form = CerrarOtMecanicoForm(request.POST, instance=ot)
             if form.is_valid():
+                # Guardamos la OT primero
                 instancia = form.save(commit=False)
                 instancia.estado = 'CERRADA_MECANICO'
                 instancia.save()
-                HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CIERRE_MECANICO', descripcion=f"Cerrada por mecánico. Notas: {instancia.motivo_pendiente or 'N/A'}")
+
+                # Creamos el registro en el historial
+                HistorialOT.objects.create(
+                    orden_de_trabajo=ot,
+                    usuario=request.user,
+                    tipo_evento='CIERRE_MECANICO',
+                    descripcion=f"Cerrada por mecánico. Notas: {instancia.motivo_pendiente or 'N/A'}"
+                )
                 messages.info(request, f"OT #{ot.folio} marcada como 'Cerrada por Mecánico'.")
-                return redirect('ot_detail', pk=ot.pk)
+
+                # --- Lógica de Notificación ---
+                try:
+                    # Notificamos a TODOS los Supervisores y Administradores
+                    destinatarios = User.objects.filter(
+                        Q(groups__name='Supervisor') | Q(groups__name='Administrador')
+                    ).distinct()
+                    
+                    if destinatarios.exists():
+                        mensaje_notificacion = f"La OT #{instancia.folio} ({instancia.vehiculo.numero_interno}) está lista para su revisión."
+                        url_notificacion = reverse('ot_detail', args=[ot.pk])
+                        
+                        notificaciones_a_crear = [
+                            Notificacion(
+                                usuario_destino=destinatario,
+                                mensaje=mensaje_notificacion,
+                                url_destino=url_notificacion
+                            ) for destinatario in destinatarios
+                        ]
+                        
+                        Notificacion.objects.bulk_create(notificaciones_a_crear)
+                        messages.success(request, f"Se ha notificado a {destinatarios.count()} gestor(es) para su revisión.")
+                
+                except Exception as e:
+                    messages.error(request, f"La OT fue cerrada, pero ocurrió un error al crear las notificaciones: {e}")
+
+                return redirect('ot_list') # Redirigimos a la lista de OTs del mecánico
             else:
                 cerrar_mecanico_form = form
 

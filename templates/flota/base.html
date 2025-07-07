@@ -83,16 +83,43 @@
         <div class="user-menu">
             {% if user.is_authenticated %}
                 <div class="notification-bell-wrapper">
-                    <button id="notification-bell-button">
-                        <i class="fas fa-bell fa-lg"></i>
-                        {% if notificaciones_no_leidas_count > 0 %}
-                            <span id="notification-count">{{ notificaciones_no_leidas_count }}</span>
-                        {% endif %}
-                    </button>
-                    <div id="notification-popup">
-                        <!-- Lógica de la campana de notificaciones -->
-                    </div>
+    <button id="notification-bell-button">
+        <i class="fas fa-bell fa-lg"></i>
+        {% if notificaciones_no_leidas_count > 0 %}
+            <span id="notification-count">{{ notificaciones_no_leidas_count }}</span>
+        {% endif %}
+    </button>
+
+    {% comment %} ESTE ES EL POPUP QUE AHORA TENDRÁ CONTENIDO {% endcomment %}
+            <div id="notification-popup" style="display: none;">
+                <div class="notification-header" style="padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #4a5568;">
+                    Notificaciones
                 </div>
+                <div class="notification-body" style="max-height: 300px; overflow-y: auto;">
+                    {% comment %}
+                        En una versión futura, podrías llenar esto con AJAX.
+                        Por ahora, mostramos las 5 más recientes que pasamos desde el context processor.
+                        Si no tienes 'notificaciones_recientes' en tu context processor, esto no mostrará nada.
+                    {% endcomment %}
+                    
+                    {% with request.user.notificaciones.all|slice:":5" as notificaciones_recientes %}
+                        {% if notificaciones_recientes %}
+                            {% for notif in notificaciones_recientes %}
+                                <a href="{{ notif.url_destino|default:'#' }}" class="notification-item {% if not notif.leida %}notif-unread{% endif %}" style="display: block; padding: 12px 15px; color: #cbd5e0; text-decoration: none; border-bottom: 1px solid #4a5568;">
+                                    <p style="margin: 0; font-size: 0.9em;">{{ notif.mensaje }}</p>
+                                    <div class="notif-time" style="font-size: 0.8em; color: #a0aec0; margin-top: 4px;">{{ notif.fecha_creacion|timesince }} atrás</div>
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <div class="notif-empty" style="padding: 15px; text-align: center; color: #a0aec0; font-size: 0.9em;">No tienes notificaciones.</div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="notification-footer" style="padding: 12px; text-align: center; border-top: 1px solid #4a5568;">
+                    <a href="{% url 'lista_notificaciones' %}" style="color: #a0aec0; text-decoration: underline;">Ver todas</a>
+                </div>
+            </div>
+        </div>
 
                 <span>Bienvenido, {{ user.get_full_name|default:user.username }}</span>
                 <form action="{% url 'logout' %}" method="post" style="display: inline; margin: 0; padding: 0;">
@@ -115,12 +142,14 @@
         {% block content %}{% endblock %}
     </div>
 
+    <!-- ... tu código HTML hasta las librerías JS ... -->
+
     <!-- Librerías JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
+    <!-- ================ INICIO DEL SCRIPT RESTAURADO DEL COMMIT ================ -->
     <script>
-        // Script de la campana de notificaciones (sin cambios)
         $(document).ready(function() {
             $('.select2').select2();
 
@@ -167,7 +196,10 @@
             }
         });
     </script>
+    <!-- ================ FIN DEL SCRIPT RESTAURADO DEL COMMIT ================ -->
     
     {% block extra_scripts %}{% endblock extra_scripts %}
+</body>
+</html>
 </body>
 </html>
