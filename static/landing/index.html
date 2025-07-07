@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulser - Gestión Inteligente de Flotas de Transporte</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom CSS Variables for Dark and Light Mode */
+        :root {
+            /* Light Mode (default for new palette: Grey, Light Blue, White) */
+            --bg-primary: hsl(210, 15%, 98%); /* Almost white */
+            --bg-secondary: hsl(210, 15%, 95%); /* Slightly darker white */
+            --text-primary: hsl(210, 20%, 20%); /* Dark charcoal grey */
+            --text-secondary: hsl(210, 10%, 45%); /* Medium grey */
+            --accent: hsl(195, 90%, 55%); /* More Celeste Blue */
+            --accent-hover: hsl(195, 90%, 45%); /* Deeper Celeste Blue */
+            --card-base-bg: #FFFFFF; /* White */
+            --input-bg: #FFFFFF;
+            --input-border: hsl(210, 10%, 80%);
+            --input-placeholder: hsl(210, 10%, 65%);
+            --text-shadow-strong: none; /* Removed for light mode */
+            --text-shadow-subtle: none; /* Removed for light mode */
+
+            /* Dark Mode (updated for new palette) */
+            --dark-bg-primary: hsl(210, 10%, 15%); /* Dark Grey */
+            --dark-bg-secondary: hsl(210, 10%, 20%); /* Slightly lighter dark grey */
+            --dark-text-primary: hsl(210, 15%, 95%); /* Off-white */
+            --dark-text-secondary: hsl(210, 10%, 70%); /* Light grey */
+            --dark-accent: hsl(195, 90%, 65%); /* Vibrant Celeste Blue */
+            --dark-accent-hover: hsl(195, 90%, 55%); /* Deeper Vibrant Celeste Blue */
+            --dark-card-base-bg: hsl(210, 10%, 25%); /* Darker grey for cards */
+            --dark-input-bg: hsl(210, 10%, 28%);
+            --dark-input-border: hsl(210, 10%, 40%);
+            --dark-input-placeholder: hsl(210, 10%, 55%);
+            --dark-text-shadow-strong: 0 0 15px var(--dark-accent);
+            --dark-text-shadow-subtle: 0 0 8px hsla(195, 90%, 65%, 0.4);
+        }
+
+        html.dark {
+            --bg-primary: var(--dark-bg-primary);
+            --bg-secondary: var(--dark-bg-secondary);
+            --text-primary: var(--dark-text-primary);
+            --text-secondary: var(--dark-text-secondary);
+            --accent: var(--dark-accent);
+            --accent-hover: var(--dark-accent-hover);
+            --card-base-bg: var(--dark-card-base-bg);
+            --input-bg: var(--dark-input-bg);
+            --input-border: var(--dark-input-border);
+            --input-placeholder: var(--dark-input-placeholder);
+            --text-shadow-strong: var(--dark-text-shadow-strong);
+            --text-shadow-subtle: var(--dark-text-shadow-subtle);
+        }
+
+        /* Base styles for body */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* Custom Tailwind Utilities */
+        .card-style {
+            background-color: var(--card-base-bg);
+            border-radius: 0.75rem; /* rounded-xl */
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+            transition: all 0.3s ease;
+        }
+
+        html.light .card-style {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--text-primary); /* Changed to text-primary for better contrast with light accent */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.2), 0 6px 10px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--accent);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            border: 2px solid var(--accent);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.2), 0 6px 10px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .icon-circle {
+            width: 4rem;
+            height: 4rem;
+            border-radius: 9999px; /* rounded-full */
+            background-color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px var(--accent); /* strong glow */
+            transition: all 0.3s ease;
+        }
+
+        .icon-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px var(--accent), 0 0 50px var(--accent);
+        }
+
+        .profile-image-circle {
+            width: 8rem;
+            height: 8rem;
+            border-radius: 9999px; /* rounded-full */
+            object-fit: cover;
+            border: 5px solid var(--accent);
+            box-shadow: 0 0 20px var(--accent); /* strong glow */
+            transition: all 0.3s ease;
+        }
+
+        .profile-image-circle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px var(--accent), 0 0 50px var(--accent);
+        }
+
+        .social-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 9999px; /* rounded-full */
+            background-color: var(--card-base-bg);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 10px var(--accent);
+            transition: all 0.3s ease;
+        }
+
+        .social-icon:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--accent), 0 0 30px var(--accent);
+        }
+
+        .footer-link {
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--accent);
+            text-shadow: var(--text-shadow-subtle);
+        }
+
+        /* Keyframes for animations */
+        @keyframes pulse-glow {
+            0% {
+                transform: scale(0.95);
+                opacity: 0.7;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0.95);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes pop-in {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Apply animations */
+        .animate-pulse-glow {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+
+        .animate-pop-in {
+            animation: pop-in 1s ease-out forwards;
+        }
+
+        .animate-fade-in {
+            animation: fade-in 1s ease-out forwards;
+        }
+
+        /* Accordion specific styles */
+        .accordion-item .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.7s ease-out, padding 0.7s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .accordion-item.active .accordion-content {
+            max-height: 500px; /* Adjust as needed for content */
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .accordion-item .accordion-header .icon {
+            transition: transform 0.3s ease;
+        }
+
+        .accordion-item.active .accordion-header .icon {
+            transform: rotate(90deg);
+        }
+
+        .accordion-item .accordion-header:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.2), 0 6px 10px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--accent);
+        }
+
+        html.light .accordion-item .accordion-header:hover {
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.1), 0 6px 10px -3px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Input styles */
+        .custom-input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .custom-input::placeholder {
+            color: var(--input-placeholder);
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px hsla(200, 95%, 55%, 0.5); /* glow effect on focus */
+        }
+
+        /* Hero section specific styles for glow elements */
+        .hero-glow-1, .hero-glow-2 {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px); /* Adjust blur as needed */
+            opacity: 0.7;
+            animation: pulse-glow 4s infinite ease-in-out;
+            z-index: 0;
+        }
+
+        .hero-glow-1 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            top: 10%;
+            left: 15%;
+        }
+
+        .hero-glow-2 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+            bottom: 10%;
+            right: 20%;
+            animation-delay: 1s;
+        }
+
+        /* Message box for form submission */
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .message-box.show {
+            opacity: 1;
+        }
+
+        /* Hero Image Slider */
+        .hero-slider-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0; /* Behind overlay and content */
+        }
+
+        .hero-slider-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        .hero-slider-image.active {
+            opacity: 1;
+        }
+
+        /* Navbar Graphite Color */
+        .navbar-graphite {
+            background-color: hsl(210, 10%, 20%); /* Graphite Grey */
+        }
+        .navbar-graphite .nav-link-text {
+            color: hsl(210, 15%, 95%); /* Light text for contrast */
+        }
+        .navbar-graphite .hover\:text-accent:hover {
+            color: var(--accent); /* Accent color on hover */
+        }
+
+        /* Dropdown specific styles */
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: var(--card-base-bg); /* Use card background for dropdown */
+            min-width: 180px; /* Increased width for dropdown content */
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 0.5rem;
+            padding: 0.5rem 0;
+            top: 100%; /* Position below the parent item */
+            left: 50%;
+            transform: translateX(-50%); /* Center the dropdown */
+            margin-top: 0.5rem; /* Space between parent and dropdown */
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .dropdown-content a:hover {
+            background-color: var(--bg-secondary);
+            color: var(--accent);
+        }
+
+        /* Image styling for roadmap and para-quien sections */
+        .section-image {
+            width: 100%;
+            height: 150px; /* Fixed height for consistency */
+            object-fit: cover;
+            border-radius: 0.75rem; /* rounded-xl */
+            margin-bottom: 1.5rem;
+            border: 3px solid var(--accent);
+            box-shadow: 0 0 15px var(--accent);
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+    <!-- Message Box Container -->
+    <div id="message-box" class="message-box hidden"></div>
+
+    <!-- Barra de Navegación -->
+    <nav class="sticky top-0 z-50 navbar-graphite bg-opacity-90 backdrop-blur-sm shadow-lg py-4 transition-all duration-300 ease-in-out">
+        <div class="container mx-auto flex justify-between items-center px-4">
+            <a href="#inicio" class="flex items-center text-2xl font-extrabold text-white">
+                <!-- Custom SVG Logo for Pulse/Heartbeat -->
+                <svg class="w-8 h-8 mr-2 text-accent animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+                Pulser
+            </a>
+            <div class="hidden md:flex space-x-6 items-center">
+                <!-- Dropdown: Producto -->
+                <div class="dropdown">
+                    <a href="#" class="nav-link-text hover:text-accent transition duration-300 hover:scale-105 flex items-center">
+                        Producto <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="#inicio">Inicio</a>
+                        <a href="#inteligencia-operativa">Inteligencia Operativa</a>
+                        <a href="#inteligencia-negocio">Inteligencia para el Negocio</a>
+                    </div>
+                </div>
+
+                <!-- Dropdown: Soluciones -->
+                <div class="dropdown">
+                    <a href="#" class="nav-link-text hover:text-accent transition duration-300 hover:scale-105 flex items-center">
+                        Soluciones <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="#beneficios-software">Beneficios del Software</a>
+                        <a href="#beneficios">Beneficios Tangibles</a>
+                        <a href="#para-quien">Para Quién</a>
+                        <a href="#roadmap">Roadmap</a>
+                    </div>
+                </div>
+                
+                <!-- Direct Link: Contacto -->
+                <a href="#contacto" class="nav-link-text hover:text-accent transition duration-300 hover:scale-105">Contacto</a>
+
+                <button id="theme-toggle" class="nav-link-text text-xl hover:text-accent transition duration-300">
+                    <i class="fas fa-sun hidden dark:inline-block"></i>
+                    <i class="fas fa-moon inline-block dark:hidden"></i>
+                </button>
+                <a href="#" class="btn-primary">Iniciar Sesión</a>
+            </div>
+            <div class="md:hidden flex items-center">
+                <button id="theme-toggle-mobile" class="nav-link-text text-xl mr-4 hover:text-accent transition duration-300">
+                    <i class="fas fa-sun hidden dark:inline-block"></i>
+                    <i class="fas fa-moon inline-block dark:hidden"></i>
+                </button>
+                <button id="mobile-menu-button" class="nav-link-text text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-bg-primary bg-opacity-95 py-4">
+            <div class="flex flex-col items-center space-y-4">
+                <a href="#inicio" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Inicio</a>
+                <a href="#inteligencia-operativa" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Inteligencia Operativa</a>
+                <a href="#beneficios-software" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Beneficios del Software</a>
+                <a href="#inteligencia-negocio" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Inteligencia para el Negocio</a>
+                <a href="#para-quien" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Para Quién</a>
+                <a href="#roadmap" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Roadmap</a>
+                <a href="#contacto" class="text-text-primary hover:text-accent transition duration-300" onclick="document.getElementById('mobile-menu').classList.add('hidden')">Contacto</a>
+                <a href="#" class="btn-primary w-max">Iniciar Sesión</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Sección Hero -->
+        <section id="inicio" class="relative h-screen flex items-center justify-center text-center overflow-hidden">
+            <!-- Hero Image Slider Container -->
+            <div class="hero-slider-container">
+                <img src="https://placehold.co/1920x1080/4A5568/CBD5E0?text=Camion+Moderno+1" alt="Camión Moderno 1" class="hero-slider-image active">
+                <img src="https://placehold.co/1920x1080/2D3748/A0AEC0?text=Camion+Moderno+2" alt="Camión Moderno 2" class="hero-slider-image">
+                <img src="https://placehold.co/1920x1080/1A202C/718096?text=Camion+Moderna+3" alt="Camión Moderna 3" class="hero-slider-image">
+            </div>
+            <!-- Overlay oscuro -->
+            <div class="absolute inset-0 bg-black opacity-80 z-10"></div>
+            <!-- Elementos de glow dinámicos -->
+            <div class="hero-glow-1 animate-pulse-glow z-0"></div>
+            <div class="hero-glow-2 animate-pulse-glow z-0"></div>
+
+            <div class="relative z-20 max-w-4xl mx-auto px-4 animate-pop-in">
+                <h1 class="text-5xl md:text-6xl font-extrabold leading-tight mb-6 text-white" style="text-shadow: var(--text-shadow-strong);">
+                    Obtén el Control Absoluto de tu <span class="text-accent">Gestión de Mantenimiento</span>
+                </h1>
+                <p class="text-xl md:text-2xl mb-10 text-white" style="text-shadow: var(--text-shadow-subtle);">
+                    Pulser es el software líder que transforma la complejidad del mantenimiento de flotas de transporte en eficiencia operativa y ahorro de costos.
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center gap-6">
+                    <a href="#contacto" class="btn-primary">Solicitar Demo</a>
+                    <a href="#" class="btn-secondary">Ver Video</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Inteligencia Operativa y Financiera (Anteriormente "Nuestros Servicios Clave") -->
+        <section id="inteligencia-operativa" class="py-20 bg-bg-secondary text-center animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto max-w-3xl">
+                <h2 class="text-4xl font-bold mb-6 leading-tight">
+                    <span class="text-accent" style="text-shadow: var(--text-shadow-strong);">Inteligencia Operativa y Financiera</span>
+                </h2>
+                <p class="text-xl text-text-secondary mb-12">
+                    Pulser es un sistema de gestión de mantenimiento (TMS) que te permite centralizar y optimizar todas las operaciones de tu flota. Desde la planificación hasta la ejecución y el análisis, nuestro software te brinda el control total para maximizar la eficiencia y reducir los costos.
+                </p>
+
+                <div class="space-y-6 text-left">
+                    <!-- Funcionalidad: Pizarra de Mantenimiento -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-clipboard-list mr-4 text-accent"></i> Pizarra de Mantenimiento
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p>Visualiza de forma clara y organizada el estado actual y programado de todos tus mantenimientos. Identifica rápidamente qué vehículos requieren atención, quién está asignado y cuándo vencen las tareas, garantizando que nada se pase por alto.</p>
+                        </div>
+                    </div>
+                    <!-- Funcionalidad: Control de Inventario -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-boxes mr-4 text-accent"></i> Control de Inventario
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p>Gestiona tu stock de repuestos y materiales de mantenimiento en tiempo real. Recibe alertas automáticas de stock bajo, optimiza tus compras y reduce el riesgo de interrupciones por falta de piezas.</p>
+                        </div>
+                    </div>
+                    <!-- Funcionalidad: Gestión de OTS -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-tools mr-4 text-accent"></i> Gestión de Órdenes de Trabajo (OTS)
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p>Crea, asigna y rastrea órdenes de trabajo preventivas y correctivas con facilidad. Desde el diagnóstico hasta la finalización, mantén un registro detallado de cada tarea, optimizando los tiempos de respuesta y la eficiencia del personal.</p>
+                        </div>
+                    </div>
+                    <!-- Funcionalidad: KPIs -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-tachometer-alt mr-4 text-accent"></i> KPIs y Métricas Clave
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p>Accede a un dashboard informativo con indicadores clave de rendimiento (KPIs) en tiempo real. Monitorea la disponibilidad de la flota, costos por kilómetro, eficiencia del mantenimiento y mucho más para tomar decisiones estratégicas.</p>
+                        </div>
+                    </div>
+                    <!-- Funcionalidad: Sistema de Reportes y Medición de Rendimiento RR HH -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-chart-pie mr-4 text-accent"></i> Reportes y Rendimiento de RRHH
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p>Genera reportes personalizados sobre el desempeño de tu flota y el rendimiento de tu equipo de mantenimiento. Identifica áreas de mejora, optimiza la asignación de recursos y mide la productividad del personal.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Beneficios (Nueva) -->
+        <section id="beneficios-software" class="py-20 bg-bg-primary animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto max-w-3xl text-center">
+                <h2 class="text-4xl font-bold mb-6 leading-tight">
+                    ¿Por Qué Elegir <span class="text-accent" style="text-shadow: var(--text-shadow-strong);">Pulser</span>?
+                </h2>
+                <p class="text-lg text-text-secondary mb-12">
+                    Pulser no es solo un software; es tu aliado estratégico para transformar la gestión de tu flota. Con nuestra plataforma, obtendrás beneficios tangibles que impactarán directamente en tu rentabilidad y eficiencia operativa.
+                </p>
+                <div class="grid md:grid-cols-2 gap-8 text-left">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-text-primary mb-3"><i class="fas fa-hand-holding-usd mr-3 text-accent"></i> Ahorro Sustancial de Costos</h3>
+                        <p class="text-text-secondary">Reduce gastos en reparaciones inesperadas, optimiza el consumo de combustible y minimiza los costos de inventario de repuestos gracias a una gestión proactiva.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-text-primary mb-3"><i class="fas fa-hourglass-half mr-3 text-accent"></i> Mayor Disponibilidad de Flota</h3>
+                        <p class="text-text-secondary">Disminuye el tiempo de inactividad de tus vehículos con mantenimientos preventivos precisos y una rápida resolución de problemas, asegurando que tu flota esté siempre en movimiento.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-text-primary mb-3"><i class="fas fa-chart-line mr-3 text-accent"></i> Decisiones Basadas en Datos</h3>
+                        <p class="text-text-secondary">Accede a información en tiempo real y análisis detallados para tomar decisiones informadas que mejoren el rendimiento general de tu operación y la rentabilidad.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-semibold text-text-primary mb-3"><i class="fas fa-user-shield mr-3 text-accent"></i> Seguridad y Cumplimiento Mejorados</h3>
+                        <p class="text-text-secondary">Asegura que tus vehículos cumplan con todas las normativas de seguridad y medioambientales, protegiendo a tus conductores, la carga y la reputación de tu empresa.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Inteligencia Operativa y Financiera PARA TU NEGOCIO (Anteriormente "Características Clave") -->
+        <section id="inteligencia-negocio" class="py-20 bg-bg-secondary animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-12" style="text-shadow: var(--text-shadow-subtle);">
+                    Inteligencia Operativa y Financiera <span class="text-accent">PARA TU NEGOCIO</span>
+                </h2>
+                <div class="space-y-6">
+                    <!-- Gestión Centralizada de Mantenimiento -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-cogs mr-4 text-accent"></i> Gestión Centralizada de Mantenimiento
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p class="mb-2"><strong>Pizarra de Mantenimiento:</strong> Visualiza de forma clara y organizada el estado actual y programado de todos tus mantenimientos.</p>
+                            <p class="mb-2"><strong>Gestión de OT Preventivas:</strong> Planifica y ejecuta órdenes de trabajo preventivas proactivamente para evitar fallas costosas.</p>
+                            <p class="mb-2"><strong>Gestión de OT Correctivas:</strong> Administra y resuelve eficientemente las órdenes de trabajo correctivas, minimizando el tiempo de inactividad.</p>
+                            <p><strong>Alertas de Mantenimiento:</strong> Recibe notificaciones automáticas y personalizables para mantenimientos programados y eventos críticos.</p>
+                        </div>
+                    </div>
+                    <!-- Inteligencia Operativa y Financiera -->
+                    <div class="accordion-item card-style border-b-2 border-transparent">
+                        <div class="accordion-header flex items-center justify-between cursor-pointer p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold text-text-primary flex items-center">
+                                <i class="fas fa-chart-bar mr-4 text-accent"></i> Inteligencia Operativa y Financiera
+                            </h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content px-4 text-text-secondary">
+                            <p class="mb-2"><strong>Dashboard Informativo y KPIs:</strong> Obtén una visión general y detallada del rendimiento de tu flota con métricas clave en tiempo real, personalizables.</p>
+                            <p class="mb-2"><strong>Reportes de Costos:</strong> Analiza y controla los gastos asociados al mantenimiento, combustible e inventario para optimizar tu presupuesto.</p>
+                            <p class="mb-2"><strong>Gestión de Inventario:</strong> Controla tu stock de repuestos y materiales de mantenimiento, evitando quiebres de inventario y optimizando compras.</p>
+                            <p><strong>Análisis de Pareto Inteligente:</strong> Identifica las fallas más frecuentes y sus causas raíz para priorizar acciones correctivas y mejorar la eficiencia de la flota.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Beneficios Tangibles para tu Empresa (Se mantiene) -->
+        <section id="beneficios" class="py-20 bg-bg-primary animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-12" style="text-shadow: var(--text-shadow-subtle);">
+                    Beneficios <span class="text-accent">Tangibles</span> para tu Empresa
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Beneficio 1 -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <div class="icon-circle mb-6">
+                            <i class="fas fa-dollar-sign text-3xl text-bg-primary"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Reducción de Costos Operativos</h3>
+                        <p class="text-text-secondary">Minimiza gastos inesperados y optimiza el uso de recursos con una gestión de mantenimiento proactiva y eficiente.</p>
+                    </div>
+                    <!-- Beneficio 2 -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <div class="icon-circle mb-6">
+                            <i class="fas fa-clock text-3xl text-bg-primary"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Mayor Tiempo de Actividad</h3>
+                        <p class="text-text-secondary">Reduce el tiempo de inactividad de tus vehículos gracias a mantenimientos programados y detección temprana de problemas.</p>
+                    </div>
+                    <!-- Beneficio 3 -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <div class="icon-circle mb-6">
+                            <i class="fas fa-shield-alt text-3xl text-bg-primary"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Incremento de la Seguridad</h3>
+                        <p class="text-text-secondary">Asegura que tu flota esté siempre en condiciones óptimas, mejorando la seguridad para tus conductores y la carga.</p>
+                    </div>
+                    <!-- Beneficio 4 -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <div class="icon-circle mb-6">
+                            <i class="fas fa-chart-line text-3xl text-bg-primary"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Mejora en la Toma de Decisiones</h3>
+                        <p class="text-text-secondary">Accede a datos precisos y análisis profundos para tomar decisiones estratégicas que impulsen el crecimiento de tu negocio.</p>
+                    </div>
+                    <!-- Beneficio 5 -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <div class="icon-circle mb-6">
+                            <i class="fas fa-leaf text-3xl text-bg-primary"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Sostenibilidad y Cumplimiento</h3>
+                        <p class="text-text-secondary">Gestiona el mantenimiento para cumplir con regulaciones ambientales y de seguridad, contribuyendo a operaciones más sostenibles.</p>
+                    </div>
+                    <!-- Beneficio 6 -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <div class="icon-circle mb-6">
+                            <i class="fas fa-handshake text-3xl text-bg-primary"></i>
+                        </div>
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Mayor Satisfacción del Cliente</h3>
+                        <p class="text-text-secondary">Entregas a tiempo y vehículos confiables se traducen en clientes más satisfechos y una reputación mejorada.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Nuestro Software está Diseñado Para Ti -->
+        <section id="para-quien" class="py-20 bg-bg-secondary animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-12" style="text-shadow: var(--text-shadow-subtle);">
+                    Nuestro Software está Diseñado <span class="text-accent">Para Ti</span>
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Rol 1: Dueños de Flotas -->
+                    <div class="accordion-item card-style text-center flex flex-col items-center border-b-2 border-transparent">
+                        <img src="https://placehold.co/200x150/6B7280/F9FAFB?text=Dueño+Flota" alt="Dueño de Flota" class="section-image">
+                        <div class="accordion-header-text flex items-center justify-center cursor-pointer">
+                            <h3 class="text-2xl font-semibold text-text-primary mr-2">Dueños de Flotas</h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content text-text-secondary mt-3">
+                            <p>Obtén una visión completa de tus operaciones, reduce costos y asegura la rentabilidad a largo plazo de tu negocio de transporte. Con Pulser, tendrás el control para tomar decisiones estratégicas y optimizar cada aspecto de tu flota.</p>
+                        </div>
+                    </div>
+                    <!-- Rol 2: Gerentes de Transporte -->
+                    <div class="accordion-item card-style text-center flex flex-col items-center border-b-2 border-transparent">
+                        <img src="https://placehold.co/200x150/6B7280/F9FAFB?text=Gerente+Transp" alt="Gerente de Transporte" class="section-image">
+                        <div class="accordion-header-text flex items-center justify-center cursor-pointer">
+                            <h3 class="text-2xl font-semibold text-text-primary mr-2">Gerentes de Transporte</h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content text-text-secondary mt-3">
+                            <p>Simplifica la programación, el seguimiento y la gestión del personal de mantenimiento, mejorando la eficiencia diaria y la productividad. Pulser te permite asignar tareas, monitorear el progreso y asegurar que tu equipo trabaje de manera coordinada.</p>
+                        </div>
+                    </div>
+                    <!-- Rol 3: Administradores de Flotas -->
+                    <div class="accordion-item card-style text-center flex flex-col items-center border-b-2 border-transparent">
+                        <img src="https://placehold.co/200x150/6B7280/F9FAFB?text=Admin+Flota" alt="Administrador de Flota" class="section-image">
+                        <div class="accordion-header-text flex items-center justify-center cursor-pointer">
+                            <h3 class="text-2xl font-semibold text-text-primary mr-2">Administradores de Flotas</h3>
+                            <i class="fas fa-chevron-right icon text-text-secondary"></i>
+                        </div>
+                        <div class="accordion-content text-text-secondary mt-3">
+                            <p>Mantén un control exhaustivo sobre el inventario de piezas, el historial de mantenimiento y los reportes para asegurar el cumplimiento y la eficiencia. Con Pulser, la gestión de activos se vuelve sencilla y precisa, evitando errores y optimizando recursos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Próximas Mejoras y Funcionalidades -->
+        <section id="roadmap" class="py-20 bg-bg-primary animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-12" style="text-shadow: var(--text-shadow-subtle);">
+                    Próximas <span class="text-accent">Mejoras y Funcionalidades</span>
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Funcionalidad 1: Gestión de Neumáticos -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <img src="https://placehold.co/200x150/6B7280/F9FAFB?text=Neumaticos" alt="Gestión de Neumáticos" class="section-image">
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Gestión Avanzada de Neumáticos</h3>
+                        <p class="text-text-secondary">Próximamente: Módulo completo para rastrear el desgaste, la presión y el historial de cada neumático, optimizando su vida útil y reduciendo costos operativos.</p>
+                    </div>
+                    <!-- Funcionalidad 2: Gestión de Combustible -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <img src="https://placehold.co/200x150/6B7280/F9FAFB?text=Combustible" alt="Gestión de Combustible" class="section-image">
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Optimización del Consumo de Combustible</h3>
+                        <p class="text-text-secondary">En desarrollo: Herramientas para monitorear y analizar el consumo de combustible, identificando oportunidades de ahorro y eficiencia en toda tu flota.</p>
+                    </div>
+                    <!-- Funcionalidad 3: Servicio GPS Integrado -->
+                    <div class="card-style text-center flex flex-col items-center">
+                        <img src="https://placehold.co/200x150/6B7280/F9FAFB?text=GPS" alt="Servicio GPS" class="section-image">
+                        <h3 class="text-2xl font-semibold mb-3 text-text-primary">Integración con Servicio GPS</h3>
+                        <p class="text-text-secondary">Planificado: Conecta tus dispositivos GPS para obtener datos de kilometraje y ubicación en tiempo real, mejorando la precisión del mantenimiento y la logística.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Contacto -->
+        <section id="contacto" class="py-20 bg-bg-secondary animate-fade-in scroll-reveal px-4">
+            <div class="container mx-auto">
+                <h2 class="text-4xl font-bold text-center mb-12" style="text-shadow: var(--text-shadow-subtle);">
+                    Contácta a <span class="text-accent">nuestro equipo</span>
+                </h2>
+                <div class="grid md:grid-cols-2 gap-12">
+                    <!-- Formulario de Contacto -->
+                    <div class="card-style">
+                        <h3 class="text-2xl font-semibold text-text-primary mb-6">Envíanos un Mensaje</h3>
+                        <form id="contact-form" class="space-y-6">
+                            <div>
+                                <label for="name" class="block text-text-secondary text-sm font-medium mb-2">Nombre Completo</label>
+                                <input type="text" id="name" name="name" class="custom-input w-full" placeholder="Tu Nombre" required>
+                            </div>
+                            <div>
+                                <label for="company" class="block text-text-secondary text-sm font-medium mb-2">Empresa</label>
+                                <input type="text" id="company" name="company" class="custom-input w-full" placeholder="Nombre de tu Empresa">
+                            </div>
+                            <div>
+                                <label for="email" class="block text-text-secondary text-sm font-medium mb-2">Correo Electrónico</label>
+                                <input type="email" id="email" name="email" class="custom-input w-full" placeholder="tu.correo@ejemplo.com" required>
+                            </div>
+                            <div>
+                                <label for="message" class="block text-text-secondary text-sm font-medium mb-2">Mensaje</label>
+                                <textarea id="message" name="message" rows="5" class="custom-input w-full" placeholder="Cuéntanos cómo podemos ayudarte..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary w-full flex items-center justify-center">
+                                <i class="fas fa-paper-plane mr-2"></i> Enviar Mensaje
+                            </button>
+                        </form>
+                    </div>
+                    <!-- Información de Contacto y Redes Sociales -->
+                    <div class="card-style">
+                        <h3 class="text-2xl font-semibold text-text-primary mb-6">Nuestra Información</h3>
+                        <div class="space-y-4 text-text-secondary">
+                            <p class="flex items-center"><i class="fas fa-map-marker-alt mr-3 text-accent"></i> Oficina Principal: 123 Calle de Ejemplo, Santiago, Chile</p>
+                            <p class="flex items-center"><i class="fas fa-phone mr-3 text-accent"></i> Teléfono: +56 9 1234 5678</p>
+                            <p class="flex items-center"><i class="fas fa-envelope mr-3 text-accent"></i> Correo: contacto@pulser.cl</p>
+                            <p class="flex items-center"><i class="fas fa-clock mr-3 text-accent"></i> Horario: Lun-Vie, 9:00 AM - 6:00 PM</p>
+                        </div>
+                        <h3 class="text-2xl font-semibold text-text-primary mt-10 mb-6">Síguenos en Redes</h3>
+                        <div class="flex space-x-4">
+                            <a href="#" class="social-icon" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#" class="social-icon" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                            <a href="#" class="social-icon" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#" class="social-icon" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Pie de Página -->
+    <footer class="bg-bg-secondary py-16 px-4">
+        <div class="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+            <!-- Columna 1: Logo y Descripción -->
+            <div>
+                <a href="#inicio" class="flex items-center text-3xl font-extrabold text-accent mb-4">
+                    <i class="fas fa-chart-line mr-2"></i> Pulser
+                </a>
+                <p class="text-text-secondary text-sm">
+                    Software líder para la gestión integral de mantenimiento de flotas de transporte. Optimiza, controla y maximiza tu rentabilidad.
+                </p>
+            </div>
+            <!-- Columna 2: Enlaces Rápidos -->
+            <div>
+                <h4 class="text-xl font-semibold text-text-primary mb-6">Enlaces Rápidos</h4>
+                <ul class="space-y-3">
+                    <li><a href="#inicio" class="footer-link">Inicio</a></li>
+                    <li><a href="#inteligencia-operativa" class="footer-link">Inteligencia Operativa</a></li>
+                    <li><a href="#beneficios" class="footer-link">Beneficios</a></li>
+                    <li><a href="#contacto" class="footer-link">Contacto</a></li>
+                </ul>
+            </div>
+            <!-- Columna 3: Soluciones -->
+            <div>
+                <h4 class="text-xl font-semibold text-text-primary mb-6">Soluciones</h4>
+                <ul class="space-y-3">
+                    <li><a href="#" class="footer-link">Gestión de Activos</a></li>
+                    <li><a href="#" class="footer-link">Mantenimiento Preventivo</a></li>
+                    <li><a href="#" class="footer-link">Control de Inventario</a></li>
+                    <li><a href="#" class="footer-link">Reportes Personalizados</a></li>
+                </ul>
+            </div>
+            <!-- Columna 4: Mantente Conectado -->
+            <div>
+                <h4 class="text-xl font-semibold text-text-primary mb-6">Mantente Conectado</h4>
+                <p class="text-text-secondary mb-4">Suscríbete a nuestro boletín para recibir las últimas novedades.</p>
+                <form class="flex flex-col sm:flex-row gap-3">
+                    <input type="email" placeholder="Tu correo electrónico" class="custom-input flex-grow">
+                    <button type="submit" class="btn-primary flex-shrink-0">Suscribir</button>
+                </form>
+            </div>
+        </div>
+        <div class="border-t border-input-border mt-12 pt-8 text-center text-text-secondary text-sm">
+            <p>&copy; 2025 Pulser. Todos los derechos reservados.</p>
+            <div class="mt-2 space-x-4">
+                <a href="#" class="footer-link">Política de Privacidad</a>
+                <a href="#" class="footer-link">Términos de Servicio</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Theme Toggle
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeToggleMobile = document.getElementById('theme-toggle-mobile');
+            const htmlElement = document.documentElement;
+
+            // Check for saved theme preference or system preference
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const savedTheme = localStorage.getItem('theme');
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                htmlElement.classList.add('dark');
+            } else {
+                htmlElement.classList.remove('dark');
+            }
+
+            const toggleTheme = () => {
+                if (htmlElement.classList.contains('dark')) {
+                    htmlElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    htmlElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            };
+
+            themeToggle.addEventListener('click', toggleTheme);
+            themeToggleMobile.addEventListener('click', toggleTheme);
+
+            // Mobile Menu Toggle
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Smooth Scrolling for Navigation Links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            // Scroll Reveal Animation (Fade-in)
+            const scrollRevealSections = document.querySelectorAll('.scroll-reveal');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-fade-in');
+                        observer.unobserve(entry.target); // Stop observing once animated
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            scrollRevealSections.forEach(section => {
+                observer.observe(section);
+            });
+
+            // Accordion Logic for Features and Roles
+            const accordionItems = document.querySelectorAll('.accordion-item');
+
+            accordionItems.forEach(item => {
+                const header = item.querySelector('.accordion-header') || item.querySelector('.accordion-header-text');
+                const content = item.querySelector('.accordion-content');
+
+                if (header && content) {
+                    header.addEventListener('click', () => {
+                        // Close all other open accordions in the same section
+                        accordionItems.forEach(otherItem => {
+                            // Check if the other item is in the same accordion group (e.g., parent section)
+                            // This prevents closing accordions in other sections.
+                            if (otherItem !== item && otherItem.closest('section') === item.closest('section') && otherItem.classList.contains('active')) {
+                                otherItem.classList.remove('active');
+                            }
+                        });
+                        // Toggle the clicked accordion
+                        item.classList.toggle('active');
+                    });
+                }
+            });
+
+            // Form Submission Simulation
+            const contactForm = document.getElementById('contact-form');
+            const messageBox = document.getElementById('message-box');
+
+            contactForm.addEventListener('submit', function(e) {
+                e.preventDefault(); // Prevent actual form submission
+
+                // Simulate form submission success
+                messageBox.textContent = '¡Mensaje enviado con éxito! Nos pondremos en contacto pronto.';
+                messageBox.classList.remove('hidden');
+                messageBox.classList.add('show');
+
+                // Hide message after 3 seconds
+                setTimeout(() => {
+                    messageBox.classList.remove('show');
+                    setTimeout(() => {
+                        messageBox.classList.add('hidden');
+                    }, 500); // Allow fade-out transition
+                }, 3000);
+
+                // Clear form fields
+                contactForm.reset();
+            });
+
+            // Hero Image Slider
+            const heroImages = document.querySelectorAll('.hero-slider-image');
+            let currentImageIndex = 0;
+
+            function showNextImage() {
+                heroImages[currentImageIndex].classList.remove('active');
+                currentImageIndex = (currentImageIndex + 1) % heroImages.length;
+                heroImages[currentImageIndex].classList.add('active');
+            }
+
+            // Start the slider after a short delay
+            if (heroImages.length > 1) {
+                heroImages[currentImageIndex].classList.add('active'); // Ensure first image is active on load
+                setInterval(showNextImage, 5000); // Change image every 5 seconds
+            }
+        });
+    </script>
+</body>
+</html>

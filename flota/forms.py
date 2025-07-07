@@ -217,9 +217,31 @@ class ManualInsumoForm(forms.Form): # <<-- CAMBIO AQUÍ: de forms.ModelForm a fo
     )
 
 class FiltroPizarraForm(forms.Form):
-    modelo = forms.ModelChoiceField(queryset=ModeloVehiculo.objects.all(), required=False, label="Modelo", widget=forms.Select(attrs={'class': 'form-control'}))
-    tipo_mantenimiento = forms.CharField(required=False, label="Tipo de Pauta", widget=forms.TextInput(attrs={'class': 'form-control'}))
-    proximos_5000_km = forms.BooleanField(required=False, label="Próximos 5.000 KM", widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+    modelo = forms.ModelChoiceField(
+        queryset=ModeloVehiculo.objects.all().order_by('nombre'),
+        required=False,
+        label="Modelo",
+        empty_label="Todos los Modelos",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    tipo_mantenimiento = forms.ChoiceField(
+        required=False,
+        label="Tipo de Mantenimiento",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    proximos_5000_km = forms.BooleanField(
+        required=False,
+        label="Próximos 5.000 KM",
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        pautas = PautaMantenimiento.objects.order_by('nombre').values_list('nombre', 'nombre').distinct()
+        opciones_finales = [('', 'Todos los Tipos')] + list(pautas)
+        self.fields['tipo_mantenimiento'].choices = opciones_finales
 
 class PausarOTForm(forms.ModelForm):
     class Meta:
