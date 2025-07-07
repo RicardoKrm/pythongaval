@@ -51,6 +51,13 @@ from .forms import (
 from django.utils import timezone 
 
 
+def landing_page(request):
+    """
+    Vista para la landing page pública del sitio.
+    """
+    # Esta vista simplemente renderiza una plantilla HTML. No necesita contexto.
+    return render(request, 'flota/landing.html')
+
 # --- Función de chequeo de rol ---
 def es_supervisor_o_admin(user):
     return user.groups.filter(name__in=['Supervisor', 'Administrador']).exists()

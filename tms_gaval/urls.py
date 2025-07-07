@@ -9,8 +9,8 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='cuentas/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
-    # Esta es la ruta principal que ahora contiene la lógica de redirección
-    path('', flota_views.dashboard_flota, name='dashboard'),
+    path('', flota_views.landing_page, name='landing'),
+    path('dashboard/', flota_views.dashboard_flota, name='dashboard'),
     
     # El resto de tus rutas permanecen igual
     path('api/ot-eventos/', flota_views.ot_eventos_api, name='ot_eventos_api'),
