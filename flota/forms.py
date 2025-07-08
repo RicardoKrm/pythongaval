@@ -286,24 +286,28 @@ class OTFiltroForm(forms.Form):
         widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
     )
 
+# flota/forms.py
+
+# ... (tus imports existentes) ...
+
 class CalendarioFiltroForm(forms.Form):
     vehiculo = forms.ModelChoiceField(
         queryset=Vehiculo.objects.all(), 
         required=False,
         label="Filtrar por Vehículo",
-        widget=forms.Select(attrs={'class': 'form-control select2'})
+        widget=forms.Select(attrs={'class': 'custom-input select2'}) # CAMBIO AQUÍ
     )
     estado = forms.ChoiceField(
         choices=[('', 'Todos los Estados')] + OrdenDeTrabajo.ESTADO_CHOICES,
         required=False, 
         label="Filtrar por Estado",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'custom-input'}) # CAMBIO AQUÍ
     )
     responsable = forms.ModelChoiceField(
         queryset=User.objects.filter(groups__name__in=['Mecánico', 'Supervisor']).distinct(),
         required=False,
         label="Filtrar por Responsable",
-        widget=forms.Select(attrs={'class': 'form-control select2'})
+        widget=forms.Select(attrs={'class': 'custom-input select2'}) # CAMBIO AQUÍ
     )    
     repuestos_disponibles = forms.ChoiceField(
         choices=[
@@ -313,7 +317,7 @@ class CalendarioFiltroForm(forms.Form):
         ],
         required=False,
         label='Disponibilidad de Repuestos',
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'custom-input'}) # CAMBIO AQUÍ
     )
 
 class RepuestoForm(forms.ModelForm):

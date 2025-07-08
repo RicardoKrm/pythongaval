@@ -543,47 +543,24 @@ def historial_vehiculo(request, pk):
 @login_required
 def pizarra_programacion(request):
     connection.set_tenant(request.tenant)
+    
+    # Obtener OTs pendientes para el sidebar
+    # Filtra por OTs NO finalizadas y no cerradas por mecánico (si es que ya tienes ese flujo)
+    # Excluye aquellas que ya tienen fecha programada para que el sidebar solo muestre las que "faltan por programar"
+    ot_pendientes_qs = OrdenDeTrabajo.objects.filter(
+        Q(estado='PENDIENTE') | Q(estado='PAUSADA') | Q(estado='EN_PROCESO'), # OTs activas
+        fecha_programada__isnull=True # Que no estén ya programadas
+    ).select_related('vehiculo', 'responsable').order_by('-prioridad', 'fecha_creacion')
+
+    # Filtros para el calendario y el sidebar (comparten el mismo form)
     filtro_form = CalendarioFiltroForm(request.GET or None)
     
-    form_creacion_ot = OrdenDeTrabajoForm() 
-
+    # Prepara el contexto para la plantilla
     context = {
-        'filtro_form': filtro_form,
-        'form_creacion_ot': form_creacion_ot,
+        'ot_pendientes': ot_pendientes_qs, # Las OTs que se pueden arrastrar
+        'filtro_form': filtro_form, # El formulario de filtros para el sidebar
     } 
     return render(request, 'flota/pizarra_programacion.html', context)
-
-def _limpiar_descripcion_tarea(descripcion):
-    """
-    Función auxiliar para limpiar la descripción de una tarea.
-    Elimina los estados comunes (PR, COR, OK, PENDIENTE) y otros artefactos.
-    """
-    if not isinstance(descripcion, str):
-        return None
-
-    # Elimina los indicadores de estado y lo que les sigue (ej: "PR OK", "COR PENDIENTE", etc.)
-    # La expresión regular busca las palabras PR, COR, CO, OK, PENDIENTE al final de una frase.
-    # Usaremos un método más simple y robusto: buscar por palabras clave y cortar la cadena.
-    
-    terminos_a_cortar = [' PR ', ' COR ', ' COK ', ' PENDIENTE', ' OK']
-    descripcion_limpia = descripcion
-    
-    for termino in terminos_a_cortar:
-        if termino in descripcion_limpia:
-            # Corta la cadena justo antes del término
-            descripcion_limpia = descripcion_limpia.split(termino)[0]
-
-    # Elimina cualquier número al final que pueda ser un folio o código (ej: '... 1167')
-    descripcion_limpia = re.sub(r'\s+\d+$', '', descripcion_limpia)
-    
-    # Elimina espacios en blanco extra al principio o al final
-    descripcion_limpia = descripcion_limpia.strip()
-
-    # Si la descripción es muy corta después de limpiar, la descartamos
-    if len(descripcion_limpia) < 5:
-        return None
-        
-    return descripcion_limpia
 
 @login_required
 @user_passes_test(lambda u: es_administrador(u)) # Solo los administradores pueden hacer carga masiva

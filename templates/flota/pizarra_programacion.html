@@ -1,34 +1,38 @@
 {% extends "flota/base.html" %}
+{% load static %}
 
 {% block title %}Pizarra de Programación{% endblock %}
 
-{% comment %} Bloqueamos el ancho completo en base.html para esta página si prefieres el sidebar fijo,
-si quieres que el calendario se extienda por completo, puedes ponerlo en "true" como en el dashboard. {% endcomment %}
-{% block full_width_content %}false{% endblock %}
+{# Le indicamos a base.html que esta página NO debe usar el ancho completo si queremos el sidebar fijo. #}
+{# Si quieres que el calendario se extienda por completo (sin sidebar o que el sidebar se sobreponga), puedes ponerlo en "true" #}
+{% block full_width_content %}false{% endblock %} 
 
 {% block extra_head %}
-    <!-- FullCalendar CSS (aún necesario, luego lo sobreescribimos) -->
+    {# ELIMINADAS LAS CARGAS DE CDN DUPLICADAS (Tailwind, Font Awesome, etc.) #}
+    {# ELIMINADAS TODAS LAS VARIABLES CSS GLOBALES Y ESTILOS BODY -> YA ESTÁN EN BASE.HTML #}
+
+    <!-- FullCalendar CSS (Importante: debe cargarse después de Tailwind para que nuestros overrides funcionen) -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
     
     <style>
-        /* Estilos personalizados para FullCalendar y elementos específicos */
+        /* --- ESTILOS ESPECÍFICOS DE PIZARRA DE PROGRAMACIÓN --- */
 
         /* CONTENEDOR PRINCIPAL: Usamos flexbox para layout de 2 columnas */
         .dashboard-container {
             display: flex;
-            min-height: calc(100vh - 8rem); /* Ajusta si tu nav/footer cambian la altura */
+            min-height: calc(100vh - 8rem); /* Ajusta la altura para que el calendario tenga espacio */
             gap: 1.5rem;
-            padding: 1.5rem 0; /* Padding vertical, aumentado */
+            padding: 1.5rem 0; /* Padding vertical */
         }
         @media (max-width: 992px) { /* Tabletas y móviles */
             .dashboard-container { flex-direction: column; padding: 1rem; }
             .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 1rem; }
-            .sidebar .card { flex: 1 1 calc(50% - 0.5rem); } /* Dos columnas en el sidebar */
+            .sidebar > .card-style { flex: 1 1 calc(50% - 0.5rem); } /* Dos columnas en el sidebar */
             .ot-panel { height: auto; min-height: 250px; }
             #calendar { height: 650px; }
         }
         @media (max-width: 768px) { /* Móviles más pequeños */
-            .sidebar .card { flex: 1 1 100%; } /* Una columna en el sidebar */
+            .sidebar > .card-style { flex: 1 1 100%; } /* Una columna en el sidebar */
             #calendar { height: 500px; }
         }
 
@@ -46,7 +50,23 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
             height: 100%;
             display: flex;
             flex-direction: column;
+            padding: 0; /* Ajuste para el card-style */
         }
+        .ot-panel .header-custom { /* Header de tarjeta custom (movido del HTML a CSS) */
+            padding: 1.25rem 2rem; /* Ajustar padding al del section-card */
+            border-bottom: 1px solid var(--input-border);
+            background-color: var(--bg-secondary); /* Fondo secundario del tema */
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: var(--text-primary);
+            font-size: 1.15rem;
+            font-weight: 700;
+            border-top-left-radius: 0.75rem; /* rounded-xl */
+            border-top-right-radius: 0.75rem; /* rounded-xl */
+        }
+        .ot-panel .header-custom i { color: var(--accent); font-size: 1.15rem; }
+
         .ot-list {
             flex-grow: 1;
             overflow-y: auto;
@@ -58,48 +78,49 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
 
         /* ÍTEM DE OT INDIVIDUAL */
         .ot-item {
-            background-color: var(--bg-secondary); /* Usa el color secundario del tema */
+            background-color: var(--input-bg); /* Usa el color de fondo de input del tema */
             border-left: 5px solid var(--accent); /* Borde izquierdo con color de acento */
             border-radius: 0.6rem;
-            padding: 1.2rem;
+            padding: 1rem 1.2rem; /* Ajustar padding */
             cursor: grab;
             transition: all 0.25s ease;
             position: relative;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2); /* Sombra ligera */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Sombra ligera */
+            border: 1px solid var(--input-border); /* Borde sutil */
         }
         .ot-item:active { cursor: grabbing; }
-        .ot-item:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.3); }
+        .ot-item:hover { transform: translateY(-3px); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
 
         .ot-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-        .ot-item-title { font-weight: 600; font-size: 1.05rem; margin: 0; color: var(--text-primary); }
+        .ot-item-title { font-weight: 600; font-size: 1rem; margin: 0; color: var(--text-primary); }
         .ot-item-priority {
             font-size: 0.7rem; padding: 0.3rem 0.6rem; border-radius: 0.3rem;
             font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
             min-width: 60px; text-align: center;
         }
         /* Colores de prioridad (basados en tu paleta Pulser) */
-        .priority-CRITICA { background-color: #EF4444; color: white; } /* red-500 */
-        .priority-ALTA { background-color: #F59E0B; color: #1A202C; } /* amber-500 */
-        .priority-MEDIA { background-color: #64748B; color: white; } /* slate-500 */
-        .priority-BAJA { background-color: var(--accent); color: white; } /* tu color accent */
+        .priority-CRITICA { background-color: var(--danger-color); color: white; }
+        .priority-ALTA { background-color: var(--warning-color); color: var(--text-primary); } /* Texto oscuro para contraste en amarillo */
+        .priority-MEDIA { background-color: #64748B; color: white; } /* Slate-500 */
+        .priority-BAJA { background-color: var(--accent); color: white; }
 
-        .ot-item-details { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+        .ot-item-details { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; font-size: 0.8rem; color: var(--text-secondary); }
         .ot-item-detail { display: flex; align-items: center; gap: 0.5rem; }
-        .ot-item-detail i { width: 18px; text-align: center; color: var(--accent); } /* Iconos con color de acento */
+        .ot-item-detail i { width: 18px; text-align: center; color: var(--accent); }
 
         /* FULLCALENDAR OVERRIDES (Sobreescribiendo estilos de FullCalendar) */
         #calendar {
-            background-color: var(--card-base-bg); /* Usa el color de tarjeta de tu tema */
+            background-color: var(--card-base-bg);
             border-radius: 0.75rem;
             padding: 1rem;
             height: 750px; /* Altura fija para el calendario */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            box-shadow: var(--shadow-medium);
         }
 
         /* Encabezado de la barra de herramientas de FullCalendar */
         .fc-toolbar-title { font-weight: 600; color: var(--text-primary); font-size: 1.4rem; }
-        .fc-toolbar { flex-wrap: wrap; } /* Permite que los elementos se envuelvan */
-        .fc-toolbar-chunk { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; } /* Espaciado y ajuste */
+        .fc-toolbar { flex-wrap: wrap; }
+        .fc-toolbar-chunk { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
         .fc-toolbar .fc-button-group { display: flex; flex-wrap: wrap; }
         
         /* Celdas de encabezado (días de la semana) */
@@ -151,7 +172,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
         
         /* Tooltip de FullCalendar (Bootstrap) */
         .tooltip-inner {
-            background-color: var(--card-base-bg); /* Fondo del tooltip */
+            background-color: var(--card-base-bg);
             color: var(--text-primary);
             border: 1px solid var(--input-border);
             padding: 0.75rem 1rem;
@@ -159,6 +180,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             font-size: 0.875rem;
         }
+        /* Flechas del tooltip adaptadas al tema */
         .tooltip.bs-tooltip-auto[x-placement^=top] .tooltip-arrow::before,
         .tooltip.bs-tooltip-top .tooltip-arrow::before { border-top-color: var(--card-base-bg); }
         .tooltip.bs-tooltip-auto[x-placement^=right] .tooltip-arrow::before,
@@ -176,55 +198,63 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
         <!-- Panel lateral para OT nuevas -->
         <aside class="sidebar">
             <div class="card-style ot-panel"> {# Usamos nuestra clase card-style #}
-                <div class="px-6 py-4 border-b border-input-border bg-bg-secondary flex items-center gap-3 rounded-t-lg"> {# Header de tarjeta custom #}
+                <div class="header-custom"> {# Clase custom para el header #}
                     <i class="fas fa-plus-circle text-accent"></i>
                     <h5 class="text-lg font-semibold text-text-primary">Órdenes de Trabajo Pendientes</h5>
                 </div>
-                <div class="p-0 flex-grow"> {# body p-0 #}
-                    <div class="ot-list" id="ot-pendientes">
-                        {% for ot_item in ot_pendientes %} {# Asumiendo que pasas ot_pendientes del contexto #}
-                        <div class="ot-item" draggable="true" 
-                             data-ot-id="{{ ot_item.id }}" 
-                             data-ot-title="{{ ot_item.titulo_evento }}" 
-                             data-ot-duration="{{ ot_item.duracion_horas|default:2 }}" {# Asume una duración por defecto si no está #}
-                             data-ot-priority="{{ ot_item.prioridad }}" 
-                             data-ot-estado="{{ ot_item.estado }}" 
-                             data-ot-vehiculo="{{ ot_item.vehiculo.numero_interno }} ({{ ot_item.vehiculo.patente }})" 
-                             data-ot-responsable="{{ ot_item.responsable.username|default:'N/A' }}">
-                            <div class="ot-item-header">
-                                <h5 class="ot-item-title">{{ ot_item.titulo_evento }}</h5>
-                                <span class="ot-item-priority priority-{{ ot_item.prioridad|upper }}">{{ ot_item.prioridad|upper }}</span>
-                            </div>
-                            <div class="ot-item-details">
-                                <div class="ot-item-detail">
-                                    <i class="fas fa-car"></i>
-                                    <span>{{ ot_item.vehiculo.numero_interno }}</span>
-                                </div>
-                                <div class="ot-item-detail">
-                                    <i class="fas fa-clock"></i>
-                                    <span>{{ ot_item.duracion_horas|default:2 }}h</span>
-                                </div>
-                                <div class="ot-item-detail">
-                                    <i class="fas fa-user-tie"></i>
-                                    <span>{{ ot_item.responsable.username|default:'N/A' }}</span>
-                                </div>
-                            </div>
+                <div class="ot-list" id="ot-pendientes">
+                    {% for ot_item in ot_pendientes %}
+                    <div class="ot-item" draggable="true" 
+                         data-ot-id="{{ ot_item.id }}" 
+                         data-ot-title="{{ ot_item.folio }} - {{ ot_item.vehiculo.numero_interno }}" 
+                         data-ot-duration="{{ ot_item.tfs_minutos|default:120 }}" {# Asume duración en minutos, 120min = 2h #}
+                         data-ot-priority="{{ ot_item.prioridad }}" 
+                         data-ot-estado="{{ ot_item.estado }}" 
+                         data-ot-vehiculo="{{ ot_item.vehiculo.numero_interno }} ({{ ot_item.vehiculo.patente }})" 
+                         data-ot-responsable="{{ ot_item.responsable.username|default:'N/A' }}"
+                         data-ot-has-parts="{{ ot_item.has_all_parts_available|lower }}"> {# Asegurar que sea 'true' o 'false' #}
+                        <div class="ot-item-header">
+                            <h5 class="ot-item-title">{{ ot_item.folio }}</h5>
+                            <span class="ot-item-priority priority-{{ ot_item.prioridad|upper }}">{{ ot_item.prioridad|upper }}</span>
                         </div>
-                        {% empty %}
-                        <p class="text-sm text-text-secondary italic text-center p-4">No hay órdenes de trabajo pendientes.</p>
-                        {% endfor %}
+                        <div class="ot-item-details">
+                            <div class="ot-item-detail">
+                                <i class="fas fa-car"></i>
+                                <span>{{ ot_item.vehiculo.numero_interno }}</span>
+                            </div>
+                            <div class="ot-item-detail">
+                                <i class="fas fa-clock"></i>
+                                <span>{{ ot_item.tfs_minutos|default:120 }}min</span>
+                            </div>
+                            <div class="ot-item-detail">
+                                <i class="fas fa-user-tie"></i>
+                                <span>{{ ot_item.responsable.username|default:'N/A' }}</span>
+                            </div>
+                            {% if ot_item.has_all_parts_available %}
+                            <div class="ot-item-detail text-green-500" title="Repuestos disponibles">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            {% else %}
+                            <div class="ot-item-detail text-red-500" title="Faltan repuestos">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
+                    {% empty %}
+                    <p class="text-sm text-text-secondary italic text-center p-4">No hay órdenes de trabajo pendientes.</p>
+                    {% endfor %}
                 </div>
             </div>
             
             <!-- Filtros en versión compacta para el sidebar -->
             <div class="card-style"> {# Usamos nuestra clase card-style #}
-                <div class="px-6 py-4 border-b border-input-border bg-bg-secondary flex items-center gap-3 rounded-t-lg"> {# Header de tarjeta custom #}
+                <div class="header-custom"> {# Clase custom para el header #}
                     <i class="fas fa-sliders-h text-accent"></i>
                     <h5 class="text-lg font-semibold text-text-primary">Filtros</h5>
                 </div>
                 <div class="p-6"> {# Card body #}
-                    <form method="get" id="filtro-calendario-form" class="space-y-4"> {# Usamos space-y-4 para gap vertical #}
+                    <form method="get" id="filtro-calendario-form" class="space-y-4">
                         <div>
                             <label for="{{ filtro_form.vehiculo.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.vehiculo.label }}</label>
                             {{ filtro_form.vehiculo }}
@@ -241,11 +271,11 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                             <label for="{{ filtro_form.repuestos_disponibles.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.repuestos_disponibles.label }}</label>
                             {{ filtro_form.repuestos_disponibles }}
                         </div>
-                        <div class="flex flex-wrap justify-end gap-3 pt-2"> {# Ajuste de margen y justificación #}
+                        <div class="flex flex-wrap justify-end gap-3 pt-2">
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-filter"></i> Aplicar
                             </button>
-                            <a href="{% url 'pizarra_programacion' %}" class="inline-flex items-center justify-center px-4 py-2 border border-input-border text-sm font-medium rounded-md shadow-sm text-text-secondary bg-bg-secondary hover:bg-input-border transition-transform duration-200 hover:scale-105">
+                            <a href="{% url 'pizarra_programacion' %}" class="btn-secondary"> {# Usamos btn-secondary del tema global #}
                                 <i class="fas fa-broom"></i> Limpiar
                             </a>
                         </div>
@@ -254,26 +284,24 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
             </div>
         </aside>
         
-        <!-- Contenido principal -->
+        <!-- Contenido principal (Calendario) -->
         <main class="main-content flex-grow">
-            <div class="bg-[var(--accent)] bg-opacity-20 backdrop-blur-sm p-8 rounded-lg shadow-xl text-white mb-6 relative overflow-hidden"> {# dashboard-header #}
-                <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-400/10 to-transparent pointer-events-none rounded-lg"></div>
+            <div class="bg-[var(--accent)] bg-opacity-20 backdrop-blur-sm p-8 rounded-lg shadow-xl text-white mb-6 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[var(--accent)]/10 to-transparent pointer-events-none rounded-lg"></div>
                 <h1 class="text-3xl font-bold mb-2 flex items-center gap-3 text-text-primary">
                     <i class="fas fa-calendar-alt"></i>Pizarra de Programación
                 </h1>
                 <p class="text-lg text-text-secondary">
-                    Arrastra las OT desde el panel izquierdo al calendario para asignarlas
+                    Arrastra las OT desde el panel izquierdo al calendario para asignarlas.
                 </p>
             </div>
 
-            <div class="card-style"> {# Usamos nuestra clase card-style #}
-                <div class="px-6 py-4 border-b border-input-border bg-bg-secondary flex items-center gap-3 rounded-t-lg"> {# Header de tarjeta custom #}
+            <div class="card-style p-0"> {# p-0 para que el padding del FullCalendar lo controle #}
+                <div class="header-custom"> {# Header de tarjeta custom #}
                     <i class="fas fa-calendar-days text-accent"></i>
                     <h5 class="text-lg font-semibold text-text-primary">Programación de Órdenes de Trabajo</h5>
                 </div>
-                <div class="p-0"> {# body p-0 #}
-                    <div id='calendar'></div>
-                </div>
+                <div id='calendar' class="p-4"> {# Añadido padding aquí #}</div>
             </div>
         </main>
     </div>
@@ -281,7 +309,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
 {% endblock %}
 
 {% block extra_scripts %}
-    {{ block.super }} {# Incluye scripts de base.html #}
+    {{ block.super }} {# Incluye scripts de base.html (jQuery, Select2) #}
     
     <!-- JS de FullCalendar y sus plugins -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
@@ -291,17 +319,17 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
 
     <!-- Bootstrap Bundle JS (SOLO PARA TOOLTIPS DE FULLCALENDAR) -->
+    {# Si no usas Bootstrap en el resto de la app, este es el único lugar donde debería estar #}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // Define las URLs de Django en variables JavaScript
         const otEventsApiUrl = "{% url 'ot_eventos_api' %}";
-        const otUpdateDateUrl = "/api/ot-actualizar-fecha/"; // URL base para la actualización de fecha
+        const otUpdateDateUrl = "{% url 'actualizar_fecha_ot_api' pk=0 %}".replace('0/', ''); // URL base para la actualización de fecha
 
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
             var filtroForm = document.getElementById('filtro-calendario-form');
-            var otList = document.getElementById('ot-pendientes');
             
             var draggedItem = null;
             
@@ -309,60 +337,76 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
             document.querySelectorAll('.ot-item').forEach(item => {
                 item.addEventListener('dragstart', function(e) {
                     draggedItem = this;
-                    e.dataTransfer.setData('text/plain', JSON.stringify(this.dataset));
+                    // Almacena solo los IDs y datos esenciales, no todo el dataset para evitar problemas
+                    const otData = {
+                        id: this.dataset.otId,
+                        title: this.dataset.otTitle,
+                        duration: this.dataset.otDuration,
+                        priority: this.dataset.otPriority,
+                        estado: this.dataset.otEstado,
+                        vehiculo: this.dataset.otVehiculo,
+                        responsable: this.dataset.otResponsable,
+                        hasParts: this.dataset.otHasParts === 'true' // Convertir a booleano
+                    };
+                    e.dataTransfer.setData('application/json', JSON.stringify(otData)); // Usar tipo MIME JSON
                     this.classList.add('dragged-ot');
                 });
                 
                 item.addEventListener('dragend', function() {
                     this.classList.remove('dragged-ot');
+                    draggedItem = null; // Limpiar después de soltar
                 });
             });
 
             var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                locale: 'es',
+                initialView: 'timeGridWeek', // Vista inicial (semanal por franjas horarias)
+                locale: 'es', // Idioma español
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'timeGridWeek,timeGridDay,dayGridMonth'
+                    right: 'timeGridWeek,timeGridDay,dayGridMonth' // Vistas disponibles
                 },
-                firstDay: 1, // Lunes
-                slotMinTime: "07:00:00",
-                slotMaxTime: "21:00:00",
-                allDaySlot: false,
-                navLinks: true,
-                editable: true,
-                droppable: true,
-                dayMaxEvents: true,
-                eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-                eventAllow: function(dropInfo, draggedEvent) { return true; },
+                firstDay: 1, // Lunes como primer día de la semana
+                slotMinTime: "07:00:00", // Horario de inicio de día
+                slotMaxTime: "21:00:00", // Horario de fin de día
+                allDaySlot: false, // Desactivar la fila de "todo el día"
+                navLinks: true, // Permite hacer clic en días/semanas para ir a esa vista
+                editable: true, // Permite mover y redimensionar eventos
+                droppable: true, // Permite soltar elementos externos (OTs pendientes)
+                dayMaxEvents: true, // Mostrar '+X más' si hay demasiados eventos en un día
+                eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false }, // Formato de hora (ej: 14:30)
+                eventDurationEditable: true, // Permite redimensionar eventos
                 
+                // Función que se ejecuta cuando un elemento arrastrado es soltado en el calendario
                 drop: function(info) {
-                    if (!draggedItem) return;
-                    const otData = JSON.parse(info.dataTransfer.getData('text/plain'));
-
+                    const otData = JSON.parse(info.dataTransfer.getData('application/json')); // Leer datos como JSON
+                    
+                    // Calcular la duración del evento arrastrado (si es en minutos, convertir a horas y minutos)
+                    const durationMinutes = parseInt(otData.duration) || 120; // Default a 120 minutos (2 horas)
+                    
+                    // Crear el nuevo evento para FullCalendar
                     var newEvent = {
-                        id: otData.otId, // IMPORTANTE: Pasar el ID real de la OT
-                        title: otData.otTitle,
+                        id: otData.id,
+                        title: otData.title,
                         start: info.date,
-                        duration: { hours: parseInt(otData.otDuration) || 2 },
-                        extendedProps: {
-                            estado: otData.otEstado || 'PENDIENTE',
-                            prioridad: otData.otPriority || 'MEDIA',
-                            vehiculo: otData.otVehiculo || 'N/A',
-                            responsable: otData.otResponsable || 'N/A',
-                            tipo: 'Programada', // O el tipo real si lo tienes en dataset
-                            hasAllPartsAvailable: true // Debería venir del backend
+                        end: new Date(info.date.getTime() + durationMinutes * 60 * 1000), // Sumar la duración
+                        resourceId: otData.responsableId || null, // Asignar a un recurso si existe
+                        extendedProps: { // Propiedades adicionales para el tooltip/estilo
+                            estado: otData.estado,
+                            prioridad: otData.priority,
+                            vehiculo: otData.vehiculo,
+                            responsable: otData.responsable,
+                            hasAllPartsAvailable: otData.hasParts,
                         },
-                        // Las clases se asignan vía eventClassNames
+                        url: "{% url 'ot_detail' pk=0 %}".replace('0', otData.id), // URL al detalle de la OT
                     };
                     
-                    // Llama a tu API de Django para guardar la programación
+                    // Llama a tu API de Django para guardar la programación (POST)
                     const csrfToken = '{{ csrf_token }}';
-                    fetch(`${otUpdateDateUrl}${otData.otId}/`, {
+                    fetch(`${otUpdateDateUrl}${otData.id}/`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
-                        body: JSON.stringify({ fecha_programada: info.date.toISOString() })
+                        body: JSON.stringify({ fecha_programada: info.date.toISOString() }) // Enviar fecha de inicio
                     })
                     .then(response => {
                         if (!response.ok) throw new Error('Error al guardar la programación.');
@@ -370,29 +414,28 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                     })
                     .then(data => {
                         if (data.status === 'ok') {
-                            calendar.addEvent(newEvent);
-                            draggedItem.remove(); // Eliminar de la lista de pendientes
-                            draggedItem = null;
-                            calendar.refetchEvents(); // Opcional: recargar todos los eventos para asegurar consistencia
+                            calendar.addEvent(newEvent); // Añadir evento al calendario
+                            if (draggedItem) { draggedItem.remove(); } // Eliminar de la lista de pendientes del sidebar
+                            alert('OT programada con éxito.');
                         } else {
                             alert('Error al programar la OT: ' + data.message);
-                            draggedItem.classList.remove('dragged-ot'); // Revertir visualmente si hay error
                         }
                     })
                     .catch(error => {
                         console.error('Error al programar OT:', error);
                         alert(`Error al programar la OT: ${error.message}`);
-                        draggedItem.classList.remove('dragged-ot'); // Revertir visualmente si hay error
                     });
                 },
                 
+                // Cuando se hace clic en una celda de día/hora (ej. para crear una OT rápidamente)
                 dateClick: function(info) {
-                    const fechaSeleccionada = info.dateStr.split('T')[0];
-                    const url = `{% url 'ot_list' %}?fecha_programada=${fechaSeleccionada}&from_calendar=true`;
-                    window.location.href = url;
+                    // Puedes redirigir a la página de creación de OT con la fecha preseleccionada
+                    const fechaSeleccionada = info.dateStr.split('T')[0]; // Solo la fecha
+                    // Construye la URL de creación de OT con la fecha pre-rellenada
+                    window.location.href = `{% url 'ot_list' %}?fecha_programada=${fechaSeleccionada}`;
                 },
                 
-                // Asignar clases CSS a los eventos de FullCalendar
+                // Función para asignar clases CSS a los eventos de FullCalendar (estilizado en extra_head)
                 eventClassNames: function(arg) {
                     let classes = []; 
                     if (arg.event.extendedProps.estado) { classes.push('estado-' + arg.event.extendedProps.estado.replace(/ /g, '_').toUpperCase()); }
@@ -400,11 +443,18 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                     return classes;
                 },
 
-                // Carga de eventos desde Django
+                // Carga de eventos desde Django API
                 events: function(fetchInfo, successCallback, failureCallback) {
-                    const params = new URLSearchParams(new FormData(filtroForm)); 
+                    const form = document.getElementById('filtro-calendario-form');
+                    const params = new URLSearchParams(new FormData(form)); 
                     params.append('start', fetchInfo.startStr);
                     params.append('end', fetchInfo.endStr);
+                    // Añadir filtros de vehiculo, estado, responsable, repuestos_disponibles
+                    if ($('#id_vehiculo').val()) params.append('vehiculo', $('#id_vehiculo').val());
+                    if ($('#id_estado').val()) params.append('estado', $('#id_estado').val());
+                    if ($('#id_responsable').val()) params.append('responsable', $('#id_responsable').val());
+                    if ($('#id_repuestos_disponibles').val()) params.append('repuestos_disponibles', $('#id_repuestos_disponibles').val());
+
                     const url = `${otEventsApiUrl}?${params.toString()}`;
                     
                     fetch(url)
@@ -416,6 +466,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                         .catch(error => { console.error('Error al cargar eventos:', error); failureCallback(error); });
                 },
                 
+                // Cuando se arrastra y suelta un evento existente dentro del calendario
                 eventDrop: function(info) {
                     const otId = info.event.id;
                     const nuevaFecha = info.event.start.toISOString();
@@ -423,7 +474,51 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                     fetch(`${otUpdateDateUrl}${otId}/`, {
                         method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
                         body: JSON.stringify({ fecha_programada: nuevaFecha })
-                    }).catch(error => { console.error('Error al actualizar la fecha de la OT:', error); info.revert(); });
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error al actualizar la fecha.');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.status === 'error') {
+                            alert('Error al mover OT: ' + data.message);
+                            info.revert(); // Revierte el evento visualmente
+                        }
+                    })
+                    .catch(error => { 
+                        console.error('Error al actualizar la fecha de la OT:', error); 
+                        alert(`Error al mover la OT: ${error.message}`);
+                        info.revert(); // Revierte el evento visualmente
+                    });
+                },
+
+                // Cuando se redimensiona un evento existente en el calendario
+                eventResize: function(info) {
+                    const otId = info.event.id;
+                    const nuevaFechaInicio = info.event.start.toISOString();
+                    const nuevaFechaFin = info.event.end.toISOString();
+                    // Aquí podrías enviar al backend la nueva duración/fecha_fin
+                    // Por ahora, tu API solo actualiza fecha_programada (inicio), pero puedes expandirla
+                    const csrfToken = '{{ csrf_token }}';
+                    fetch(`${otUpdateDateUrl}${otId}/`, { // O una nueva URL para resize
+                        method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify({ fecha_programada: nuevaFechaInicio, fecha_cierre: nuevaFechaFin })
+                    })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error al redimensionar.');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.status === 'error') {
+                            alert('Error al redimensionar OT: ' + data.message);
+                            info.revert();
+                        }
+                    })
+                    .catch(error => { 
+                        console.error('Error al redimensionar OT:', error); 
+                        alert(`Error al redimensionar la OT: ${error.message}`);
+                        info.revert();
+                    });
                 },
 
                 // Contenido de cada evento en el calendario
@@ -432,7 +527,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                     eventContentEl.classList.add('fc-event-main-frame'); 
                     
                     let titleEl = document.createElement('div');
-                    titleEl.classList.add('fc-event-title'); // Usar la clase CSS para truncar texto
+                    titleEl.classList.add('fc-event-title'); 
                     
                     const prioridad = arg.event.extendedProps?.prioridad;
                     let prioridadIcon = '';
@@ -441,6 +536,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                     titleEl.innerHTML = prioridadIcon + arg.event.title;
                     eventContentEl.appendChild(titleEl);
 
+                    // Icono de repuestos
                     if (arg.event.extendedProps && typeof arg.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
                         let iconEl = document.createElement('i');
                         iconEl.classList.add('repuesto-icon');
@@ -457,7 +553,7 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                     return { domNodes: [eventContentEl] };
                 },
 
-                // Tooltip de Bootstrap para eventos
+                // Tooltip de Bootstrap para eventos (cuando se pasa el ratón por encima)
                 eventDidMount: function(info) {
                     let repuestosStatus = 'No especificado';
                     if (info.event.extendedProps && typeof info.event.extendedProps.hasAllPartsAvailable !== 'undefined') {
@@ -497,21 +593,25 @@ si quieres que el calendario se extienda por completo, puedes ponerlo en "true" 
                         </div>
                     `;
 
+                    // Inicializar el tooltip de Bootstrap
                     new bootstrap.Tooltip(info.el, {
                         html: true, placement: 'top', trigger: 'hover', container: 'body', title: tooltipContent
                     });
                 },
                 
+                // Cuando se hace clic en un evento (redireccionar al detalle de la OT)
                 eventClick: function(info) {
-                    info.jsEvent.preventDefault();
-                    if (info.event.url) { window.open(info.event.url, "_blank"); }
+                    info.jsEvent.preventDefault(); // Prevenir el comportamiento por defecto del enlace
+                    if (info.event.url) { window.open(info.event.url, "_blank"); } // Abrir en nueva pestaña
                 }
             });
 
-            calendar.render();
+            calendar.render(); // Renderizar el calendario
 
+            // Refrescar eventos del calendario cuando los filtros cambian
             filtroForm.addEventListener('change', function() { calendar.refetchEvents(); });
             
+            // Configurar FullCalendar para aceptar elementos arrastrables con la clase 'ot-item'
             calendar.setOption('dropAccept', '.ot-item');
         });
     </script>
