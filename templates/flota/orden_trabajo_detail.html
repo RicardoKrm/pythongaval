@@ -3,242 +3,281 @@
 {% block title %}Detalle OT #{{ ot.folio }}{% endblock %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    
+    <!-- Estilos necesarios para la animación del acordeón -->
     <style>
-        body { background-color: #1a202c !important; color: #cbd5e0 !important; } .container { max-width: 1200px; } h1, h2, h4, h5 { color: #e2e8f0; } hr { border-color: #4a5568; } .grid-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; } @media (max-width: 992px) { .grid-container { grid-template-columns: 1fr; } } .ot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; } .ot-status { padding: .3rem .9rem; border-radius: 9999px; font-weight: bold; color: white; } .status-PENDIENTE { background-color: #dd6b20; } .status-EN_PROCESO { background-color: #3182ce; } .status-PAUSADA { background-color: #d69e2e; } .status-CERRADA_MECANICO { background-color: #718096; } .status-FINALIZADA { background-color: #2f855a; } .card { background-color: #2d3748; border: 1px solid #4a5568; border-radius: 0.5rem; } .data-list { list-style: none; padding: 0; margin:0; } .data-list li { display: flex; justify-content: space-between; align-items: center; padding: .75rem 0; border-bottom: 1px solid #4a5568; } .data-list li:last-child { border-bottom: none; } .data-list strong { color: #a0aec0; } .card h4 i, .card h5 i { color: #a0aec0; margin-right: 0.75rem; } .accordion-button { background-color: #2d3748 !important; color: #e2e8f0 !important; box-shadow: none !important; } .accordion-button:not(.collapsed) { background-color: #4a5568 !important; } .accordion-button::after { filter: invert(1) grayscale(100%) brightness(200%); } .accordion-body { background-color: #2d3748; } .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9em; color: #a0aec0; } .form-control, .form-select { background-color: #1a202c; color: #cbd5e0; border: 1px solid #4a5568; } .form-control:focus, .form-select:focus { background-color: #1a202c; color: #cbd5e0; border-color: #3182ce; box-shadow: none; } .history-item-icon { width: 30px; text-align: center; } .select2-container { width: 100% !important; box-sizing: border-box; } .select2-container--default .select2-selection--single, .select2-container--default .select2-selection--multiple { background-color: #1a202c !important; border: 1px solid #4a5568 !important; border-radius: 0.375rem !important; min-height: 38px !important; padding: 5px; } .select2-container--default .select2-selection--single .select2-selection__rendered { color: #cbd5e0 !important; line-height: 26px !important; } .select2-container--default .select2-selection--single .select2-selection__arrow { height: 36px !important; } .select2-container--default .select2-selection--multiple .select2-selection__choice { background-color: #4a5568 !important; border-color: #3182ce !important; color: #e2e8f0 !important; padding: 3px 6px !important; margin: 2px !important; } .select2-container--default .select2-selection--multiple .select2-selection__choice__remove { color: #cbd5e0 !important; margin-right: 5px !important; } .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover { color: #fff !important; } .select2-dropdown { background-color: #2d3748 !important; border: 1px solid #4a5568 !important; } .select2-container--default .select2-search--dropdown .select2-search__field { background-color: #1a202c !important; color: #cbd5e0 !important; border: 1px solid #4a5568 !important; } .select2-container--default .select2-results__option--highlighted[aria-selected] { background-color: #3182ce !important; } .select2-container--default .select2-results__option[aria-selected=true] { background-color: #4a5568 !important; }
+        .accordion-content {
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            max-height: 0; /* Oculto por defecto */
+        }
     </style>
 {% endblock %}
 
+
 {% block content %}
-<div class="ot-header">
-    <div>
-        <h1>Orden de Trabajo <span class="text-muted">#{{ ot.folio }}</span></h1>
-        <div class="d-flex align-items-center mt-2">
-            <p class="h4 text-muted mb-0 me-3">{{ ot.vehiculo }}</p>
-            <a href="{% url 'historial_vehiculo' pk=ot.vehiculo.pk %}" class="btn btn-sm btn-outline-info">
-                <i class="fas fa-history me-1"></i> Ver Historial del Vehículo
-            </a>
-        </div>
-    </div>
-    <span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span>
-</div>
+<div class="space-y-6">
 
-{% if ot.estado == 'PAUSADA' %}
-<div class="alert alert-warning" role="alert" style="background-color: #d69e2e; border-color: #b08020; color: #fff;">
-    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> ¡OT Pausada!</h4>
-    <p class="mb-0"><strong>Motivo:</strong> {{ ot.get_motivo_pausa_display }}. {{ ot.notas_pausa }}</p>
-</div>
-{% endif %}
-
-<div class="mb-4">
-    {% comment %} SOLO el Administrador puede Pausar y Reanudar {% endcomment %}
-    {% if puede_realizar_acciones_criticas %}
-        {% if ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}
-            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#pausarOTModal"><i class="fas fa-pause me-1"></i> Pausar OT</button>
-        {% endif %}
-
-        {% if ot.estado == 'PAUSADA' %}
-            <form method="post" class="d-inline">
-                {% csrf_token %}  {# <--- TOKEN AÑADIDO AQUÍ #}
-                <input type="hidden" name="estado" value="EN_PROCESO">
-                <button type="submit" name="cambiar_estado" class="btn btn-success"><i class="fas fa-play me-1"></i> Reanudar OT</button>
-            </form>
-        {% endif %}
-    {% endif %}
-
-    {% comment %} Supervisor y Admin pueden autorizar horas extra {% endcomment %}
-    {% if puede_gestionar_tareas_y_personal %}
-        {% if not ot.horas_extra_autorizadas and ot.estado in "PAUSADA,EN_PROCESO" %}
-            <form method="post" action="{% url 'autorizar_horas_extra' pk=ot.pk %}" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres autorizar horas extra para esta OT?');">
-                {% csrf_token %}  {# <--- TOKEN AÑADIDO AQUÍ #}
-                <button type="submit" class="btn btn-info">
-                    <i class="fas fa-clock me-1"></i> Autorizar Horas Extra
-                </button>
-            </form>
-        {% endif %}
-
-        {% if ot.tipo == 'EVALUATIVA' %}
-            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#diagnosticoModal"><i class="fas fa-stethoscope me-1"></i> Añadir Diagnóstico</button>
-        {% endif %}
-    {% endif %}
-</div>
-
-<div class="grid-container">
-    <div class="left-column">
-        <div class="card mb-4">
-            <div class="card-body">
-                <h4 class="mb-3"><i class="fas fa-info-circle"></i>Información General</h4>
-                <ul class="data-list">
-                    <li><strong>Tipo:</strong> <span>{{ ot.get_tipo_display }}</span></li>
-                    <li><strong>Prioridad:</strong> <span>{{ ot.get_prioridad_display }}</span></li>
-                    <li><strong>Fecha Creación:</strong> <span>{{ ot.fecha_creacion|date:"d M Y, H:i" }}</span></li>
-                    <li><strong>KM Apertura:</strong> <span>{{ ot.kilometraje_apertura|floatformat:0 }}</span></li>
-                    <li class="border-0"><strong>Costo Total:</strong> <strong class="fs-4 text-success">${{ ot.costo_total|floatformat:2 }}</strong></li>
-                </ul>
+    <!-- Encabezado de la página -->
+    <div class="flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <a href="{% url 'ot_list' %}" class="text-sm text-text-secondary hover:text-accent transition-colors"><i class="fas fa-arrow-left mr-2"></i>Volver al listado</a>
+            <h1 class="text-3xl font-bold text-text-primary mt-1">Orden de Trabajo #{{ ot.folio }}</h1>
+            <div class="flex items-center gap-4 mt-2">
+                <p class="text-lg text-text-secondary">{{ ot.vehiculo }}</p>
+                <a href="{% url 'historial_vehiculo' pk=ot.vehiculo.pk %}" class="text-xs font-semibold text-accent hover:underline">
+                    <i class="fas fa-history mr-1"></i> Ver Historial del Vehículo
+                </a>
             </div>
         </div>
-        {% if ot.tipo == 'EVALUATIVA' %}
-        <div class="card mb-4"><div class="card-body"><h4 class="mb-3"><i class="fas fa-search"></i>Detalles de Evaluación</h4><h5><i class="fas fa-comment-dots text-muted"></i> Síntomas Reportados</h5><p class="ms-4">{{ ot.sintomas_reportados|linebreaksbr|default:"No especificados." }}</p><hr><h5 class="mt-3"><i class="fas fa-user-md text-muted"></i> Diagnóstico Técnico</h5><p class="ms-4">{{ ot.diagnostico_evaluacion|linebreaksbr|default:"Pendiente de diagnóstico." }}</p></div></div>
-        {% endif %}
-        <div class="card mb-4"><div class="card-body"><h4 class="mb-3"><i class="fas fa-tasks"></i>Tareas Realizadas</h4>{% if ot.tareas_realizadas.all %}<ul class="data-list">{% for tarea in ot.tareas_realizadas.all %}<li><span>{{ tarea.descripcion }}</span><span class="text-muted">${{ tarea.costo_base|floatformat:2 }}{% if puede_gestionar_tareas_y_personal %}<form action="{% url 'eliminar_tarea_ot' ot.pk tarea.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar esta tarea?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger ms-2 py-0 px-1"><i class="fas fa-trash-alt fa-xs"></i></button></form>{% endif %}</span></li>{% endfor %}</ul>{% else %}<p class="text-muted">Aún no se han añadido tareas.</p>{% endif %}</div></div>
-        <div class="card mb-4"><div class="card-body"><h4 class="mb-3"><i class="fas fa-boxes"></i>Insumos Utilizados</h4>{% if ot.detalles_insumos_ot.all %}<ul class="data-list">{% for detalle in ot.detalles_insumos_ot.all %}<li><span>{{ detalle.cantidad|floatformat }} x {% if detalle.repuesto_inventario %}{{ detalle.repuesto_inventario.nombre }} ({{ detalle.repuesto_inventario.numero_parte }}){% else %}{{ detalle.insumo.nombre }}{% endif %}</span><span class="text-muted">${% if detalle.repuesto_inventario %}{{ detalle.repuesto_inventario.precio_unitario|floatformat:2 }}{% else %}{{ detalle.insumo.precio_unitario|floatformat:2 }}{% endif %} c/u{% if puede_gestionar_tareas_y_personal %}<form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este insumo/repuesto?');">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger ms-2 py-0 px-1"><i class="fas fa-trash-alt fa-xs"></i></button></form>{% endif %}</span></li>{% endfor %}</ul>{% else %}<p class="text-muted">Aún no se han añadido insumos o repuestos.</p>{% endif %}</div></div>
-        <div class="card"><div class="card-body"><h4 class="mb-3"><i class="fas fa-history"></i>Historial de la OT</h4><div style="max-height: 400px; overflow-y: auto;"><ul class="list-group list-group-flush">{% for evento in ot.historial.all %}<li class="list-group-item bg-transparent border-secondary ps-0"><div class="d-flex w-100"><div class="history-item-icon me-3"><i class="fas fa-info-circle text-primary"></i></div><div><div class="d-flex justify-content-between"><h6 class="mb-1">{{ evento.get_tipo_evento_display }}</h6><small class="text-muted">{{ evento.fecha_evento|date:"d/m/Y H:i" }}</small></div><p class="mb-1 small">{{ evento.descripcion }}</p><small class="text-muted">Por: {{ evento.usuario.username|default:"Sistema" }}</small></div></div></li>{% empty %}<li class="list-group-item bg-transparent border-secondary">No hay eventos registrados.</li>{% endfor %}</ul></div></div></div>
+        <div class="text-right">
+            <span class="inline-block px-4 py-2 text-sm font-bold text-white rounded-lg shadow-md
+                {% if ot.estado == 'PENDIENTE' %}bg-yellow-500
+                {% elif ot.estado == 'EN_PROCESO' %}bg-blue-500
+                {% elif ot.estado == 'PAUSADA' %}bg-orange-500
+                {% elif ot.estado == 'CERRADA_MECANICO' %}bg-gray-500
+                {% elif ot.estado == 'FINALIZADA' %}bg-green-600
+                {% else %}bg-gray-400{% endif %}">
+                {{ ot.get_estado_display }}
+            </span>
+            <p class="text-xs text-text-secondary mt-1">Costo Total: <strong class="text-base text-green-400">${{ ot.costo_total|floatformat:2 }}</strong></p>
+        </div>
     </div>
-    <div class="right-column">
-        <div class="accordion" id="accordionOT">
+
+    <!-- Alerta de OT Pausada -->
+    {% if ot.estado == 'PAUSADA' %}
+    <div class="p-4 rounded-lg bg-yellow-500/20 border-l-4 border-yellow-500 text-yellow-300">
+        <p class="font-bold"><i class="fas fa-exclamation-triangle mr-2"></i>¡OT Pausada!</p>
+        <p class="text-sm"><strong>Motivo:</strong> {{ ot.get_motivo_pausa_display }}. {{ ot.notas_pausa }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Botones de Acción Principales -->
+    <div class="flex flex-wrap gap-3">
+        {% if puede_realizar_acciones_criticas and ot.estado != 'PAUSADA' and ot.estado != 'FINALIZADA' %}
+            <button type="button" class="btn-primary !bg-yellow-500 hover:!bg-yellow-600" onclick="openModal('pausarOTModal')"><i class="fas fa-pause mr-2"></i>Pausar OT</button>
+        {% endif %}
+        {% if puede_realizar_acciones_criticas and ot.estado == 'PAUSADA' %}
+            <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="estado" value="EN_PROCESO"><button type="submit" name="cambiar_estado" class="btn-primary !bg-green-600 hover:!bg-green-700"><i class="fas fa-play mr-2"></i>Reanudar OT</button></form>
+        {% endif %}
+        {% if puede_gestionar_tareas_y_personal and not ot.horas_extra_autorizadas and ot.estado in "PAUSADA,EN_PROCESO" %}
+            <form method="post" action="{% url 'autorizar_horas_extra' pk=ot.pk %}" class="inline" onsubmit="return confirm('¿Autorizar horas extra para esta OT?');">{% csrf_token %}<button type="submit" class="btn-primary !bg-sky-500 hover:!bg-sky-600"><i class="fas fa-clock mr-2"></i>Autorizar Horas Extra</button></form>
+        {% endif %}
+        {% if puede_gestionar_tareas_y_personal and ot.tipo == 'EVALUATIVA' %}
+            <button type="button" class="btn-primary !bg-indigo-500 hover:!bg-indigo-600" onclick="openModal('diagnosticoModal')"><i class="fas fa-stethoscope mr-2"></i>Añadir Diagnóstico</button>
+        {% endif %}
+    </div>
+
+    <!-- Layout principal de dos columnas -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Columna Izquierda (Principal) -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="card-style"><h4 class="text-lg font-semibold mb-3"><i class="fas fa-info-circle mr-2 text-accent"></i>Información General</h4><div class="grid grid-cols-2 gap-4 text-sm"><div><strong class="block text-text-secondary">Tipo:</strong><span>{{ ot.get_tipo_display }}</span></div><div><strong class="block text-text-secondary">Prioridad:</strong><span>{{ ot.get_prioridad_display }}</span></div><div><strong class="block text-text-secondary">Fecha Creación:</strong><span>{{ ot.fecha_creacion|date:"d M Y, H:i" }}</span></div><div><strong class="block text-text-secondary">KM Apertura:</strong><span>{{ ot.kilometraje_apertura|floatformat:0 }}</span></div></div></div>
+            {% if ot.tipo == 'EVALUATIVA' %}<div class="card-style"><h4 class="text-lg font-semibold mb-3"><i class="fas fa-search mr-2 text-accent"></i>Detalles de Evaluación</h4><div><h5 class="font-medium text-text-secondary"><i class="fas fa-comment-dots mr-2"></i>Síntomas Reportados</h5><p class="pl-6 text-sm italic">{{ ot.sintomas_reportados|linebreaksbr|default:"No especificados." }}</p></div><hr class="border-input-border my-4"><div><h5 class="font-medium text-text-secondary"><i class="fas fa-user-md mr-2"></i>Diagnóstico Técnico</h5><p class="pl-6 text-sm italic">{{ ot.diagnostico_evaluacion|linebreaksbr|default:"Pendiente de diagnóstico." }}</p></div></div>{% endif %}
+            <div class="card-style"><h4 class="text-lg font-semibold mb-3"><i class="fas fa-tasks mr-2 text-accent"></i>Tareas Realizadas</h4>{% if ot.tareas_realizadas.all %}<ul class="space-y-2 text-sm">{% for tarea in ot.tareas_realizadas.all %}<li class="flex justify-between items-center p-2 rounded-md hover:bg-bg-secondary"><span>{{ tarea.descripcion }}</span><span class="font-mono text-text-secondary">${{ tarea.costo_base|floatformat:2 }}{% if puede_gestionar_tareas_y_personal %}<form action="{% url 'eliminar_tarea_ot' ot.pk tarea.pk %}" method="post" class="inline" onsubmit="return confirm('¿Eliminar esta tarea?');">{% csrf_token %}<button type="submit" class="text-red-500 hover:text-red-400 ml-3"><i class="fas fa-trash-alt"></i></button></form>{% endif %}</span></li>{% endfor %}</ul>{% else %}<p class="text-sm text-text-secondary italic">Aún no se han añadido tareas.</p>{% endif %}</div>
+            <div class="card-style"><h4 class="text-lg font-semibold mb-3"><i class="fas fa-boxes mr-2 text-accent"></i>Insumos y Repuestos</h4>{% if ot.detalles_insumos_ot.all %}<ul class="space-y-2 text-sm">{% for detalle in ot.detalles_insumos_ot.all %}<li class="flex justify-between items-center p-2 rounded-md hover:bg-bg-secondary"><span>{{ detalle.cantidad|floatformat }} x {% if detalle.repuesto_inventario %}{{ detalle.repuesto_inventario.nombre }}{% else %}{{ detalle.insumo.nombre }}{% endif %}</span><span class="font-mono text-text-secondary">${% if detalle.repuesto_inventario %}{{ detalle.repuesto_inventario.precio_unitario|floatformat:2 }}{% else %}{{ detalle.insumo.precio_unitario|floatformat:2 }}{% endif %} c/u{% if puede_gestionar_tareas_y_personal %}<form action="{% url 'eliminar_insumo_ot' ot.pk detalle.pk %}" method="post" class="inline" onsubmit="return confirm('¿Eliminar este insumo/repuesto?');">{% csrf_token %}<button type="submit" class="text-red-500 hover:text-red-400 ml-3"><i class="fas fa-trash-alt"></i></button></form>{% endif %}</span></li>{% endfor %}</ul>{% else %}<p class="text-sm text-text-secondary italic">Aún no se han añadido insumos.</p>{% endif %}</div>
+            <div class="card-style"><h4 class="text-lg font-semibold mb-3"><i class="fas fa-history mr-2 text-accent"></i>Historial de la OT</h4><ul class="space-y-4">{% for evento in ot.historial.all %}<li class="flex items-start text-sm"><i class="fas fa-info-circle text-accent mt-1 mr-3"></i><div><p class="text-text-primary">{{ evento.descripcion }}</p><p class="text-xs text-text-secondary">Por {{ evento.usuario.username|default:"Sistema" }} - {{ evento.fecha_evento|date:"d/m/Y H:i" }}</p></div></li>{% empty %}<p class="text-sm text-text-secondary italic">No hay eventos registrados.</p>{% endfor %}</ul></div>
+        </div>
+
+        <!-- Columna Derecha (Acciones) - ACORDEÓN CORREGIDO -->
+        <div class="lg:col-span-1 space-y-4" id="accordion-container">
+
+            {% if puede_gestionar_tareas_y_personal and ot.tipo == 'PREVENTIVA' %}
+            <div class="accordion-item bg-card-base-bg rounded-lg shadow-md overflow-hidden">
+                <div class="accordion-header flex justify-between items-center cursor-pointer p-4">
+                    <h4 class="text-lg font-semibold text-text-primary">Pauta de Mantenimiento</h4>
+                    <i class="fas fa-chevron-down transition-transform text-text-secondary"></i>
+                </div>
+                <div class="accordion-content">
+                    <div class="p-4 border-t border-input-border">
+                        {% if ot.pauta_mantenimiento %}<p class="text-sm text-text-secondary mb-3">Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post">{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn-primary w-full justify-center">Cargar Tareas</button></form>{% else %}<p class="text-sm text-yellow-400 italic">No hay pauta.</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             {% if puede_gestionar_tareas_y_personal %}
-                {% if ot.tipo == 'PREVENTIVA' %}
-                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePauta">Cargar Tareas de Pauta</button></h2><div id="collapsePauta" class="accordion-collapse collapse show" data-bs-parent="#accordionOT"><div class="accordion-body">{% if ot.pauta_mantenimiento %}<p>Asociada a: <strong>{{ ot.pauta_mantenimiento.nombre }}</strong></p><form method="post">{% csrf_token %}<button type="submit" name="cargar_tareas_pauta" class="btn btn-success w-100">Cargar Tareas</button></form>{% else %}<p class="text-warning">No hay pauta asignada.</p>{% endif %}</div></div></div>
-                {% endif %}
-                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAsignarTarea">Añadir Tarea Adicional</button></h2><div id="collapseAsignarTarea" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><p class="text-muted small">Selecciona una tarea del catálogo.</p><form method="post">{% csrf_token %}<div class="mb-3"><label for="{{ asignar_tarea_form.tarea.id_for_label }}" class="form-label">{{ asignar_tarea_form.tarea.label }}</label>{{ asignar_tarea_form.tarea }}</div><button type="submit" name="asignar_tarea_existente" class="btn btn-primary w-100 mt-2"><i class="fas fa-plus-circle me-2"></i>Añadir Tarea</button></form></div></div></div>
-                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePersonal">Asignar Personal</button></h2><div id="collapsePersonal" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><h5 class="mb-3"><i class="fas fa-users text-muted"></i> Personal Actual</h5>{% if ot.responsable or ot.personal_asignado.all %}<ul class="list-unstyled mb-4">{% if ot.responsable %}<li><span class="badge bg-warning text-dark me-2">Responsable</span> {{ ot.responsable.get_full_name|default:ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}{% if ayudante != ot.responsable %}<li><span class="badge bg-secondary me-2">Ayudante</span> {{ ayudante.get_full_name|default:ayudante.username }}</li>{% endif %}{% endfor %}</ul>{% else %}<p>No hay personal asignado.</p>{% endif %}<hr><h5 class="mt-3 mb-3"><i class="fas fa-edit text-muted"></i> Modificar</h5><form method="post">{% csrf_token %}<div class="mb-3"><label for="id_responsable" class="form-label">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div class="mb-3"><label for="id_personal_asignado" class="form-label">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn btn-success w-100 mt-2"><i class="fas fa-save me-2"></i>Guardar Asignación</button></form></div></div></div>
+            <div class="accordion-item bg-card-base-bg rounded-lg shadow-md overflow-hidden">
+                <div class="accordion-header flex justify-between items-center cursor-pointer p-4">
+                    <h4 class="text-lg font-semibold text-text-primary">Añadir Tarea</h4>
+                    <i class="fas fa-chevron-down transition-transform text-text-secondary"></i>
+                </div>
+                <div class="accordion-content">
+                    <div class="p-4 border-t border-input-border">
+                        <form method="post" class="space-y-3">{% csrf_token %}<div><label for="{{ asignar_tarea_form.tarea.id_for_label }}" class="block text-sm font-medium text-text-secondary">{{ asignar_tarea_form.tarea.label }}</label>{{ asignar_tarea_form.tarea }}</div><button type="submit" name="asignar_tarea_existente" class="btn-primary w-full justify-center"><i class="fas fa-plus-circle mr-2"></i>Añadir</button></form>
+                    </div>
+                </div>
+            </div>
             {% endif %}
-            <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsumo">Gestión de Insumos/Repuestos</button></h2><div id="collapseInsumo" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><p class="text-muted small">Añada repuestos desde el inventario o registre un insumo que no está en stock.</p><button type="button" class="btn btn-info w-100 mb-3" data-bs-toggle="modal" data-bs-target="#modalBuscarRepuesto"><i class="fas fa-search me-2"></i> Añadir Repuesto desde Inventario</button><hr><h6 class="mt-3">Añadir Insumo Manual</h6><form method="post">{% csrf_token %}<div class="mb-2"><label class="form-label">{{ manual_insumo_form.nombre.label }}</label>{{ manual_insumo_form.nombre }}</div><div class="row"><div class="col-6 mb-2"><label class="form-label">{{ manual_insumo_form.cantidad.label }}</label>{{ manual_insumo_form.cantidad }}</div><div class="col-6 mb-2"><label class="form-label">{{ manual_insumo_form.precio_unitario.label }}</label>{{ manual_insumo_form.precio_unitario }}</div></div><button type="submit" name="add_manual_insumo" class="btn btn-outline-success w-100 mt-2">Guardar Insumo Manual</button></form></div></div></div>
-            {% if puede_realizar_acciones_criticas %}
-                <div class="accordion-item"><h2 class="accordion-header" id="headingEstado"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseEstado">Cambiar Estado (Admin)</button></h2><div id="collapseEstado" class="accordion-collapse collapse" aria-labelledby="headingEstado" data-bs-parent="#accordionOT"><div class="accordion-body"><form id="formCambiarEstado" method="post">{% csrf_token %}<div class="mb-3"><label for="{{ cambiar_estado_form.estado.id_for_label }}" class="form-label">Nuevo Estado</label>{{ cambiar_estado_form.estado }}</div><input type="hidden" name="cambiar_estado" value="1"><button type="submit" class="btn btn-success w-100">Actualizar Estado</button></form></div></div></div>
-            {% endif %}
+
+            <div class="accordion-item bg-card-base-bg rounded-lg shadow-md overflow-hidden">
+                <div class="accordion-header flex justify-between items-center cursor-pointer p-4">
+                    <h4 class="text-lg font-semibold text-text-primary">Gestión de Insumos</h4>
+                    <i class="fas fa-chevron-down transition-transform text-text-secondary"></i>
+                </div>
+                <div class="accordion-content">
+                    <div class="p-4 border-t border-input-border">
+                        <button type="button" class="btn-primary w-full justify-center mb-4" onclick="openModal('modalBuscarRepuesto')"><i class="fas fa-search mr-2"></i>Buscar Repuesto</button>
+                        <hr class="border-input-border">
+                        <h5 class="text-base font-semibold my-3">Registrar Insumo Manual</h5>
+                        <form method="post" class="space-y-3">{% csrf_token %}<div><label class="block text-sm font-medium text-text-secondary">{{ manual_insumo_form.nombre.label }}</label>{{ manual_insumo_form.nombre }}</div><div class="grid grid-cols-2 gap-3"><div><label class="block text-sm font-medium text-text-secondary">{{ manual_insumo_form.cantidad.label }}</label>{{ manual_insumo_form.cantidad }}</div><div><label class="block text-sm font-medium text-text-secondary">{{ manual_insumo_form.precio_unitario.label }}</label>{{ manual_insumo_form.precio_unitario }}</div></div><button type="submit" name="add_manual_insumo" class="btn-primary !bg-green-600 hover:!bg-green-700 w-full justify-center">Guardar Insumo</button></form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item bg-card-base-bg rounded-lg shadow-md overflow-hidden">
+                <div class="accordion-header flex justify-between items-center cursor-pointer p-4">
+                    <h4 class="text-lg font-semibold text-text-primary">Asignar Personal</h4>
+                    <i class="fas fa-chevron-down transition-transform text-text-secondary"></i>
+                </div>
+                <div class="accordion-content">
+                    <div class="p-4 border-t border-input-border">
+                        <h5 class="text-base font-medium text-text-secondary mb-2">Personal Actual</h5>
+                        {% if ot.responsable or ot.personal_asignado.all %}<ul class="text-sm space-y-1 mb-4">{% if ot.responsable %}<li><span class="font-bold text-yellow-400">Responsable:</span> {{ ot.responsable.get_full_name|default:ot.responsable.username }}</li>{% endif %}{% for ayudante in ot.personal_asignado.all %}{% if ayudante != ot.responsable %}<li><span class="font-bold text-text-secondary">Ayudante:</span> {{ ayudante.get_full_name|default:ayudante.username }}</li>{% endif %}{% endfor %}</ul>{% else %}<p class="text-sm text-text-secondary italic mb-4">No hay personal asignado.</p>{% endif %}
+                        <hr class="border-input-border">
+                        <h5 class="text-base font-semibold my-3">Modificar Asignación</h5>
+                        <form method="post" class="space-y-3">{% csrf_token %}<div><label class="block text-sm font-medium text-text-secondary">{{ asignar_form.responsable.label }}</label>{{ asignar_form.responsable }}</div><div><label class="block text-sm font-medium text-text-secondary">{{ asignar_form.personal_asignado.label }}</label>{{ asignar_form.personal_asignado }}</div><button type="submit" name="asignar_personal" class="btn-primary w-full justify-center"><i class="fas fa-save mr-2"></i>Guardar</button></form>
+                    </div>
+                </div>
+            </div>
+            
             {% if es_mecanico %}
-                <div class="accordion-item"><h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFinalizar">Cerrar para Revisión</button></h2><div id="collapseFinalizar" class="accordion-collapse collapse" data-bs-parent="#accordionOT"><div class="accordion-body"><form method="post">{% csrf_token %}
-                    <div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}<small class="form-text text-muted">Motivo.</small></div>
-                    <div class="mb-3"><label class="form-label">{{ cerrar_mecanico_form.kilometraje_cierre.label }}</label>{{ cerrar_mecanico_form.kilometraje_cierre }}</div>
-                    <button type="submit" name="cerrar_mecanico" class="btn btn-success w-100">Marcar como Realizado</button>
-                </form></div></div></div>
+            <div class="accordion-item bg-card-base-bg rounded-lg shadow-md overflow-hidden">
+                <div class="accordion-header flex justify-between items-center cursor-pointer p-4">
+                    <h4 class="text-lg font-semibold text-text-primary">Cerrar para Revisión</h4>
+                    <i class="fas fa-chevron-down transition-transform text-text-secondary"></i>
+                </div>
+                <div class="accordion-content">
+                    <div class="p-4 border-t border-input-border">
+                        <form method="post" class="space-y-3">{% csrf_token %}<div><label class="block text-sm font-medium text-text-secondary">{{ cerrar_mecanico_form.motivo_pendiente.label }}</label>{{ cerrar_mecanico_form.motivo_pendiente }}</div><div><label class="block text-sm font-medium text-text-secondary">{{ cerrar_mecanico_form.kilometraje_cierre.label }}</label>{{ cerrar_mecanico_form.kilometraje_cierre }}</div><button type="submit" name="cerrar_mecanico" class="btn-primary !bg-green-600 hover:!bg-green-700 w-full justify-center">Marcar como Realizado</button></form>
+                    </div>
+                </div>
+            </div>
             {% endif %}
+            
+            {% if puede_realizar_acciones_criticas %}
+            <div class="accordion-item bg-card-base-bg rounded-lg shadow-md overflow-hidden">
+                <div class="accordion-header flex justify-between items-center cursor-pointer p-4">
+                    <h4 class="text-lg font-semibold text-text-primary">Cambiar Estado (Admin)</h4>
+                    <i class="fas fa-chevron-down transition-transform text-text-secondary"></i>
+                </div>
+                <div class="accordion-content">
+                    <div class="p-4 border-t border-input-border">
+                        <form id="formCambiarEstado" method="post" class="space-y-3">{% csrf_token %}<div><label for="{{ cambiar_estado_form.estado.id_for_label }}" class="block text-sm font-medium text-text-secondary">{{ cambiar_estado_form.estado.label }}</label>{{ cambiar_estado_form.estado }}</div><input type="hidden" name="cambiar_estado" value="1"><button type="submit" class="btn-primary w-full justify-center">Actualizar Estado</button></form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>
 
 <!-- Modales -->
-<div class="modal fade" id="pausarOTModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><h5 class="modal-title">Pausar Orden de Trabajo</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form method="post">{% csrf_token %}<div class="modal-body">{{ pausar_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="pausar_ot" class="btn btn-warning">Pausar OT</button></div></form></div></div></div>
-<div class="modal fade" id="diagnosticoModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><h5 class="modal-title">Añadir Diagnóstico Técnico</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><form method="post">{% csrf_token %}<div class="modal-body">{{ diagnostico_form.as_p }}</div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" name="guardar_diagnostico" class="btn btn-info">Guardar Diagnóstico</button></div></form></div></div></div>
-<div class="modal fade" id="modalBuscarRepuesto" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content bg-dark text-white"><div class="modal-header border-secondary"><h5 class="modal-title"><i class="fas fa-search"></i> Buscar Repuesto</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><input type="text" id="repuesto-search-input" class="form-control" placeholder="Escriba para buscar..."></div><div id="repuesto-search-results"><p class="text-muted text-center">Los resultados aparecerán aquí.</p></div></div><div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
+<div id="pausarOTModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"><div class="card-style w-full max-w-md"><h3 class="text-lg font-bold mb-4">Pausar Orden de Trabajo</h3><form method="post">{% csrf_token %}<div class="space-y-3">{{ pausar_form.as_p }}</div><div class="flex justify-end gap-3 mt-6"><button type="button" class="btn-primary !bg-gray-500 hover:!bg-gray-600" onclick="closeModal('pausarOTModal')">Cancelar</button><button type="submit" name="pausar_ot" class="btn-primary !bg-yellow-500 hover:!bg-yellow-600">Confirmar Pausa</button></div></form></div></div>
+<div id="diagnosticoModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"><div class="card-style w-full max-w-md"><h3 class="text-lg font-bold mb-4">Añadir Diagnóstico Técnico</h3><form method="post">{% csrf_token %}<div class="space-y-3">{{ diagnostico_form.as_p }}</div><div class="flex justify-end gap-3 mt-6"><button type="button" class="btn-primary !bg-gray-500 hover:!bg-gray-600" onclick="closeModal('diagnosticoModal')">Cancelar</button><button type="submit" name="guardar_diagnostico" class="btn-primary">Guardar Diagnóstico</button></div></form></div></div>
+<div id="modalBuscarRepuesto" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"><div class="card-style w-full max-w-2xl"><h3 class="text-lg font-bold mb-4"><i class="fas fa-search mr-2"></i>Buscar Repuesto</h3><input type="text" id="repuesto-search-input" placeholder="Escriba para buscar..." class="w-full mb-4"><div id="repuesto-search-results" class="max-h-64 overflow-y-auto"><p class="text-sm text-text-secondary text-center">Los resultados aparecerán aquí.</p></div><div class="flex justify-end mt-6"><button type="button" class="btn-primary !bg-gray-500 hover:!bg-gray-600" onclick="closeModal('modalBuscarRepuesto')">Cerrar</button></div></div></div>
+
 {% endblock content %}
 
 {% block extra_scripts %}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-    $(document).ready(function() {
-        // Inicializamos TODOS los Select2 que NO están dentro del acordeón de personal.
-        // Esto es para el campo de 'Añadir Tarea Adicional'.
-        $('.select2').not('#id_responsable, #id_personal_asignado').select2({
-            theme: "bootstrap-5",
-            dropdownParent: $('body') // Evita problemas si están en un modal
-        });
+        $(document).ready(function() {
+            // Inicializar Select2
+            $('#id_responsable, #id_personal_asignado, {{ asignar_tarea_form.tarea.auto_id }}, {{ cerrar_mecanico_form.motivo_pendiente.auto_id }}, {{ cambiar_estado_form.estado.auto_id }}').select2();
 
-        // --- INICIO DE LA LÓGICA CORREGIDA PARA EL ACORDEÓN ---
-        
-        // 1. Buscamos el elemento del acordeón de "Asignar Personal"
-        var acordeonPersonal = document.getElementById('collapsePersonal');
-        
-        // 2. Nos "suscribimos" al evento de Bootstrap que se dispara CUANDO el acordeón TERMINA de abrirse.
-        if (acordeonPersonal) {
-            acordeonPersonal.addEventListener('shown.bs.collapse', function () {
-                // 3. SOLO EN ESE MOMENTO, inicializamos los Select2 que están adentro.
-                $('#id_responsable, #id_personal_asignado').select2({
-                    theme: "bootstrap-5",
-                    // Es crucial decirle a Select2 que su "padre" visual es el cuerpo del acordeón,
-                    // para que el menú desplegable no quede oculto.
-                    dropdownParent: $('#collapsePersonal .accordion-body') 
-                });
-            }, { once: true }); // La opción { once: true } es una optimización para que esto solo se ejecute la primera vez que se abre.
-        }
-
-        // --- FIN DE LA LÓGICA CORREGIDA ---
-
-        // Lógica de búsqueda de repuestos (sin cambios)
-        const searchInput = $('#repuesto-search-input');
-        const resultsContainer = $('#repuesto-search-results');
-        const searchUrl = "{% url 'repuesto_search_api' %}";
-        
-        function renderResults(data) {
-            resultsContainer.empty();
-            if (data.length === 0) {
-                resultsContainer.html('<p class="text-muted text-center">No se encontraron repuestos.</p>');
-                return;
-            }
-            const list = $('<ul class="list-group list-group-flush"></ul>');
-            data.forEach(function(repuesto) {
-                const stockClass = repuesto.stock > 0 ? 'text-success' : 'text-danger';
-                const stockIcon = repuesto.stock > 0 ? 'fa-check-circle' : 'fa-times-circle';
-                const listItem = `<li class="list-group-item bg-transparent border-secondary d-flex justify-content-between align-items-center"><div><strong>${repuesto.text}</strong><br><small class="text-muted">Calidad: ${repuesto.calidad} | Stock: <span class="fw-bold ${stockClass}">${repuesto.stock} <i class="fas ${stockIcon}"></i></span></small></div><div><div class="input-group"><input type="number" class="form-control form-control-sm" style="width: 70px;" value="1" min="1" max="${repuesto.stock}" id="cantidad-repuesto-${repuesto.id}"><button class="btn btn-sm btn-outline-primary" type="button" data-repuesto-id="${repuesto.id}" data-ot-id="{{ ot.pk }}" onclick="addRepuesto(this)" ${repuesto.stock <= 0 ? 'disabled' : ''}>Añadir</button></div></div></li>`;
-                list.append(listItem);
-            });
-            resultsContainer.append(list);
-        }
-
-        let searchTimeout;
-        searchInput.on('keyup', function() {
-            clearTimeout(searchTimeout);
-            const query = $(this).val();
-            if (query.length < 2) {
-                resultsContainer.html('<p class="text-muted text-center">Escriba al menos 2 letras para buscar.</p>');
-                return;
-            }
-            resultsContainer.html('<p class="text-muted text-center">Buscando...</p>');
-            searchTimeout = setTimeout(function() {
-                $.ajax({
-                    url: searchUrl,
-                    data: { 'q': query },
-                    success: function(data) { renderResults(data); },
-                    error: function() { resultsContainer.html('<p class="text-danger text-center">Error al realizar la búsqueda.</p>'); }
-                });
-            }, 300);
-        });
-
-        // Confirmación para finalizar OT
-        $('#formCambiarEstado').on('submit', function(event) {
-            const estadoSeleccionado = $(this).find('select[name="estado"]').val();
-            if (estadoSeleccionado === 'FINALIZADA') {
-                if (!confirm("¿Estás seguro de que quieres FINALIZAR esta OT?\nEsta acción es irreversible.")) {
-                    event.preventDefault(); 
-                }
-            }
-        });
-
-        // Lógica para añadir repuesto
-        window.addRepuesto = function(button) {
-            const repuestoId = button.dataset.repuestoId;
-            const otId = button.dataset.otId;
-            const cantidadInput = document.getElementById(`cantidad-repuesto-${repuestoId}`);
-            const cantidad = cantidadInput.value;
-            const csrfToken = '{{ csrf_token }}';
-            const addUrl = "{% url 'add_repuesto_a_ot_api' %}";
-            
-            button.disabled = true;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-            fetch(addUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ ot_id: otId, repuesto_id: repuestoId, cantidad: cantidad })
-            })
-            .then(response => {
-                if (!response.ok) { return response.json().then(err => { throw new Error(err.message || 'Error desconocido del servidor.'); }); }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === 'ok') {
-                    button.classList.remove('btn-outline-primary');
-                    button.classList.add('btn-success');
-                    button.innerHTML = '<i class="fas fa-check"></i> Añadido';
-                    setTimeout(() => { location.reload(); }, 1000);
+            // Lógica para el Acordeón
+            $('.accordion-header').on('click', function() {
+                const content = $(this).next('.accordion-content');
+                const icon = $(this).find('i.fa-chevron-down');
+                
+                if (content.css('max-height') !== '0px') {
+                    content.css('max-height', '0px');
+                    icon.css('transform', 'rotate(0deg)');
                 } else {
-                    throw new Error(data.message);
+                    $('.accordion-content').css('max-height', '0px');
+                    $('.accordion-header i.fa-chevron-down').css('transform', 'rotate(0deg)');
+                    
+                    content.css('max-height', content[0].scrollHeight + 'px');
+                    icon.css('transform', 'rotate(180deg)');
                 }
-            })
-            .catch(error => {
-                console.error('Error en addRepuesto:', error);
-                alert(`Ocurrió un error: ${error.message}`);
-                button.disabled = false;
-                button.innerHTML = 'Añadir';
             });
-        };
-    });
+
+            // Lógica para los modales
+            window.openModal = function(modalId) {
+                $('#' + modalId).removeClass('hidden');
+            }
+            window.closeModal = function(modalId) {
+                $('#' + modalId).addClass('hidden');
+            }
+            $('.fixed.inset-0').on('click', function(event) {
+                if (event.target === this) {
+                    $(this).addClass('hidden');
+                }
+            });
+
+            // Lógica de búsqueda de repuestos
+            const searchInput = $('#repuesto-search-input');
+            const resultsContainer = $('#repuesto-search-results');
+            const searchUrl = "{% url 'repuesto_search_api' %}";
+            
+            function renderResults(data) {
+                resultsContainer.empty();
+                if (data.length === 0) { resultsContainer.html('<p class="text-sm text-text-secondary text-center">No se encontraron repuestos.</p>'); return; }
+                const list = $('<ul class="space-y-2"></ul>');
+                data.forEach(function(repuesto) {
+                    const stockClass = repuesto.stock > 0 ? 'text-green-400' : 'text-red-400';
+                    const stockIcon = repuesto.stock > 0 ? 'fa-check-circle' : 'fa-times-circle';
+                    const listItem = `<li class="flex justify-between items-center p-2 rounded-md bg-bg-secondary text-sm"><div><strong>${repuesto.text}</strong><br><small class="text-text-secondary">Calidad: ${repuesto.calidad} | Stock: <span class="font-bold ${stockClass}">${repuesto.stock} <i class="fas ${stockIcon}"></i></span></small></div><div class="flex items-center gap-2"><input type="number" class="w-16 text-center" value="1" min="1" max="${repuesto.stock}" id="cantidad-repuesto-${repuesto.id}"><button class="btn-primary !text-xs !py-1" data-repuesto-id="${repuesto.id}" data-ot-id="{{ ot.pk }}" onclick="addRepuesto(this)" ${repuesto.stock <= 0 ? 'disabled' : ''}>Añadir</button></div></li>`;
+                    list.append(listItem);
+                });
+                resultsContainer.append(list);
+            }
+
+            let searchTimeout;
+            searchInput.on('keyup', function() {
+                clearTimeout(searchTimeout);
+                const query = $(this).val();
+                if (query.length < 2) { resultsContainer.html('<p class="text-sm text-text-secondary text-center">Escriba al menos 2 letras para buscar.</p>'); return; }
+                resultsContainer.html('<p class="text-sm text-text-secondary text-center">Buscando...</p>');
+                searchTimeout = setTimeout(function() {
+                    $.ajax({
+                        url: searchUrl, data: { 'q': query },
+                        success: function(data) { renderResults(data); },
+                        error: function() { resultsContainer.html('<p class="text-sm text-red-400 text-center">Error al realizar la búsqueda.</p>'); }
+                    });
+                }, 300);
+            });
+
+            // Confirmación para finalizar OT
+            $('#formCambiarEstado').on('submit', function(event) {
+                const estadoSeleccionado = $(this).find('select[name="estado"]').val();
+                if (estadoSeleccionado === 'FINALIZADA') {
+                    if (!confirm("¿Estás seguro de que quieres FINALIZAR esta OT?\nEsta acción es irreversible.")) { event.preventDefault(); }
+                }
+            });
+
+            // Lógica para añadir repuesto
+            window.addRepuesto = function(button) {
+                const repuestoId = button.dataset.repuestoId, otId = button.dataset.otId;
+                const cantidad = $(`#cantidad-repuesto-${repuestoId}`).val();
+                const csrfToken = '{{ csrf_token }}', addUrl = "{% url 'add_repuesto_a_ot_api' %}";
+                
+                button.disabled = true; button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                fetch(addUrl, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ ot_id: otId, repuesto_id: repuestoId, cantidad: cantidad })
+                }).then(response => response.json().then(data => ({ok: response.ok, data})))
+                .then(({ok, data}) => {
+                    if (!ok) throw new Error(data.message || 'Error desconocido.');
+                    button.classList.remove('btn-primary'); button.classList.add('!bg-green-600');
+                    button.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => { location.reload(); }, 800);
+                }).catch(error => {
+                    alert(`Ocurrió un error: ${error.message}`);
+                    button.disabled = false; button.innerHTML = 'Añadir';
+                });
+            };
+        });
     </script>
 {% endblock extra_scripts %}

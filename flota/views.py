@@ -48,6 +48,7 @@ from .forms import (
      UsuarioCreacionForm, UsuarioEdicionForm
 
 )
+
 from django.utils import timezone 
 
 
@@ -584,66 +585,299 @@ def _limpiar_descripcion_tarea(descripcion):
         
     return descripcion_limpia
 
-
 @login_required
+@user_passes_test(lambda u: es_administrador(u)) # Solo los administradores pueden hacer carga masiva
 def carga_masiva(request):
     connection.set_tenant(request.tenant)
+    
     if request.method == 'POST':
         form = CargaMasivaForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                with transaction.atomic():
-                    if 'archivo_programa_mantenimiento' in request.FILES:
-                        archivo_excel = request.FILES['archivo_programa_mantenimiento']
-                        df = pd.read_excel(archivo_excel, header=1)
-                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('(', '').str.replace(')', '')
+                with transaction.atomic(): # Inicia una transacción para asegurar la integridad de los datos
+                    messages_list = [] # Para acumular mensajes de éxito/error
+
+                    # 1. Carga de VEHÍCULOS
+                    if form.cleaned_data['archivo_vehiculos']:
+                        archivo_excel = form.cleaned_data['archivo_vehiculos']
+                        df = pd.read_excel(archivo_excel, header=1) # Asume encabezados en la segunda fila
+                        # Limpiar nombres de columnas para que coincidan con los nombres esperados del modelo
+                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('(', '').str.replace(')', '').str.replace('n°', 'numero_').str.replace('ó', 'o').str.replace('á', 'a').str.replace('í', 'i').str.replace('é', 'e').str.replace('ú', 'u')
                         
-                        creados = 0
-                        actualizados = 0
+                        vehiculos_creados = 0
+                        vehiculos_actualizados = 0
+                        errores_vehiculos = []
 
                         for index, row in df.iterrows():
-                            if pd.isna(row['n°_int']):
-                                continue
+                            try:
+                                if pd.isna(row['numero_int']): # Si el número interno es NaN, saltar fila
+                                    continue
 
-                            modelo_obj, _ = ModeloVehiculo.objects.get_or_create(
-                                nombre=str(row['modelo']).strip(),
-                                defaults={'marca': str(row['marca']).strip(), 'tipo': str(row['tipo_veh']).strip()}
-                            )
-                            norma_obj, _ = NormaEuro.objects.get_or_create(nombre=str(row['norma']).strip())
+                                # Asegurarse de que el modelo y la norma existan o se creen
+                                modelo_obj, _ = ModeloVehiculo.objects.get_or_create(
+                                    nombre=str(row['modelo']).strip(),
+                                    defaults={'marca': str(row['marca']).strip(), 'tipo': str(row['tipo_veh']).strip()}
+                                )
+                                norma_obj, _ = NormaEuro.objects.get_or_create(nombre=str(row['norma']).strip())
 
-                            vehiculo_obj, created = Vehiculo.objects.update_or_create(
-                                numero_interno=str(int(row['n°_int'])),
-                                defaults={
-                                    'patente': str(row['ppu']).strip() if pd.notna(row['ppu']) else None,
-                                    'modelo': modelo_obj,
-                                    'norma_euro': norma_obj,
-                                    'chasis': str(row.get('chasis')).strip() if pd.notna(row.get('chasis')) else None,
-                                    'motor': str(row.get('motor')).strip() if pd.notna(row.get('motor')) else None,
-                                    'razon_social': str(row.get('razón__social')).strip() if pd.notna(row.get('razón__social')) else None,
-                                    'kilometraje_actual': int(row['km_actual']) if pd.notna(row['km_actual']) else 0,
-                                    'aplicacion': str(row.get('aplic')).strip() if pd.notna(row.get('aplic')) else None,
-                                }
-                            )
-                            
-                            if created:
-                                creados += 1
-                            else:
-                                actualizados += 1
-                        
-                        messages.success(request, f"Carga de flota completada: {creados} vehículos nuevos creados y {actualizados} vehículos actualizados.")
+                                # Actualizar o crear vehículo
+                                vehiculo_obj, created = Vehiculo.objects.update_or_create(
+                                    numero_interno=str(int(row['numero_int'])), # Asegura que sea un string sin decimales
+                                    defaults={
+                                        'patente': str(row['ppu']).strip() if pd.notna(row.get('ppu')) else None,
+                                        'modelo': modelo_obj,
+                                        'norma_euro': norma_obj,
+                                        'chasis': str(row.get('chasis')).strip() if pd.notna(row.get('chasis')) else None,
+                                        'motor': str(row.get('motor')).strip() if pd.notna(row.get('motor')) else None,
+                                        'razon_social': str(row.get('razon_social')).strip() if pd.notna(row.get('razon_social')) else None,
+                                        'kilometraje_actual': int(row['km_actual']) if pd.notna(row.get('km_actual')) else 0,
+                                        'aplicacion': str(row.get('aplicacion')).strip() if pd.notna(row.get('aplicacion')) else None,
+                                    }
+                                )
+                                if created:
+                                    vehiculos_creados += 1
+                                else:
+                                    vehiculos_actualizados += 1
+                            except Exception as e:
+                                errores_vehiculos.append(f"Fila {index+2}: {e} (Datos: {row.to_dict()})") # +2 por encabezados
+
+                        messages_list.append(f"Carga de flota completada: {vehiculos_creados} vehículos nuevos y {vehiculos_actualizados} actualizados.")
+                        if errores_vehiculos:
+                            messages_list.append(f"Errores en carga de vehículos: {'; '.join(errores_vehiculos)}")
                     
-                    # Aquí puedes añadir las otras lógicas de carga que tenías
-                    # if 'archivo_pautas' in request.FILES: ...
+                    # 2. Carga de PAUTAS DE MANTENIMIENTO
+                    if form.cleaned_data['archivo_pautas']:
+                        archivo_excel = form.cleaned_data['archivo_pautas']
+                        df = pd.read_excel(archivo_excel, header=0) # Asume encabezados en la primera fila
+                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('á', 'a').str.replace('ó', 'o').str.replace('é', 'e').str.replace('ú', 'u')
+                        
+                        pautas_creadas = 0
+                        pautas_actualizadas = 0
+                        errores_pautas = []
+
+                        for index, row in df.iterrows():
+                            try:
+                                if pd.isna(row.get('modelo_vehiculo')) or pd.isna(row.get('kilometraje_pauta')):
+                                    continue
+                                
+                                modelo_obj = ModeloVehiculo.objects.get(nombre=str(row['modelo_vehiculo']).strip())
+                                pauta_obj, created = PautaMantenimiento.objects.update_or_create(
+                                    nombre=str(row['nombre']).strip(),
+                                    modelo_vehiculo=modelo_obj,
+                                    kilometraje_pauta=int(row['kilometraje_pauta']),
+                                    defaults={
+                                        'intervalo_km': int(row.get('intervalo_km', 10000)),
+                                    }
+                                )
+                                # Si hay una columna de tareas en la pauta, puedes añadir lógica para vincularlas aquí
+                                # (requeriría un formato específico de esa columna, ej. nombres de tareas separados por coma)
+
+                                if created:
+                                    pautas_creadas += 1
+                                else:
+                                    pautas_actualizadas += 1
+                            except ModeloVehiculo.DoesNotExist:
+                                errores_pautas.append(f"Fila {index+2}: Modelo de vehículo '{row.get('modelo_vehiculo')}' no encontrado.")
+                            except Exception as e:
+                                errores_pautas.append(f"Fila {index+2}: {e} (Datos: {row.to_dict()})")
+
+                        messages_list.append(f"Carga de pautas completada: {pautas_creadas} pautas nuevas y {pautas_actualizadas} actualizadas.")
+                        if errores_pautas:
+                            messages_list.append(f"Errores en carga de pautas: {'; '.join(errores_pautas)}")
+
+                    # 3. Carga de INVENTARIO DE REPUESTOS
+                    if form.cleaned_data['archivo_repuestos']:
+                        archivo_excel = form.cleaned_data['archivo_repuestos']
+                        df = pd.read_excel(archivo_excel, header=0)
+                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('á', 'a').str.replace('ó', 'o').str.replace('é', 'e').str.replace('ú', 'u')
+
+                        repuestos_creados = 0
+                        repuestos_actualizados = 0
+                        errores_repuestos = []
+
+                        for index, row in df.iterrows():
+                            try:
+                                if pd.isna(row.get('nombre')) or pd.isna(row.get('numero_parte')):
+                                    continue
+                                
+                                # Asegurar que el proveedor exista o sea nulo
+                                proveedor_obj = None
+                                if pd.notna(row.get('proveedor_habitual')):
+                                    proveedor_obj, _ = Proveedor.objects.get_or_create(nombre=str(row['proveedor_habitual']).strip())
+                                
+                                # Mapear calidad de string a valor del ChoiceField
+                                calidad_str = str(row.get('calidad', 'GENERICO')).strip().upper()
+                                calidad_choices = dict(Repuesto.CALIDAD_CHOICES)
+                                calidad_valor = next((k for k, v in calidad_choices.items() if v.upper() == calidad_str or k == calidad_str), 'GENERICO')
+
+                                repuesto_obj, created = Repuesto.objects.update_or_create(
+                                    numero_parte=str(row['numero_parte']).strip(),
+                                    calidad=calidad_valor, # Usar el valor del ChoiceField
+                                    defaults={
+                                        'nombre': str(row['nombre']).strip(),
+                                        'stock_actual': int(row.get('stock_actual', 0)),
+                                        'stock_minimo': int(row.get('stock_minimo', 1)),
+                                        'ubicacion': str(row.get('ubicacion')).strip() if pd.notna(row.get('ubicacion')) else None,
+                                        'proveedor_habitual': proveedor_obj,
+                                        'precio_unitario': float(str(row.get('precio_unitario', 0)).replace(',', '.')) # Convertir a float y manejar comas
+                                    }
+                                )
+                                if created:
+                                    repuestos_creados += 1
+                                else:
+                                    repuestos_actualizados += 1
+                            except Exception as e:
+                                errores_repuestos.append(f"Fila {index+2}: {e} (Datos: {row.to_dict()})")
+
+                        messages_list.append(f"Carga de inventario completada: {repuestos_creados} repuestos nuevos y {repuestos_actualizados} actualizados.")
+                        if errores_repuestos:
+                            messages_list.append(f"Errores en carga de repuestos: {'; '.join(errores_repuestos)}")
+
+                    # 4. Carga de HISTORIAL DE MANTENIMIENTO (OTs Finalizadas)
+                    if form.cleaned_data['archivo_historial_mantenimiento']:
+                        archivo_excel = form.cleaned_data['archivo_historial_mantenimiento']
+                        df = pd.read_excel(archivo_excel, header=0)
+                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('á', 'a').str.replace('ó', 'o').str.replace('é', 'e').str.replace('ú', 'u')
+
+                        historial_procesado = 0
+                        errores_historial = []
+
+                        for index, row in df.iterrows():
+                            try:
+                                # Validar campos esenciales
+                                if pd.isna(row.get('vehiculo_numero_interno')) or pd.isna(row.get('fecha_cierre')) or pd.isna(row.get('tipo_ot')):
+                                    errores_historial.append(f"Fila {index+2}: Datos esenciales faltantes (Vehículo, Fecha Cierre, Tipo OT).")
+                                    continue
+
+                                vehiculo = Vehiculo.objects.get(numero_interno=str(row['vehiculo_numero_interno']).strip())
+                                responsable = None
+                                if pd.notna(row.get('usuario_responsable')):
+                                    # Asume que el username es el que se usa en el Excel
+                                    responsable = User.objects.filter(username=str(row['usuario_responsable']).strip()).first()
+                                    if not responsable:
+                                        errores_historial.append(f"Fila {index+2}: Usuario responsable '{row.get('usuario_responsable')}' no encontrado.")
+                                        continue
+                                
+                                # Convertir fecha a datetime object
+                                if isinstance(row['fecha_cierre'], (datetime, pd.Timestamp)):
+                                    fecha_cierre_dt = row['fecha_cierre']
+                                else: # Asumir string, intentar parsear
+                                    fecha_cierre_dt = datetime.strptime(str(row['fecha_cierre']), '%Y-%m-%d %H:%M:%S') # Ajustar formato si es diferente
+
+                                # Mapear tipo_ot a valor del ChoiceField
+                                tipo_ot_str = str(row['tipo_ot']).strip().upper()
+                                tipo_ot_valor = next((k for k, v in OrdenDeTrabajo.TIPO_CHOICES if v.upper() == tipo_ot_str or k == tipo_ot_str), 'CORRECTIVA')
+                                
+                                # Mapear tipo_falla a objeto TipoFalla
+                                tipo_falla_obj = None
+                                if pd.notna(row.get('tipo_falla')):
+                                    try:
+                                        tipo_falla_obj = TipoFalla.objects.get(descripcion=str(row['tipo_falla']).strip())
+                                    except TipoFalla.DoesNotExist:
+                                        errores_historial.append(f"Fila {index+2}: Tipo de falla '{row.get('tipo_falla')}' no encontrado. OT creada sin tipo de falla.")
+                                
+                                # Crear/actualizar OT
+                                ot, created = OrdenDeTrabajo.objects.update_or_create(
+                                    folio=str(row.get('folio_ot')).strip() if pd.notna(row.get('folio_ot')) else None, # Si no hay folio, se generará uno
+                                    vehiculo=vehiculo,
+                                    fecha_creacion=fecha_cierre_dt - timedelta(hours=1), # Asumir que se creó 1 hora antes de cerrar
+                                    tipo=tipo_ot_valor,
+                                    defaults={
+                                        'estado': 'FINALIZADA',
+                                        'fecha_cierre': fecha_cierre_dt,
+                                        'kilometraje_apertura': int(row.get('kilometraje_cierre', 0)) - 100 if pd.notna(row.get('kilometraje_cierre')) else 0, # Asumir 100km menos
+                                        'kilometraje_cierre': int(row.get('kilometraje_cierre', 0)) if pd.notna(row.get('kilometraje_cierre')) else 0,
+                                        'costo_total': float(str(row.get('costo_total_ot', 0)).replace(',', '.')),
+                                        'tfs_minutos': int(row.get('tfs_minutos', 60)), # Asumir 60 minutos
+                                        'responsable': responsable,
+                                        'tipo_falla': tipo_falla_obj,
+                                    }
+                                )
+                                # Añadir tarea si existe la columna y la tarea
+                                if pd.notna(row.get('descripcion_tarea')):
+                                    tarea_desc = str(row['descripcion_tarea']).strip()
+                                    tarea_obj, _ = Tarea.objects.get_or_create(descripcion=tarea_desc)
+                                    ot.tareas_realizadas.add(tarea_obj)
+
+                                historial_procesado += 1
+
+                            except Vehiculo.DoesNotExist:
+                                errores_historial.append(f"Fila {index+2}: Vehículo con número interno '{row.get('vehiculo_numero_interno')}' no encontrado.")
+                            except Exception as e:
+                                errores_historial.append(f"Fila {index+2}: {e} (Datos: {row.to_dict()})")
+
+                        messages_list.append(f"Carga de historial de mantenimiento completada: {historial_procesado} OTs procesadas.")
+                        if errores_historial:
+                            messages_list.append(f"Errores en carga de historial: {'; '.join(errores_historial)}")
+
+
+                    # 5. Carga de BITÁCORAS DIARIAS
+                    if form.cleaned_data['archivo_bitacoras_diarias']:
+                        archivo_excel = form.cleaned_data['archivo_bitacoras_diarias']
+                        df = pd.read_excel(archivo_excel, header=0)
+                        df.columns = df.columns.str.strip().str.lower().str.replace(' ', '_').str.replace('.', '').str.replace('á', 'a').str.replace('ó', 'o').str.replace('é', 'e').str.replace('ú', 'u')
+
+                        bitacoras_procesadas = 0
+                        errores_bitacoras = []
+
+                        for index, row in df.iterrows():
+                            try:
+                                if pd.isna(row.get('fecha')) or pd.isna(row.get('vehiculo_numero_interno')):
+                                    errores_bitacoras.append(f"Fila {index+2}: Datos esenciales faltantes (Fecha, Vehículo).")
+                                    continue
+
+                                vehiculo = Vehiculo.objects.get(numero_interno=str(row['vehiculo_numero_interno']).strip())
+                                
+                                # Convertir fecha a date object
+                                if isinstance(row['fecha'], (datetime, pd.Timestamp)):
+                                    fecha_dt = row['fecha'].date()
+                                else: # Asumir string, intentar parsear
+                                    fecha_dt = datetime.strptime(str(row['fecha']), '%Y-%m-%d').date() # Ajustar formato si es diferente
+
+                                bitacora, created = BitacoraDiaria.objects.update_or_create(
+                                    vehiculo=vehiculo,
+                                    fecha=fecha_dt,
+                                    defaults={
+                                        'horas_operativas': float(str(row.get('horas_operativas', 0)).replace(',', '.')),
+                                        'horas_mantenimiento_prog': float(str(row.get('horas_mantenimiento_programado', 0)).replace(',', '.')), # Ajustar a tu columna
+                                        'horas_falla': float(str(row.get('horas_falla', 0)).replace(',', '.'))
+                                    }
+                                )
+                                bitacoras_procesadas += 1
+
+                            except Vehiculo.DoesNotExist:
+                                errores_bitacoras.append(f"Fila {index+2}: Vehículo con número interno '{row.get('vehiculo_numero_interno')}' no encontrado.")
+                            except Exception as e:
+                                errores_bitacoras.append(f"Fila {index+2}: {e} (Datos: {row.to_dict()})")
+
+                        messages_list.append(f"Carga de bitácoras diarias completada: {bitacoras_procesadas} bitácoras procesadas.")
+                        if errores_bitacoras:
+                            messages_list.append(f"Errores en carga de bitácoras: {'; '.join(errores_bitacoras)}")
+
+
+                    # Mostrar todos los mensajes acumulados
+                    for msg in messages_list:
+                        if "Errores" in msg:
+                            messages.error(request, msg)
+                        else:
+                            messages.success(request, msg)
 
             except Exception as e:
+                # Si ocurre un error crítico que detiene la transacción
                 messages.error(request, f"Ocurrió un error crítico durante la carga: {e}")
             
             return redirect('carga_masiva')
+        else:
+            # Si el formulario no es válido (ej. archivo no es Excel)
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error en '{form.fields[field].label}': {error}")
     else:
         form = CargaMasivaForm()
 
     context = {'form': form}
     return render(request, 'flota/carga_masiva.html', context)
+
 @login_required
 def indicadores_dashboard(request):
     connection.set_tenant(request.tenant)
@@ -1544,9 +1778,10 @@ def reportes_dashboard(request):
     """
     connection.set_tenant(request.tenant)
 
-    # Lógica para manejar la petición de exportación
+    # --- Lógica para manejar la petición de exportación (se mantiene) ---
     if request.method == 'POST':
-        # Obtenemos las fechas del formulario
+        # ... (tu código POST existente para exportación) ...
+        # Asegúrate de que aquí los nombres sean 'start_date' y 'end_date'
         start_date_str = request.POST.get('start_date')
         end_date_str = request.POST.get('end_date')
 
@@ -1557,7 +1792,13 @@ def reportes_dashboard(request):
             messages.error(request, "Formato de fecha inválido. Por favor, seleccione un rango de fechas.")
             return redirect('reportes_dashboard')
 
-        # Filtramos las OTs en el rango de fechas de CIERRE
+        # Si descomentas los filtros de vehiculo, estado, tipo en la plantilla,
+        # aquí deberías procesarlos también. Por ejemplo:
+        # vehiculo_ids = request.POST.getlist('vehiculo_ot')
+        # if vehiculo_ids:
+        #     ordenes = ordenes.filter(vehiculo__pk__in=vehiculo_ids)
+        # etc.
+
         ordenes = OrdenDeTrabajo.objects.filter(
             fecha_cierre__date__range=[start_date, end_date]
         ).select_related(
@@ -1568,25 +1809,22 @@ def reportes_dashboard(request):
             messages.warning(request, "No se encontraron Órdenes de Trabajo en el período seleccionado para exportar.")
             return redirect('reportes_dashboard')
 
-        # --- Lógica de Generación de CSV ---
+        # ... (tu lógica de generación de CSV existente) ...
         response = HttpResponse(
             content_type='text/csv',
             headers={'Content-Disposition': f'attachment; filename="reporte_ots_{start_date_str}_a_{end_date_str}.csv"'},
         )
-        response.write(u'\ufeff'.encode('utf8')) # BOM para que Excel reconozca UTF-8
+        response.write(u'\ufeff'.encode('utf8'))
 
-        writer = csv.writer(response, delimiter=';') # Usamos punto y coma como delimitador, común en Excel en español
+        writer = csv.writer(response, delimiter=';')
         
-        # Escribimos la cabecera del CSV
         writer.writerow([
             'Folio OT', 'Estado', 'Tipo', 'Vehiculo Numero', 'Vehiculo Patente', 
             'Fecha Creacion', 'Fecha Cierre', 'Kilometraje Apertura', 'Kilometraje Cierre',
             'Responsable', 'Costo Total', 'TFS (Minutos)', 'Tipo de Falla', 'Tareas'
         ])
 
-        # Escribimos los datos de cada OT
         for ot in ordenes:
-            # Concatenamos las descripciones de las tareas
             tareas_str = ", ".join([tarea.descripcion for tarea in ot.tareas_realizadas.all()])
             
             writer.writerow([
@@ -1600,7 +1838,7 @@ def reportes_dashboard(request):
                 ot.kilometraje_apertura,
                 ot.kilometraje_cierre,
                 ot.responsable.username if ot.responsable else 'N/A',
-                f"{ot.costo_total:.2f}".replace('.',','), # Formato decimal para Excel en español
+                f"{ot.costo_total:.2f}".replace('.',','),
                 ot.tfs_minutos,
                 ot.tipo_falla.descripcion if ot.tipo_falla else 'N/A',
                 tareas_str
@@ -1609,5 +1847,193 @@ def reportes_dashboard(request):
         return response
 
     # Lógica para mostrar la página si la petición es GET
-    context = {}
+    # PASAMOS LOS DATOS NECESARIOS PARA LOS SELECTORES DE LA PLANTILLA
+    vehiculos = Vehiculo.objects.all().order_by('numero_interno')
+    estados_ot = OrdenDeTrabajo.ESTADO_CHOICES
+    tipos_ot = OrdenDeTrabajo.TIPO_CHOICES
+
+    context = {
+        'vehiculos': vehiculos,
+        'estados_ot': estados_ot,
+        'tipos_ot': tipos_ot,
+    }
     return render(request, 'flota/reportes_dashboard.html', context)
+
+@login_required
+def export_vehiculos_csv(request):
+    connection.set_tenant(request.tenant)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="reporte_vehiculos.csv"'
+    response.write(u'\ufeff'.encode('utf8')) # BOM para Excel
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow([
+        'Numero Interno', 'Patente', 'Marca', 'Modelo', 'Kilometraje Actual',
+        'Razon Social', 'Aplicacion', 'Norma Euro', 'Ultimo Mant. (KM)',
+        'Fecha Ult. Mant.', 'Tipo Ult. Mant.', 'Proximo Mant. (KM)',
+        'KM Faltantes', 'Estado Mantenimiento'
+    ])
+
+    vehiculos_qs = Vehiculo.objects.select_related('modelo', 'norma_euro').order_by('numero_interno')
+
+    # Aplicar los filtros del dashboard si vienen en la petición
+    modelo_id = request.GET.get('modelo')
+    proximos_5000_km = request.GET.get('proximos_5000_km')
+    tipo_mantenimiento = request.GET.get('tipo_mantenimiento') # Nuevo filtro
+
+    if modelo_id:
+        vehiculos_qs = vehiculos_qs.filter(modelo_id=modelo_id)
+    
+    # Recalculamos los estados y kms faltantes para aplicar filtros y exportar
+    data_flota_completa = []
+    for vehiculo in vehiculos_qs:
+        km_actual = vehiculo.kilometraje_actual
+        estado_mant = "NORMAL"
+        pauta_obj, proximo_km_pauta, kms_faltantes_mant = None, None, None
+        
+        ultima_ot_preventiva = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo, tipo='PREVENTIVA', estado='FINALIZADA').order_by('-fecha_cierre').first()
+        km_ultimo_mant = ultima_ot_preventiva.kilometraje_cierre if ultima_ot_preventiva else None
+        fecha_ultimo_mant = ultima_ot_preventiva.fecha_cierre if ultima_ot_preventiva else None
+        tipo_ultimo_mant = ultima_ot_preventiva.pauta_mantenimiento.nombre if ultima_ot_preventiva and ultima_ot_preventiva.pauta_mantenimiento else None
+        
+        proxima_pauta_agg = PautaMantenimiento.objects.filter(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta__gt=km_actual).aggregate(proximo_km=Min('kilometraje_pauta'))
+        proximo_km_pauta = proxima_pauta_agg.get('proximo_km')
+
+        if proximo_km_pauta:
+            try:
+                pauta_obj = PautaMantenimiento.objects.get(modelo_vehiculo=vehiculo.modelo, kilometraje_pauta=proximo_km_pauta)
+                intervalo_km = getattr(pauta_obj, 'intervalo_km', 0)
+                kms_faltantes_mant = proximo_km_pauta - km_actual
+                umbral_vencido = 2000 # O según tu ConfiguracionEmpresa
+                umbral_proximo = (intervalo_km * ConfiguracionEmpresa.load().porcentaje_alerta_mantenimiento / 100) if intervalo_km > 0 else 5000 # Usar config
+                if kms_faltantes_mant <= umbral_vencido: estado_mant = "VENCIDO"
+                elif kms_faltantes_mant <= umbral_proximo: estado_mant = "PROXIMO"
+            except PautaMantenimiento.DoesNotExist: pass
+
+        # Aplicar filtros específicos para la exportación que no se manejan en el queryset inicial
+        # Solo se aplica si el filtro está presente Y el dato no es nulo
+        if proximos_5000_km == 'true' and (kms_faltantes_mant is None or kms_faltantes_mant > 5000):
+            continue # Saltar este vehículo si no cumple el filtro de 5000 km
+        
+        if tipo_mantenimiento and (pauta_obj is None or pauta_obj.nombre != tipo_mantenimiento):
+            continue # Saltar este vehículo si no cumple el filtro de tipo de mantenimiento
+
+        writer.writerow([
+            vehiculo.numero_interno,
+            vehiculo.patente or '',
+            vehiculo.modelo.marca or '',
+            vehiculo.modelo.nombre or '',
+            vehiculo.kilometraje_actual,
+            vehiculo.razon_social or '',
+            vehiculo.aplicacion or '',
+            vehiculo.norma_euro.nombre if vehiculo.norma_euro else '',
+            km_ultimo_mant or '',
+            fecha_ultimo_mant.strftime('%d-%m-%Y') if fecha_ultimo_mant else '',
+            tipo_ultimo_mant or '',
+            proximo_km_pauta or '',
+            kms_faltantes_mant or '',
+            estado_mant
+        ])
+    return response
+
+
+@login_required
+def export_repuestos_csv(request):
+    connection.set_tenant(request.tenant)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="reporte_repuestos.csv"'
+    response.write(u'\ufeff'.encode('utf8')) # BOM para Excel
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow([
+        'Nombre', 'Numero de Parte', 'Calidad', 'Stock Actual',
+        'Stock Minimo', 'Ubicacion', 'Proveedor Habitual', 'Precio Unitario'
+    ])
+
+    repuestos_qs = Repuesto.objects.select_related('proveedor_habitual').order_by('nombre')
+
+    # Aplicar filtro de búsqueda si viene en la petición
+    query = request.GET.get('q', '')
+    if query:
+        repuestos_qs = repuestos_qs.filter(
+            Q(nombre__icontains=query) | Q(numero_parte__icontains=query)
+        )
+
+    for repuesto in repuestos_qs:
+        writer.writerow([
+            repuesto.nombre,
+            repuesto.numero_parte,
+            repuesto.get_calidad_display(),
+            repuesto.stock_actual,
+            repuesto.stock_minimo,
+            repuesto.ubicacion or '',
+            repuesto.proveedor_habitual.nombre if repuesto.proveedor_habitual else '',
+            f"{repuesto.precio_unitario:.2f}".replace('.',','),
+        ])
+    return response
+
+
+@login_required
+def export_ots_csv(request):
+    connection.set_tenant(request.tenant)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="reporte_ordenes_trabajo.csv"'
+    response.write(u'\ufeff'.encode('utf8')) # BOM para Excel
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow([
+        'Folio OT', 'Estado', 'Tipo', 'Vehiculo Numero', 'Vehiculo Patente', 
+        'Fecha Creacion', 'Fecha Cierre', 'Kilometraje Apertura', 'Kilometraje Cierre',
+        'Responsable', 'Costo Total', 'TFS (Minutos)', 'Tipo de Falla', 'Tareas'
+    ])
+
+    ordenes_qs = OrdenDeTrabajo.objects.filter(estado='FINALIZADA').select_related(
+        'vehiculo', 'vehiculo__modelo', 'responsable', 'tipo_falla'
+    ).prefetch_related('tareas_realizadas', 'detalles_insumos_ot').order_by('-fecha_creacion')
+
+    # Aplicar filtros si vienen en la petición (GET, porque es desde un listado)
+    vehiculo_id = request.GET.get('vehiculo')
+    tipo = request.GET.get('tipo')
+    estado = request.GET.get('estado')
+    fecha_desde_str = request.GET.get('fecha_desde')
+    fecha_hasta_str = request.GET.get('fecha_hasta')
+
+    if vehiculo_id:
+        ordenes_qs = ordenes_qs.filter(vehiculo_id=vehiculo_id)
+    if tipo:
+        ordenes_qs = ordenes_qs.filter(tipo=tipo)
+    if estado:
+        ordenes_qs = ordenes_qs.filter(estado=estado) # Considera permitir múltiples estados si el filtro de OT lo hace
+    
+    if fecha_desde_str:
+        try:
+            fecha_desde = datetime.strptime(fecha_desde_str, '%Y-%m-%d').date()
+            ordenes_qs = ordenes_qs.filter(fecha_creacion__date__gte=fecha_desde)
+        except ValueError:
+            pass # Ignorar fecha inválida
+    if fecha_hasta_str:
+        try:
+            fecha_hasta = datetime.strptime(fecha_hasta_str, '%Y-%m-%d').date()
+            ordenes_qs = ordenes_qs.filter(fecha_creacion__date__lte=fecha_hasta)
+        except ValueError:
+            pass # Ignorar fecha inválida
+
+    for ot in ordenes_qs:
+        tareas_str = ", ".join([tarea.descripcion for tarea in ot.tareas_realizadas.all()])
+        writer.writerow([
+            ot.folio,
+            ot.get_estado_display(),
+            ot.get_tipo_display(),
+            ot.vehiculo.numero_interno,
+            ot.vehiculo.patente or '',
+            ot.fecha_creacion.strftime('%d-%m-%Y %H:%M') if ot.fecha_creacion else '',
+            ot.fecha_cierre.strftime('%d-%m-%Y %H:%M') if ot.fecha_cierre else '',
+            ot.kilometraje_apertura or '',
+            ot.kilometraje_cierre or '',
+            ot.responsable.username if ot.responsable else 'N/A',
+            f"{ot.costo_total:.2f}".replace('.',','),
+            ot.tfs_minutos,
+            ot.tipo_falla.descripcion if ot.tipo_falla else 'N/A',
+            tareas_str
+        ])
+    return response

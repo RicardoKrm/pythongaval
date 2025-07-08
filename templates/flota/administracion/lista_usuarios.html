@@ -1,55 +1,435 @@
 {% extends "flota/base.html" %}
+{% load static %}
 
-{% block title %}Gestión de Usuarios{% endblock %}
+{% block title %}Gestión de Usuarios - Pulser{% endblock %}
+
+{% block extra_head %}
+    {# ELIMINADAS LAS CARGAS DE CDN DE TAILWIND, FONTAWESOME, ETC. -> YA ESTÁN EN BASE.HTML #}
+    
+    <style>
+        /* CSS Variables for Light and Dark Mode - SPECIFIC TO THIS VIBRANT DARK THEME */
+        /* Estas variables son redundantes si ya están en base.html y no son override específicos */
+        /* Si base.html ya las define, pueden eliminarse. Si esta pagina necesita overrides, dejarlas. */
+        /* Por ahora las dejo, pero considera centralizarlas si son comunes */
+        :root {
+            --bg-primary: hsl(0, 0%, 98%); /* Almost white */
+            --bg-secondary: hsl(0, 0%, 95%); /* Slightly darker white */
+            --text-primary: hsl(210, 20%, 20%); /* Dark charcoal grey */
+            --text-secondary: hsl(210, 10%, 45%); /* Medium grey */
+            --accent: hsl(185, 100%, 50%); /* Vibrant Cyan (original #00E5FF, convertido a HSL para consistency) */
+            --accent-hover: hsl(185, 100%, 40%); /* Deeper Cyan */
+            --card-base-bg: #FFFFFF; /* White */
+            --input-bg: #FFFFFF;
+            --input-border: hsl(210, 10%, 80%);
+            --input-placeholder: hsl(210, 10%, 65%);
+            --text-shadow-strong: none;
+            --text-shadow-subtle: none;
+            --calendar-icon-filter: invert(0);
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.15);
+            --success-color: hsl(140, 70%, 45%); /* Verde vibrante compatible con Pulser */
+            --warning-color: hsl(40, 95%, 55%); /* Naranja vibrante compatible con Pulser */
+            --danger-color: hsl(0, 70%, 60%); /* Rojo compatible con Pulser */
+            --info-color: var(--accent);
+            --header-gradient-start: hsl(210, 20%, 90%); /* Claros para el light mode */
+            --header-gradient-end: hsl(210, 15%, 95%);
+        }
+
+        html.dark {
+            --bg-primary: hsl(220, 30%, 5%); /* #0A0F18 */
+            --bg-secondary: hsl(220, 25%, 8%); /* Slightly lighter dark for sections */
+            --text-primary: hsl(0, 0%, 100%); /* #FFFFFF */
+            --text-secondary: hsl(210, 10%, 70%); /* #B0BEC5 */
+            --accent: hsl(217, 91%, 60%); /* #3B82F6 (Azul de tu código original, convertido a HSL) */
+            --accent-hover: hsl(217, 75%, 50%); /* #2563EB */
+            --card-base-bg: hsl(210, 20%, 13%); /* #1A222F */
+            --input-bg: hsl(210, 20%, 18%); /* #2B3545 */
+            --input-border: hsl(210, 10%, 25%); /* #4A5568, ligeramente ajustado para contraste */
+            --input-placeholder: hsl(210, 10%, 45%);
+            --text-shadow-strong: 0 0 15px var(--accent);
+            --text-shadow-subtle: 0 0 8px hsla(217, 91%, 60%, 0.4);
+            --calendar-icon-filter: invert(1);
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.5); /* Sombra ligera más pronunciada */
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada para cards */
+            --success-color: hsl(150, 60%, 40%); /* #10B981 */
+            --warning-color: hsl(39, 92%, 50%); /* #F59E0B */
+            --danger-color: hsl(0, 80%, 55%); /* #EF4444 */
+            --info-color: var(--accent);
+            --header-gradient-start: hsl(220, 30%, 10%); /* Oscuros para el dark mode */
+            --header-gradient-end: hsl(220, 25%, 15%);
+        }
+        
+        /* Estilos generales del cuerpo */
+        /* Estas reglas se aplican a <body>. Como <body> está en base.html, 
+           estas deberían moverse a base.html si son globales.
+           Si son overrides para esta página, es mejor tener clases específicas aquí. */
+        /* Por ahora las mantengo aquí para que no se pierdan, pero idealmente se refactorizan */
+        body {
+            /* font-family: 'Inter', sans-serif; ya en base */
+            /* background-color: var(--bg-primary); ya en base */
+            /* color: var(--text-primary); ya en base */
+            overflow-x: hidden; /* Prevenir scroll horizontal no deseado */
+            line-height: 1.6; /* Mejorar la legibilidad del texto */
+            /* margin: 0; ya en base */
+            /* padding: 0; ya en base */
+            /* transition: background-color 0.3s ease, color 0.3s ease; ya en base */
+
+            background-image: radial-gradient(circle at 100% 150%, var(--card-base-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 0% 150%, var(--card-base-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 50% 100%, var(--card-base-bg) 0%, transparent 10%),
+                              linear-gradient(to bottom, var(--bg-primary), color-mix(in srgb, var(--bg-primary) 80%, black)); 
+            background-size: 120% 120%;
+            background-attachment: fixed; /* Mantiene el patrón fijo al hacer scroll */
+        }
+
+        /* Contenedor principal de la página */
+        /* Si usas full_width_content en base.html, quizás no necesites page-container aquí */
+        /* Si base.html ya tiene max-w-7xl mx-auto py-6, entonces este div es redundante. */
+        /* Para esta prueba, asumo que quieres mantener esta estructura específica de layout. */
+        .page-container {
+            padding: 2.5rem 1.5rem;
+            max-width: 1400px; /* Ancho más amplio para listas y tablas */
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Encabezado de la página principal (título y botón) */
+        .page-header-main-list { 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--header-gradient-start) 0%, var(--header-gradient-end) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2.5rem;
+            box-shadow: var(--shadow-medium);
+            color: var(--text-primary); 
+            position: relative;
+            overflow: hidden;
+            flex-wrap: wrap; 
+            gap: 1rem; 
+            transition: all 0.3s ease;
+        }
+
+        .page-header-main-list h1 {
+            font-weight: 700;
+            font-size: 2.2rem;
+            margin: 0;
+            color: var(--text-primary); 
+            text-shadow: var(--text-shadow-subtle);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .page-header-main-list h1 i {
+            color: var(--accent); 
+            font-size: 1.8rem;
+        }
+
+        /* Botones generales */
+        .btn-custom { 
+            font-weight: 700;
+            border-radius: 0.7rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            font-size: 1.1rem;
+            padding: 0.9rem 2.2rem;
+            text-decoration: none;
+            background-color: var(--accent); 
+            border: none;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-light);
+        }
+        .btn-custom:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        /* Contenedor de la tabla principal */
+        .section-card { 
+            background-color: var(--card-base-bg); 
+            border: 1px solid var(--input-border); 
+            border-radius: 1rem;
+            box-shadow: var(--shadow-medium);
+            padding: 0; 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        html.light .section-card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+
+        /* Tabla de Usuarios (Estilo Excel-like) */
+        .table-responsive-custom { 
+            max-height: calc(100vh - 250px); 
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 1rem; 
+            border: 1px solid var(--input-border); 
+            box-shadow: var(--shadow-light); 
+            margin-bottom: 0; 
+        }
+        .table-custom { 
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background-color: var(--card-base-bg); 
+            margin-bottom: 0;
+        }
+        .table-custom thead th {
+            position: sticky;
+            top: 0;
+            background-color: var(--input-bg); 
+            color: var(--text-secondary);
+            font-weight: 700;
+            border-bottom: 2px solid var(--input-border);
+            padding: 1rem 1.25rem;
+            text-align: left;
+            z-index: 1;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .table-custom tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        .table-custom tbody tr:nth-child(even) { 
+            background-color: var(--bg-primary); 
+        }
+        html.light .table-custom tbody tr:nth-child(even) {
+            background-color: color-mix(in srgb, var(--card-base-bg) 95%, black);
+        }
+        .table-custom tbody tr:hover {
+            background-color: var(--bg-secondary); 
+        }
+        .table-custom td { 
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--input-border);
+            border-right: 1px solid var(--input-border);
+            color: var(--text-primary);
+            font-size: 0.95em;
+        }
+        .table-custom td:last-child {
+            border-right: none;
+        }
+        .table-custom tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .table-custom .font-bold-custom { 
+            font-weight: 700;
+        }
+        .table-custom a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            font-weight: 500;
+        }
+        .table-custom a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+        .table-custom .text-center-custom { 
+            text-align: center;
+        }
+        .table-custom .text-secondary-custom { 
+            color: var(--text-secondary) !important;
+        }
+
+        /* Badges de Rol */
+        .badge-custom { 
+            padding: 0.4em 0.7em;
+            border-radius: 0.3rem;
+            font-weight: 600;
+            font-size: 0.9em;
+            white-space: nowrap; 
+        }
+        .badge-secondary-custom { 
+            background-color: var(--input-bg);
+            color: var(--text-secondary);
+        }
+        .badge-danger-custom { 
+            background-color: var(--danger-color);
+            color: var(--text-primary);
+        }
+
+        /* Botón de acción en la tabla */
+        .btn-action-table { 
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9em;
+            background-color: var(--bg-secondary); 
+            border: 1px solid var(--input-border); 
+            color: var(--text-secondary); 
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+        .btn-action-table:hover {
+            background-color: var(--accent); 
+            color: var(--text-primary); 
+            border-color: var(--accent);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        html.light .btn-action-table:hover {
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+        .btn-action-table i {
+            font-size: 0.8em; 
+        }
+
+
+        /* Botón de cambio de tema */
+        /* Este botón DEBE ir solo en base.html si es global */
+        .page-theme-toggle {
+            position: fixed; /* Ahora fijo para que no se mueva con el scroll */
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            font-size: 1.8rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+        .page-theme-toggle:hover {
+            color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .page-container { padding: 2rem 1rem; }
+            .page-header-main-list {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+            }
+            .page-header-main-list h1 { font-size: 2rem; }
+            .btn-custom { width: 100%; }
+            .table-responsive-custom { max-height: 400px; }
+            .table-custom thead th, .table-custom td { padding: 0.8rem 1rem; font-size: 0.9em; }
+        }
+
+        @media (max-width: 768px) {
+            .page-container { padding: 1.5rem 0.8rem; }
+            .page-header-main-list { padding: 1.2rem; margin-bottom: 1.5rem; border-radius: 0.75rem; }
+            .page-header-main-list h1 { font-size: 1.75rem; }
+            .section-card { padding: 0; border-radius: 0.75rem; } 
+            .table-responsive-custom { max-height: 300px; }
+            .table-custom thead th, .table-custom td { padding: 0.7rem 0.9rem; font-size: 0.85em; }
+            .btn-action-table { padding: 0.3rem 0.75rem; font-size: 0.8em; }
+            .page-theme-toggle { top: 15px; right: 15px; font-size: 1.5rem; }
+        }
+
+        @media (max-width: 576px) {
+            .page-container { padding: 1rem 0.5rem; }
+            .page-header-main-list { border-radius: 0.5rem; margin-bottom: 1rem; padding: 1rem; }
+            .page-header-main-list h1 { font-size: 1.5rem; }
+            .section-card { border-radius: 0.5rem; margin-bottom: 1rem; }
+            .table-responsive-custom { max-height: 250px; }
+            .table-custom thead th, .table-custom td { padding: 0.6rem 0.8rem; font-size: 0.8em; }
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Gestión de Usuarios</h1>
-    <a href="{% url 'crear_usuario' %}" class="btn btn-primary">
-        <i class="fas fa-plus-circle me-1"></i> Crear Nuevo Usuario
-    </a>
-</div>
+    {# ELIMINAMOS LA ETIQUETA <body class="dark"> DE AQUÍ #}
+    {# ELIMINAMOS EL DIV class="page-container" DE AQUÍ, YA QUE BASE.HTML YA TIENE UN CONTENEDOR PRINCIPAL. #}
+    {# Si quieres un contenedor extra con los estilos de .page-container, enciérralo en un div con esa clase #}
+    {# PERO LA ESTRUCTURA PRINCIPAL DEBE IR EN BASE.HTML #}
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Nombre de Usuario</th>
-                    <th>Nombre Completo</th>
-                    <th>Email</th>
-                    <th>Rol</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for usuario in usuarios %}
-                    <tr>
-                        <td><strong>{{ usuario.username }}</strong></td>
-                        <td>{{ usuario.get_full_name|default:"-" }}</td>
-                        <td>{{ usuario.email|default:"-" }}</td>
-                        <td>
-                            {% with grupo=usuario.groups.first %}
-                                {% if grupo %}
-                                    <span class="badge bg-secondary">{{ grupo.name }}</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Sin Rol</span>
-                                {% endif %}
-                            {% endwith %}
-                        </td>
-                        <td>
-                            <a href="{% url 'editar_usuario' user_id=usuario.pk %}" class="btn btn-sm btn-outline-info">
-                                Editar
-                            </a>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-4">No hay usuarios registrados.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    <div class="page-container"> {# Añadido de nuevo si quieres el max-width, padding y margin:0 auto específico de esta page #}
+
+        <div class="page-header-main-list animate-pop-in">
+            <h1><i class="fas fa-users-gear mr-2"></i> Gestión de Usuarios</h1>
+            <div>
+                <a href="{% url 'crear_usuario' %}" class="btn-custom">
+                    <i class="fas fa-plus-circle mr-1"></i> Crear Nuevo Usuario
+                </a>
+            </div>
+        </div>
+
+        <div class="section-card card-style animate-pop-in">
+            <div class="table-responsive-custom">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Nombre de Usuario</th>
+                            <th>Nombre Completo</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                            <tr>
+                                <td><strong class="font-bold-custom">{{ usuario.username }}</strong></td>
+                                <td><span>{{ usuario.get_full_name|default:"-" }}</span></td>
+                                <td><span>{{ usuario.email|default:"-" }}</span></td>
+                                <td>
+                                    {% with grupo=usuario.groups.first %}
+                                        {% if grupo %}
+                                            <span class="badge-custom badge-secondary-custom">{{ grupo.name }}</span>
+                                        {% else %}
+                                            <span class="badge-custom badge-danger-custom">Sin Rol</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'editar_usuario' user_id=usuario.pk %}" class="btn-action-table" title="Editar">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center-custom py-4 text-secondary-custom">No hay usuarios registrados.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div> {# Cierre de .page-container #}
+
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }} {# ¡IMPORTANTE! Para incluir los scripts de base.html #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Animación pop-in para las secciones (se mantiene aquí si solo aplica a esta página)
+            const animateElements = document.querySelectorAll('.animate-pop-in');
+            animateElements.forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.1}s`;
+                el.style.opacity = '0'; // Comienza invisible
+                el.style.transform = 'translateY(20px)'; // Pequeño desplazamiento inicial
+            });
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        observer.unobserve(entry.target); // Deja de observar una vez animado
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            animateElements.forEach(element => {
+                observer.observe(element);
+            });
+            // La lógica del cambio de tema NO DEBE IR AQUÍ. Ya está en base.html
+            // y opera sobre la etiqueta <html>. Si la duplicas, puede haber conflictos.
+        });
+    </script>
 {% endblock %}

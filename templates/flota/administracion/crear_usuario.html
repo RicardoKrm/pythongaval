@@ -1,59 +1,468 @@
 {% extends "flota/base.html" %}
+{% load static %}
 
-{% block title %}Crear Nuevo Usuario{% endblock %}
+{% block title %}Crear Usuario - Pulser{% endblock %}
+
+{% block extra_head %}
+    {# Las variables CSS y estilos generales del body DEBEN estar en base.html #}
+    {# Aquí solo se dejan overrides muy específicos o estilos temporales para la depuración #}
+    <style>
+        /* Contenedor principal de la página */
+        .page-container {
+            padding: 2.5rem 1.5rem;
+            max-width: 800px; /* Limita el ancho del formulario para mejor legibilidad */
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Encabezado del formulario */
+        .page-header-main-form {
+            background: linear-gradient(135deg, var(--header-gradient-start, #e0e7ff) 0%, var(--header-gradient-end, #c7d2fe) 100%);
+            padding: 2rem 2.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2.5rem;
+            box-shadow: var(--shadow-medium, 0 20px 50px rgba(0, 0, 0, 0.15));
+            color: var(--text-primary, #1f2937); 
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .page-header-main-form h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin: 0;
+            color: var(--text-primary, #1f2937); 
+            text-shadow: var(--text-shadow-subtle, none);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        .page-header-main-form h1 i {
+            color: var(--accent, #3b82f6);
+            font-size: 2.2rem;
+        }
+        .page-header-main-form p.form-description {
+            color: var(--text-secondary, #4b5563);
+            font-weight: 400;
+            font-size: 1.05rem;
+            margin-top: 0.8rem;
+            margin-bottom: 0;
+            max-width: 600px;
+        }
+
+        /* Contenedor del formulario principal */
+        .form-main-card {
+            background-color: var(--card-base-bg, #ffffff);
+            border: 1px solid var(--input-border, #d1d5db);
+            border-radius: 1rem;
+            box-shadow: var(--shadow-medium, 0 20px 50px rgba(0, 0, 0, 0.15));
+            padding: 2.5rem;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+        html.light .form-main-card {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+
+        /* Estilo para secciones de formulario agrupadas */
+        .form-section-group {
+            background-color: var(--input-bg, #f9fafb);
+            border: 1px solid var(--input-border, #d1d5db);
+            border-radius: 0.7rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .form-section-group:last-of-type {
+            margin-bottom: 0;
+        }
+
+        /* Título de sección dentro del formulario */
+        .form-section-group h5 {
+            color: var(--text-primary, #1f2937);
+            font-weight: 700;
+            font-size: 1.15rem;
+            margin-top: 0; 
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--input-border, #d1d5db);
+            padding-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .form-section-group h5 i {
+            color: var(--accent, #3b82f6);
+            font-size: 1.15rem;
+        }
+
+        /* Etiquetas de formulario */
+        .form-label-custom {
+            font-weight: 600; 
+            color: var(--text-primary, #1f2937);
+            margin-bottom: 0.8rem;
+            font-size: 1em;
+        }
+
+        /* Controles de formulario (input, select, textarea) */
+        .custom-input {
+            background-color: var(--input-bg, #ffffff); 
+            border: 1px solid var(--input-border, #d1d5db); 
+            color: var(--text-primary, #1f2937); 
+            padding: 0.9rem 1.4rem; 
+            border-radius: 0.7rem; 
+            font-size: 1.05rem;
+            height: 52px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .custom-input::placeholder { color: var(--input-placeholder, #9ca3af); }
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent, #3b82f6);
+            box-shadow: 0 0 0 0.5rem hsla(217, 91%, 60%, 0.4);
+        }
+        input[type="number"].custom-input::-webkit-inner-spin-button,
+        input[type="number"].custom-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"].custom-input { -moz-appearance: textfield; }
+
+        /* Estilos para Select2 (sobrescribiendo los de Select2 y Select2 Bootstrap) */
+        .select2-container .select2-selection--multiple,
+        .select2-container .select2-selection--single {
+            background-color: var(--input-bg) !important; 
+            border: 1px solid var(--input-border) !important; 
+            border-radius: 0.7rem !important;
+            min-height: 52px !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .select2-container .select2-selection--single .select2-selection__rendered,
+        .select2-container .select2-selection--multiple .select2-selection__rendered {
+            color: var(--text-primary) !important;
+            padding: 0.9rem 1.4rem !important;
+            line-height: 1.5 !important;
+        }
+        .select2-container .select2-selection--single .select2-selection__arrow,
+        .select2-container .select2-selection--multiple .select2-selection__arrow {
+            height: 52px !important;
+            right: 1.4rem !important;
+            position: absolute;
+            top: 0;
+        }
+        .select2-container .select2-selection__arrow b {
+            border-color: var(--text-secondary) transparent transparent transparent !important;
+        }
+        .select2-container--default.select2-container--open .select2-selection__arrow b {
+            border-color: transparent transparent var(--text-secondary) transparent !important;
+        }
+        .select2-container .select2-results__option--highlighted.select2-results__option--selectable {
+            background-color: var(--accent) !important;
+            color: var(--text-primary) !important;
+        }
+        .select2-container .select2-results__option {
+            background-color: var(--card-base-bg) !important;
+            color: var(--text-primary) !important;
+            padding: 0.8rem 1.4rem !important;
+            transition: background-color 0.2s ease;
+        }
+        .select2-container .select2-results__option[aria-selected=true] {
+            background-color: var(--bg-secondary) !important;
+        }
+        .select2-dropdown {
+            background-color: var(--card-base-bg) !important;
+            border: 1px solid var(--input-border) !important;
+            border-radius: 0.7rem !important;
+            box-shadow: var(--shadow-light);
+            overflow: hidden;
+        }
+        .select2-search input {
+            background-color: var(--input-bg) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--input-border) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .select2-container .select2-selection--single .select2-selection__clear {
+            color: var(--text-secondary) !important;
+            font-size: 1.2em;
+            right: 2.5rem !important;
+            padding-right: 0 !important;
+        }
+        /* Para selección múltiple */
+        .select2-container .select2-selection--multiple .select2-selection__choice {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--input-border) !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem 1rem !important;
+            margin-top: 0.5rem !important;
+            margin-left: 0.5rem !important;
+            font-size: 0.9em;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__choice__remove {
+            color: var(--text-secondary) !important;
+            margin-right: 0.3rem !important;
+            float: none !important;
+            font-size: 1.1em;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: var(--danger-color) !important;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__rendered {
+            padding-top: 0.4rem !important;
+            padding-bottom: 0.4rem !important;
+        }
+        /* Ajustar el padding en selección múltiple si no hay elementos seleccionados */
+        .select2-container .select2-selection--multiple .select2-selection__rendered li {
+            margin-top: 0 !important;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__rendered {
+            padding-left: 0.9rem !important;
+            padding-right: 1.4rem !important;
+        }
+        .select2-container--default.select2-container--focus .select2-selection--multiple,
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 0.5rem hsla(217, 91%, 60%, 0.4) !important;
+        }
+        /* Manejar el placeholder del Select2 */
+        .select2-container .select2-selection--multiple .select2-selection__placeholder,
+        .select2-container .select2-selection--single .select2-selection__placeholder {
+            color: var(--input-placeholder) !important;
+        }
+        
+        /* Botones de acción */
+        .button-action-group {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn-custom-action {
+            font-weight: 700;
+            border-radius: 0.7rem;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+            font-size: 1.2rem;
+            padding: 1rem 2.5rem;
+            text-decoration: none;
+            background-color: var(--success-color);
+            border: none;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-light);
+        }
+        .btn-custom-action:hover {
+            background-color: color-mix(in srgb, var(--success-color) 80%, black);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-medium);
+        }
+        .btn-custom-cancel {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 0.9rem 2.2rem;
+            box-shadow: none;
+            transition: all 0.3s ease;
+        }
+        .btn-custom-cancel:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        html.light .btn-custom-cancel:hover {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .page-container { padding: 1.5rem 0.8rem; }
+            .page-header-main-form { padding: 1.5rem; margin-bottom: 1.5rem; border-radius: 0.75rem; }
+            .page-header-main-form h1 { font-size: 2rem; }
+            .page-header-main-form h1 i { font-size: 1.8rem; }
+            .page-header-main-form p.form-description { font-size: 0.95rem; margin-top: 0.5rem;}
+            .form-main-card { padding: 1.5rem; border-radius: 0.75rem; }
+            .form-section-group { padding: 1.2rem; margin-bottom: 1rem; border-radius: 0.75rem; }
+            .form-section-group h5 { font-size: 1.05rem; margin-bottom: 0.8rem; }
+            .form-section-group h5 i { font-size: 1em; }
+            .form-label-custom { font-size: 0.95rem; margin-bottom: 0.6rem;}
+            .custom-input { height: 48px; font-size: 1em; padding: 0.8rem 1.2rem;}
+            .select2-container .select2-selection--single,
+            .select2-container .select2-selection--multiple {
+                min-height: 48px !important;
+                height: 48px !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__rendered,
+            .select2-container .select2-selection--multiple .select2-selection__rendered {
+                padding: 0.8rem 1.2rem !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__arrow,
+            .select2-container .select2-selection--multiple .select2-selection__arrow {
+                height: 48px !important;
+                right: 1.2rem !important;
+            }
+            .button-action-group { gap: 0.8rem; margin-top: 1.5rem; }
+            .btn-custom-action, .btn-custom-cancel { font-size: 1.1rem; padding: 0.9rem 1.8rem; }
+        }
+
+        @media (max-width: 576px) {
+            .page-container { padding: 1rem 0.5rem; }
+            .page-header-main-form { padding: 1.2rem; margin-bottom: 1rem; border-radius: 0.5rem; }
+            .page-header-main-form h1 { font-size: 1.8rem; }
+            .page-header-main-form h1 i { font-size: 1.5rem; }
+            .page-header-main-form p.form-description { font-size: 0.9rem; margin-top: 0.5rem;}
+            .form-main-card { padding: 1.2rem; border-radius: 0.5rem; }
+            .form-section-group { padding: 1rem; margin-bottom: 0.8rem; border-radius: 0.5rem; }
+            .form-section-group h5 { font-size: 1rem; margin-bottom: 0.7rem; }
+            .form-section-group h5 i { font-size: 0.95rem; }
+            .form-label-custom { font-size: 0.9rem; margin-bottom: 0.5rem;}
+            .custom-input { height: 44px; font-size: 0.95rem; padding: 0.7rem 1rem;}
+            .select2-container .select2-selection--single,
+            .select2-container .select2-selection--multiple {
+                min-height: 44px !important;
+                height: 44px !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__rendered,
+            .select2-container .select2-selection--multiple .select2-selection__rendered {
+                padding: 0.7rem 1rem !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__arrow,
+            .select2-container .select2-selection--multiple .select2-selection__arrow {
+                height: 44px !important;
+                right: 1rem !important;
+            }
+            .button-action-group { gap: 0.7rem; margin-top: 1.5rem; }
+            .btn-custom-action, .btn-custom-cancel { font-size: 1rem; padding: 0.8rem 1.5rem; }
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
-<h1>Crear Nuevo Usuario</h1>
-
-<div class="form-card mt-4">
-    <form method="post">
-        {% csrf_token %}
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
-                {{ form.username }}
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
-                {{ form.email }}
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
-                {{ form.first_name }}
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
-                {{ form.last_name }}
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
-                {{ form.password }}
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.grupo.id_for_label }}" class="form-label">{{ form.grupo.label }}</label>
-                {{ form.grupo }}
-            </div>
+    <div class="page-container">
+        <div class="page-header-main-form animate-pop-in">
+            <h1><i class="fas fa-user-plus mr-2"></i> Crear Nuevo Usuario</h1> {# Título y Icono Correctos #}
+            <p class="form-description">
+                Complete los datos para crear una nueva cuenta de usuario en el sistema y asigne su rol.
+            </p>
         </div>
 
-        {% if form.non_field_errors %}
-            <div class="alert alert-danger">
-                {% for error in form.non_field_errors %}
-                    {{ error }}
-                {% endfor %}
-            </div>
-        {% endif %}
+        <div class="form-main-card animate-pop-in">
+            <form method="post" class="grid grid-cols-1 gap-4">
+                {% csrf_token %}
+                
+                {# Mensajes de error del formulario global #}
+                {% if form.errors %}
+                    <div class="alert-error">
+                        Por favor, corrija los siguientes errores:
+                        <ul>
+                            {% for field, errors in form.errors.items %}
+                                <li>{{ field|capfirst }}:
+                                    {% for error in errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
 
-        <div class="mt-4">
-            <button type="submit" class="btn-submit">Crear Usuario</button>
-            <a href="{% url 'lista_usuarios' %}" class="btn-secondary ms-2">Cancelar</a>
+                <div class="form-section-group">
+                    <h5><i class="fas fa-id-card mr-2"></i>Datos de Acceso</h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label-custom" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                            {{ form.username }}
+                        </div>
+                        <div>
+                            <label class="form-label-custom" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                            {{ form.password }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-group">
+                    <h5><i class="fas fa-user-circle mr-2"></i>Información Personal y Rol</h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="form-label-custom" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div>
+                            <label class="form-label-custom" for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                            {{ form.last_name }}
+                        </div>
+                        <div class="col-span-full"> {# Email ocupa todo el ancho en móviles y tablets #}
+                            <label class="form-label-custom" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-span-full"> {# Rol ocupa todo el ancho #}
+                            <label class="form-label-custom" for="{{ form.grupo.id_for_label }}">{{ form.grupo.label }}</label>
+                            {{ form.grupo }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-action-group col-span-full">
+                    <button type="submit" class="btn-custom-action">
+                        <i class="fas fa-user-plus mr-2"></i>Crear Usuario
+                    </button>
+                    <a href="{% url 'lista_usuarios' %}" class="btn-custom-cancel">
+                        <i class="fas fa-times-circle mr-2"></i>Cancelar
+                    </a>
+                </div>
+            </form>
         </div>
-    </form>
-</div>
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Animación pop-in para las secciones
+        const animateElements = document.querySelectorAll('.animate-pop-in');
+        animateElements.forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        animateElements.forEach(element => {
+            observer.observe(element);
+        });
+
+        // Inicializar Select2 en el selector de grupo (rol)
+        $('#id_grupo').select2({
+            theme: "default", 
+            width: '100%',
+            placeholder: "Seleccionar un rol...",
+            allowClear: true
+        });
+    });
+    </script>
 {% endblock %}

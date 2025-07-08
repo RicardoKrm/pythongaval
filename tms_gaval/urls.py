@@ -47,5 +47,9 @@ urlpatterns = [
     path('administracion/usuarios/editar/<int:user_id>/', views.editar_usuario, name='editar_usuario'),
     path('kpi-rrhh/', views.kpi_rrhh_dashboard, name='kpi_rrhh_dashboard'),
     path('reportes/', views.reportes_dashboard, name='reportes_dashboard'),
+     # Nuevas URLs de Exportación contextual
+    path('exportar/vehiculos-csv/', views.export_vehiculos_csv, name='export_vehiculos_csv'),
+    path('exportar/repuestos-csv/', views.export_repuestos_csv, name='export_repuestos_csv'),
+    path('exportar/ots-csv/', views.export_ots_csv, name='export_ots_csv'),
     
 ]

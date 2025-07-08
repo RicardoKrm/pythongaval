@@ -1,160 +1,389 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}TMS GAVAL{% endblock %} - {{ request.tenant.nombre }}</title>
+    <title>{% block title %}Pulser TMS{% endblock %} - {{ request.tenant.nombre }}</title>
     
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    
+
     <style>
-        /* Tus estilos originales (sin cambios) */
-        body { font-family: system-ui, sans-serif; margin: 0; background-color: #1a202c; color: #cbd5e0; }
-        nav { background-color: #2d3748; padding: 1em 2em; display: flex; justify-content: space-between; align-items: center; }
-        .nav-links a { color: white; text-decoration: none; margin-right: 1.5em; font-weight: 500; }
-        .nav-links a:hover { text-decoration: underline; }
-        .user-menu { display: flex; align-items: center; gap: 1em; }
-        .user-menu span { color: #a0aec0; }
-        .user-menu a { color: white; text-decoration: none; }
-        .btn-logout { background-color: #c53030; color: white; padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: inherit; font-weight: 500; }
-        .btn-logout:hover { background-color: #9b2c2c; }
-        .container { padding: 2em; }
-        .messages-container { padding: 0 2em; }
-        .alert { padding: 15px; margin: 1em 0; border-radius: 4px; color: white; }
-        .alert-success { background-color: #2f855a; }
-        .alert-error { background-color: #c53030; }
-        .alert-warning { background-color: #dd6b20; }
-        .alert-info { background-color: #3182ce; }
-        h1, h2 { color: #e2e8f0; border-bottom: 1px solid #4a5568; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1em; font-size: 0.9em; }
-        th, td { padding: 12px; border: 1px solid #2d3748; text-align: left; }
-        thead { background-color: #2d3748; color: #a0aec0; }
-        /* Estilos de la campanita (sin cambios) */
-        .notification-bell-wrapper { position: relative; margin-right: 1.5em; }
-        #notification-bell-button { background: none; border: none; color: white; cursor: pointer; padding: 5px; position: relative; }
-        #notification-count { position: absolute; top: -5px; right: -8px; background-color: #c53030; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7em; font-weight: bold; border: 1px solid white; }
-        #notification-popup { display: none; position: absolute; top: 40px; right: 0; width: 350px; max-height: 400px; overflow-y: auto; background-color: #2d3748; border: 1px solid #4a5568; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000; }
-        #notification-popup a { display: block; padding: 12px 15px; color: #cbd5e0; text-decoration: none; border-bottom: 1px solid #4a5568; }
-        #notification-popup a:hover { background-color: #4a5568; }
-        #notification-popup .notif-unread { background-color: #354154; font-weight: bold; }
-        #notification-popup p { margin: 0; font-size: 0.9em; }
-        #notification-popup .notif-time { font-size: 0.8em; color: #a0aec0; margin-top: 4px; }
-        #notification-popup .notif-empty, #notification-popup .notif-footer { padding: 15px; text-align: center; color: #a0aec0; font-size: 0.9em; }
-        #notification-popup .notif-footer a { border: none; padding: 0; display: inline; text-decoration: underline; }
-    </style>
-    
-    {% block extra_head %}{% endblock %}
-
-</head>
-<body>
-    <nav>
-        <div class="nav-links">
-            <!-- Pizarra Mantenimiento: Visible para todos EXCEPTO Mecánicos -->
-            {% if not es_mecanico %}
-                <a href="{% url 'dashboard' %}">Pizarra de Mantenimiento</a>
-            {% endif %}
-
-            <!-- Órdenes de Trabajo: Visible para TODOS -->
-            <a href="{% url 'ot_list' %}">Órdenes de Trabajo</a>
-
-            <!-- Paneles Operativos: Roles que gestionan el día a día (Admin, Supervisor) -->
-            {% if es_personal_operativo %}
-                <a href="{% url 'pizarra_programacion' %}">Pizarra de Programación</a>
-                <a href="{% url 'pizarra_combustible' %}">Control de Combustible</a>
-                <a href="{% url 'repuesto_list' %}">Inventario</a>
-            {% endif %}
-
-            <!-- Paneles Estratégicos y de Análisis: Roles de alto nivel (Admin, Gerente) -->
-            {% if es_administrador or es_gerente %}
-                <a href="{% url 'indicadores_dashboard' %}">KPIs de Flota</a>
-                <a href="{% url 'kpi_rrhh_dashboard' %}">KPIs de RR.HH.</a>
-                <a href="{% url 'analisis_fallas' %}">Análisis de Fallas</a>
-                <a href="{% url 'analisis_avanzado' %}">Costos y Tendencias</a>
-                <a href="{% url 'reportes_dashboard' %}">Reportes</a>
-            {% endif %}
-            
-            <!-- Paneles de Administración Total: Solo Administrador -->
-            {% if es_administrador %}
-                <a href="{% url 'carga_masiva' %}">Carga Masiva</a>
-                <a href="{% url 'lista_usuarios' %}">Gestionar Usuarios</a>
-            {% endif %}
-        </div>
+        /* Variables de Color (sin cambios) */
+        :root {
+            --bg-primary: hsl(210, 15%, 98%);
+            --bg-secondary: hsl(210, 20%, 94%);
+            --text-primary: hsl(210, 20%, 20%);
+            --text-secondary: hsl(210, 10%, 45%);
+            --accent: hsl(195, 90%, 55%);
+            --accent-hover: hsl(195, 90%, 45%);
+            --card-base-bg: #FFFFFF;
+            --input-bg: #FFFFFF;
+            --input-border: hsl(210, 10%, 75%);
+            --input-placeholder: hsl(210, 10%, 65%);
+        }
+        html.dark {
+            --bg-primary: hsl(210, 10%, 15%);
+            --bg-secondary: hsl(210, 10%, 12%);
+            --text-primary: hsl(210, 15%, 95%);
+            --text-secondary: hsl(210, 10%, 70%);
+            --accent: hsl(195, 90%, 65%);
+            --accent-hover: hsl(195, 90%, 55%);
+            --card-base-bg: hsl(210, 10%, 20%);
+            --input-bg: hsl(210, 10%, 28%);
+            --dark-input-border: hsl(210, 10%, 45%);
+            --input-border: var(--dark-input-border);
+            --input-placeholder: hsl(210, 10%, 55%);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        .card-style {
+            background-color: var(--card-base-bg);
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+        }
         
-        <div class="user-menu">
-            {% if user.is_authenticated %}
-                <div class="notification-bell-wrapper">
-    <button id="notification-bell-button">
-        <i class="fas fa-bell fa-lg"></i>
-        {% if notificaciones_no_leidas_count > 0 %}
-            <span id="notification-count">{{ notificaciones_no_leidas_count }}</span>
-        {% endif %}
-    </button>
+        /* Regla general para todos los campos de formulario */
+        input[type="text"], input[type="number"], input[type="email"], input[type="password"], input[type="date"], textarea, select {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s ease-in-out;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="email"]:focus, input[type="password"]:focus, input[type="date"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px hsla(195, 90%, 65%, 0.4);
+        }
 
-    {% comment %} ESTE ES EL POPUP QUE AHORA TENDRÁ CONTENIDO {% endcomment %}
-            <div id="notification-popup" style="display: none;">
-                <div class="notification-header" style="padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #4a5568;">
-                    Notificaciones
+        /* Estilos ESPECÍFICOS y más importantes para Select2, que sobreescriben lo anterior si es necesario */
+        .select2-container .select2-selection--single {
+            height: 42px !important; /* Mantenemos altura consistente */
+            background-color: var(--input-bg) !important;
+            border: 1px solid var(--input-border) !important; /* ¡LA CLAVE ESTÁ AQUÍ! Aplicamos el borde */
+            color: var(--text-primary) !important;
+            border-radius: 0.375rem !important;
+        }
+        .select2-container--default.select2-container--focus .select2-selection--single,
+        .select2-container--default.select2-container--open .select2-selection--single {
+            border-color: var(--accent) !important; /* Borde de foco */
+            box-shadow: 0 0 0 3px hsla(195, 90%, 65%, 0.4); /* Sombra de foco */
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--text-primary) !important;
+            line-height: 40px !important;
+            padding-left: 0.75rem !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px !important;
+        }
+        .select2-dropdown {
+            background-color: var(--card-base-bg) !important;
+            border: 1px solid var(--input-border) !important;
+        }
+        .select2-results__option {
+            color: var(--text-secondary) !important;
+        }
+        .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--accent) !important;
+            color: var(--card-base-bg) !important;
+        }
+        .select2-search--dropdown .select2-search__field {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--input-border) !important;
+        }
+
+        /* Estilos para Mensajes de Django */
+        .alert-success { background-color: #d1fae5; border-left: 4px solid #10b981; color: #065f46; padding: 1rem; }
+        html.dark .alert-success { background-color: rgba(16, 185, 129, 0.2); border-left: 4px solid #34d399; color: #a7f3d0; }
+        .alert-error { background-color: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; padding: 1rem; }
+        html.dark .alert-error { background-color: rgba(239, 68, 68, 0.2); border-left: 4px solid #f87171; color: #fca5a5; }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border: 1px solid transparent;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            color: #ffffff;
+            background-color: var(--accent);
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        /* Estilos para los items de los dropdowns de navegación */
+        .nav-dropdown-item {
+            display: block;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .nav-dropdown-item:hover {
+            background-color: var(--bg-secondary);
+            color: var(--accent);
+        }
+
+        {% block extra_head %}{% endblock %}
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- MODIFICADO: Nueva barra de navegación profesional y responsiva -->
+    <nav class="bg-[var(--card-base-bg)] shadow-lg fixed w-full top-0 z-40"></nav>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo y Menú Principal -->
+                <div class="flex items-center">
+                    <a href="{% url 'dashboard' %}" class="flex-shrink-0 flex items-center text-2xl font-extrabold text-[var(--accent)]">
+                        <svg class="w-8 h-8 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></svg>
+                        <span>Pulser</span>
+                    </a>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <!-- Enlaces de Navegación Principal para todos los roles o por defecto -->
+                            {% if not es_mecanico %}
+                                <a href="{% url 'dashboard' %}" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Pizarra Mantenimiento</a>
+                            {% endif %}
+                            
+                            <a href="{% url 'ot_list' %}" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Órdenes de Trabajo</a>
+                            
+                            <!-- Enlaces directos para Supervisor (no están en dropdown para ellos) -->
+                            {% if es_supervisor and not es_administrador and not es_gerente %}
+                                <a href="{% url 'pizarra_programacion' %}" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Programación</a>
+                                <a href="{% url 'repuesto_list' %}" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Inventario</a>
+                                <a href="{% url 'pizarra_combustible' %}" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200">Control Combustible</a>
+                            {% endif %}
+
+                            <!-- DROPDOWNS PARA ADMINISTRADOR Y GERENTE -->
+                            {% if es_administrador or es_gerente %}
+                                <!-- Dropdown: Paneles Operativos -->
+                                <div class="relative inline-block text-left">
+                                    <button type="button" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none flex items-center" onclick="toggleNavDropdown(event, 'dropdown-operativos')">
+                                        Paneles Operativos <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                                    </button>
+                                    <div id="dropdown-operativos" class="absolute hidden bg-[var(--card-base-bg)] shadow-lg rounded-md mt-2 py-1 w-56 z-50 ring-1 ring-black ring-opacity-5">
+                                        <a href="{% url 'pizarra_programacion' %}" class="nav-dropdown-item">Programación</a>
+                                        <a href="{% url 'repuesto_list' %}" class="nav-dropdown-item">Inventario</a>
+                                        <a href="{% url 'pizarra_combustible' %}" class="nav-dropdown-item">Control Combustible</a>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown: Paneles de KPIs -->
+                                <div class="relative inline-block text-left">
+                                    <button type="button" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none flex items-center" onclick="toggleNavDropdown(event, 'dropdown-kpis')">
+                                        Paneles de KPIs <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                                    </button>
+                                    <div id="dropdown-kpis" class="absolute hidden bg-[var(--card-base-bg)] shadow-lg rounded-md mt-2 py-1 w-56 z-50 ring-1 ring-black ring-opacity-5">
+                                        <a href="{% url 'indicadores_dashboard' %}" class="nav-dropdown-item">KPI Flota</a>
+                                        <a href="{% url 'kpi_rrhh_dashboard' %}" class="nav-dropdown-item">KPI RR.HH.</a>
+                                        <a href="{% url 'analisis_fallas' %}" class="nav-dropdown-item">Análisis Fallas</a>
+                                        <a href="{% url 'analisis_avanzado' %}" class="nav-dropdown-item">Costos / Tendencias</a>
+                                    </div>
+                                </div>
+
+                                <!-- Dropdown: Herramientas y Configuración -->
+                                <div class="relative inline-block text-left">
+                                    <button type="button" class="text-text-secondary hover:text-[var(--accent-hover)] px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 focus:outline-none flex items-center" onclick="toggleNavDropdown(event, 'dropdown-herramientas')">
+                                        Herramientas <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                                    </button>
+                                    <div id="dropdown-herramientas" class="absolute hidden bg-[var(--card-base-bg)] shadow-lg rounded-md mt-2 py-1 w-56 z-50 ring-1 ring-black ring-opacity-5">
+                                        <a href="{% url 'reportes_dashboard' %}" class="nav-dropdown-item">Reportes</a>
+                                        <a href="{% url 'carga_masiva' %}" class="nav-dropdown-item">Carga Masiva</a>
+                                        <a href="{% url 'lista_usuarios' %}" class="nav-dropdown-item">Administración Usuarios</a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="notification-body" style="max-height: 300px; overflow-y: auto;">
-                    {% comment %}
-                        En una versión futura, podrías llenar esto con AJAX.
-                        Por ahora, mostramos las 5 más recientes que pasamos desde el context processor.
-                        Si no tienes 'notificaciones_recientes' en tu context processor, esto no mostrará nada.
-                    {% endcomment %}
-                    
-                    {% with request.user.notificaciones.all|slice:":5" as notificaciones_recientes %}
-                        {% if notificaciones_recientes %}
-                            {% for notif in notificaciones_recientes %}
-                                <a href="{{ notif.url_destino|default:'#' }}" class="notification-item {% if not notif.leida %}notif-unread{% endif %}" style="display: block; padding: 12px 15px; color: #cbd5e0; text-decoration: none; border-bottom: 1px solid #4a5568;">
-                                    <p style="margin: 0; font-size: 0.9em;">{{ notif.mensaje }}</p>
-                                    <div class="notif-time" style="font-size: 0.8em; color: #a0aec0; margin-top: 4px;">{{ notif.fecha_creacion|timesince }} atrás</div>
-                                </a>
-                            {% endfor %}
-                        {% else %}
-                            <div class="notif-empty" style="padding: 15px; text-align: center; color: #a0aec0; font-size: 0.9em;">No tienes notificaciones.</div>
-                        {% endif %}
-                    {% endwith %}
+
+                <!-- Menú de Usuario y Notificaciones -->
+                <div class="hidden md:block">
+                    <div class="ml-4 flex items-center md:ml-6">
+                        <!-- Campana de Notificaciones -->
+                        <div class="relative" id="notification-bell-wrapper">
+                            <button id="notification-bell-button" type="button" class="p-1 rounded-full text-gray-400 hover:text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+                                <i class="far fa-bell text-xl"></i>
+                                {% if notificaciones_no_leidas_count > 0 %}
+                                    <span id="notification-count" class="absolute -top-1 -right-1 flex items-center justify-center h-5 w-5 rounded-full bg-red-500 text-xs text-white">{{ notificaciones_no_leidas_count }}</span>
+                                {% endif %}
+                            </button>
+                            <div id="notification-popup" class="hidden origin-top-right absolute right-0 mt-2 w-80 rounded-md shadow-lg py-1 bg-[var(--card-base-bg)] ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="px-4 py-2 font-bold border-b border-[var(--input-border)] text-text-primary">Notificaciones</div>
+                                {% with notificaciones_recientes_no_leidas as notificaciones_recientes %} {# Usa la variable del context processor #}
+                                    {% for notif in notificaciones_recientes %}
+                                        <a href="{{ notif.url_destino|default:'#' }}" class="block px-4 py-2 text-sm text-text-secondary hover:bg-[var(--bg-secondary)] {% if not notif.leida %} font-bold text-text-primary {% endif %}">
+                                            {{ notif.mensaje }}
+                                            <p class="text-xs text-gray-500 mt-1">{{ notif.fecha_creacion|timesince }} atrás</p>
+                                        </a>
+                                    {% empty %}
+                                        <p class="px-4 py-3 text-sm text-center text-text-secondary">No tienes notificaciones.</p>
+                                    {% endfor %}
+                                {% endwith %}
+                                <a href="{% url 'lista_notificaciones' %}" class="block text-center py-2 text-sm text-[var(--accent)] hover:underline border-t border-[var(--input-border)]">Ver todas</a>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown de Perfil -->
+                        <div class="ml-3 relative" id="user-menu-wrapper">
+                            <div>
+                                <button type="button" id="user-menu-button" class="max-w-xs bg-gray-800 rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white" aria-expanded="false" aria-haspopup="true">
+                                    <span class="sr-only">Abrir menú de usuario</span>
+                                    <div class="h-8 w-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-white font-bold">
+                                        {{ user.username|first|upper }}
+                                    </div>
+                                </button>
+                            </div>
+                            <div id="user-menu-popup" class="hidden origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-[var(--card-base-bg)] ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="px-4 py-2 text-sm text-text-secondary border-b border-[var(--input-border)]">
+                                    Conectado como <strong class="text-text-primary">{{ user.get_full_name|default:user.username }}</strong>
+                                </div>
+                                <a href="#" class="block px-4 py-2 text-sm text-text-secondary hover:bg-[var(--bg-secondary)]">Mi Perfil</a> {# Considerar crear una URL real para esto #}
+                                <button id="theme-toggle" class="w-full text-left block px-4 py-2 text-sm text-text-secondary hover:bg-[var(--bg-secondary)]">
+                                    <span class="dark:hidden"><i class="fas fa-moon mr-2"></i>Modo Oscuro</span>
+                                    <span class="hidden dark:inline"><i class="fas fa-sun mr-2"></i>Modo Claro</span>
+                                </button>
+                                <form action="{% url 'logout' %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="w-full text-left block px-4 py-2 text-sm text-red-400 hover:bg-red-500 hover:text-white">Cerrar Sesión</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="notification-footer" style="padding: 12px; text-align: center; border-top: 1px solid #4a5568;">
-                    <a href="{% url 'lista_notificaciones' %}" style="color: #a0aec0; text-decoration: underline;">Ver todas</a>
+
+                <!-- Botón de Menú Móvil -->
+                <div class="-mr-2 flex md:hidden">
+                    <button id="mobile-menu-button" type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
                 </div>
             </div>
         </div>
 
-                <span>Bienvenido, {{ user.get_full_name|default:user.username }}</span>
-                <form action="{% url 'logout' %}" method="post" style="display: inline; margin: 0; padding: 0;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-logout">Cerrar Sesión</button>
-                </form>
-            {% endif %}
+        <!-- Menú Móvil (Versión plana para simplificar la UX móvil) -->
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                {% if not es_mecanico %}<a href="{% url 'dashboard' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Pizarra Mant.</a>{% endif %}
+                <a href="{% url 'ot_list' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Órdenes de Trabajo</a>
+                
+                {% if es_personal_operativo %}
+                    <a href="{% url 'pizarra_programacion' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Programación</a>
+                    <a href="{% url 'repuesto_list' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Inventario</a>
+                    <a href="{% url 'pizarra_combustible' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Control Combustible</a>
+                {% endif %}
+                
+                {% if es_administrador or es_gerente %}
+                    <a href="{% url 'indicadores_dashboard' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">KPI Flota</a>
+                    <a href="{% url 'kpi_rrhh_dashboard' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">KPI RR.HH.</a>
+                    <a href="{% url 'analisis_fallas' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Análisis Fallas</a>
+                    <a href="{% url 'analisis_avanzado' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Costos / Tendencias</a>
+                    <a href="{% url 'reportes_dashboard' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Reportes</a>
+                    <a href="{% url 'carga_masiva' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Carga Masiva</a>
+                    <a href="{% url 'lista_usuarios' %}" class="text-gray-300 hover:bg-gray-700 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Administración</a>
+                {% endif %}
+            </div>
         </div>
     </nav>
     
-    <div class="messages-container">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-    </div>
+    <main>
+        <div class="{% if full_width_content %}max-w-full px-4 sm:px-6 lg:px-8{% else %}max-w-7xl mx-auto{% endif %} py-6">
+            <!-- Contenedor de mensajes de Django -->
+            {% if messages %}
+                <div class="px-4 sm:px-0 mb-4">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
 
-    <div class="container">
-        {% block content %}{% endblock %}
-    </div>
-
-    <!-- ... tu código HTML hasta las librerías JS ... -->
-
-    <!-- Librerías JS -->
+            <!-- El contenido principal de cada página se insertará aquí -->
+            <div class="px-4 py-6 sm:px-0">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </main>
+    
+    <!-- Scripts JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
-    <!-- ================ INICIO DEL SCRIPT RESTAURADO DEL COMMIT ================ -->
     <script>
         $(document).ready(function() {
+            // Inicializar Select2
             $('.select2').select2();
 
+            // Lógica para el Menú de Usuario y Notificaciones
+            const setupDropdown = (wrapperId, buttonId, popupId) => {
+                const wrapper = $(`#${wrapperId}`);
+                const button = $(`#${buttonId}`);
+                const popup = $(`#${popupId}`);
+
+                if (button.length > 0) {
+                    button.on('click', function(event) {
+                        event.stopPropagation();
+                        // Ocultar otros popups abiertos
+                        $('.relative > div:last-child').not(popup).addClass('hidden');
+                        popup.toggleClass('hidden');
+                    });
+                }
+            };
+            
+            setupDropdown('notification-bell-wrapper', 'notification-bell-button', 'notification-popup');
+            setupDropdown('user-menu-wrapper', 'user-menu-button', 'user-menu-popup');
+
+            // Lógica para los Nuevos Dropdowns de Navegación
+            window.toggleNavDropdown = function(event, dropdownId) {
+                event.stopPropagation();
+                const allNavDropdowns = document.querySelectorAll('.absolute.hidden.bg-\\[var\\(--card-base-bg\\]\\]');
+                const targetDropdown = document.getElementById(dropdownId);
+
+                // Cerrar otros dropdowns de navegación
+                allNavDropdowns.forEach(dropdown => {
+                    if (dropdown.id !== dropdownId) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+
+                // Abrir/cerrar el dropdown objetivo
+                targetDropdown.classList.toggle('hidden');
+            }
+
+            // Cerrar TODOS los popups (usuario, notificaciones, y navegación) al hacer clic fuera
+            $(document).on('click', function(event) {
+                if (!$(event.target).closest('#notification-bell-wrapper').length && 
+                    !$(event.target).closest('#user-menu-wrapper').length &&
+                    !$(event.target).closest('.relative.inline-block.text-left').length // Para los nuevos dropdowns
+                ) {
+                    $('#notification-popup').addClass('hidden');
+                    $('#user-menu-popup').addClass('hidden');
+                    // Cerrar los nuevos dropdowns de navegación también
+                    document.querySelectorAll('.absolute.hidden.bg-\\[var\\(--card-base-bg\\]\\]').forEach(dropdown => {
+                        dropdown.classList.add('hidden');
+                    });
+                }
+            });
+
+            // Lógica para marcar notificaciones como leídas (sin cambios funcionales)
             const bellButton = $('#notification-bell-button');
-            const popup = $('#notification-popup');
             const countBadge = $('#notification-count');
             const markAsReadUrl = "{% url 'marcar_notificaciones_leidas' %}";
             const csrfToken = "{{ csrf_token }}";
@@ -162,44 +391,43 @@
 
             if (bellButton.length > 0) {
                 bellButton.on('click', function(event) {
-                    event.stopPropagation();
-                    popup.toggle();
-                    
                     if (countBadge.is(':visible') && !notificationsHaveBeenMarked) {
                         notificationsHaveBeenMarked = true;
                         fetch(markAsReadUrl, {
                             method: 'POST',
                             headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === 'ok') {
-                                countBadge.hide();
-                            } else {
-                                notificationsHaveBeenMarked = false;
-                            }
-                        })
-                        .catch(error => {
-                            console.error("Error al marcar notificaciones como leídas:", error);
-                            notificationsHaveBeenMarked = false;
-                        });
-                    }
-                });
-
-                $(document).on('click', function(event) {
-                    if (!$(event.target).closest('.notification-bell-wrapper').length) {
-                        if (popup.is(':visible')) {
-                            popup.hide();
-                        }
+                        }).then(response => response.json()).then(data => {
+                            if (data.status === 'ok') { countBadge.hide(); } 
+                            else { notificationsHaveBeenMarked = false; }
+                        }).catch(() => { notificationsHaveBeenMarked = false; });
                     }
                 });
             }
+
+            // Lógica para el Menú Móvil
+            $('#mobile-menu-button').on('click', function() {
+                $('#mobile-menu').toggleClass('hidden');
+            });
+
+            // Lógica para el Theme Toggle
+            const themeToggle = $('#theme-toggle');
+            const htmlElement = $('html');
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                htmlElement.removeClass('dark light').addClass(savedTheme);
+            }
+            themeToggle.on('click', () => {
+                if (htmlElement.hasClass('dark')) {
+                    htmlElement.removeClass('dark').addClass('light');
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    htmlElement.removeClass('light').addClass('dark');
+                    localStorage.setItem('theme', 'dark');
+                }
+            });
         });
     </script>
-    <!-- ================ FIN DEL SCRIPT RESTAURADO DEL COMMIT ================ -->
     
     {% block extra_scripts %}{% endblock extra_scripts %}
-</body>
-</html>
 </body>
 </html>

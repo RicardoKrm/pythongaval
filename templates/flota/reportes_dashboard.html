@@ -1,52 +1,641 @@
 {% extends "flota/base.html" %}
+{% load static %}
 
-{% block title %}Generación de Reportes{% endblock %}
+{% block title %}Generación de Reportes - Pulser{% endblock %}
+
+{% block extra_head %}
+    
+    <style>
+        :root {
+            --bg-primary: hsl(0, 0%, 98%);
+            --bg-secondary: hsl(0, 0%, 95%);
+            --text-primary: hsl(210, 20%, 20%);
+            --text-secondary: hsl(210, 10%, 45%);
+            --accent: hsl(185, 100%, 50%);
+            --accent-hover: hsl(185, 100%, 40%);
+            --card-base-bg: #FFFFFF;
+            --input-bg: #FFFFFF;
+            --input-border: hsl(210, 10%, 80%);
+            --input-placeholder: hsl(210, 10%, 65%);
+            --text-shadow-strong: none;
+            --text-shadow-subtle: none;
+            --calendar-icon-filter: invert(0);
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.15);
+            --success-color: hsl(140, 70%, 45%);
+            --warning-color: hsl(40, 95%, 55%);
+            --danger-color: hsl(0, 70%, 60%);
+            --info-color: var(--accent);
+            --alert-info-bg: hsla(185, 100%, 50%, 0.1);
+            --alert-info-text: var(--accent);
+            --header-gradient-start: hsl(210, 20%, 90%);
+            --header-gradient-end: hsl(210, 15%, 95%);
+        }
+
+        html.dark {
+            --bg-primary: hsl(220, 30%, 5%);
+            --bg-secondary: hsl(220, 25%, 8%);
+            --text-primary: hsl(0, 0%, 100%);
+            --text-secondary: hsl(210, 10%, 70%);
+            --accent: hsl(185, 100%, 50%);
+            --accent-hover: hsl(185, 100%, 40%);
+            --card-base-bg: hsl(210, 20%, 13%);
+            --input-bg: hsl(210, 20%, 18%);
+            --input-border: hsl(210, 10%, 25%);
+            --input-placeholder: hsl(210, 10%, 45%);
+            --text-shadow-strong: 0 0 15px var(--accent);
+            --text-shadow-subtle: 0 0 8px hsla(185, 100%, 50%, 0.4);
+            --calendar-icon-filter: invert(1);
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.5);
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.8);
+            --success-color: hsl(140, 70%, 55%);
+            --warning-color: hsl(39, 92%, 65%);
+            --danger-color: hsl(350, 100%, 60%);
+            --info-color: var(--accent);
+            --alert-info-bg: hsla(185, 100%, 50%, 0.1);
+            --alert-info-text: var(--accent);
+            --header-gradient-start: hsl(220, 30%, 10%);
+            --header-gradient-end: hsl(220, 25%, 15%);
+        }
+
+        /* Estilos generales del body - RECOMENDACIÓN: MOVER A BASE.HTML */
+        /* Estas reglas aplican al <body>. Si son globales, DEBEN ir en base.html. */
+        /* Por ahora las mantengo aquí si son overrides MUY específicos. */
+        body {
+            /* font-family, background-color, color, line-height, min-height, display, flex-direction, padding ya en base.html */
+            background-image: radial-gradient(circle at 100% 150%, var(--card-base-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 0% 150%, var(--card-base-bg) 0%, transparent 20%),
+                              radial-gradient(circle at 50% 100%, var(--card-base-bg) 0%, transparent 10%),
+                              linear-gradient(to bottom, var(--bg-primary), color-mix(in srgb, var(--bg-primary) 80%, black)); 
+            background-size: 120% 120%;
+            background-attachment: fixed;
+        }
+
+        /* Contenedor principal de la página */
+        .page-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            flex-grow: 1;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            text-shadow: var(--text-shadow-strong);
+            letter-spacing: 0.05em;
+        }
+
+        p.page-description {
+            color: var(--text-secondary);
+            font-size: 1.15em;
+            text-align: center;
+            margin-bottom: 2.5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .section-card { /* Main card container */
+            margin-bottom: 2.5rem;
+        }
+        .section-card .card-header-custom {
+            background-color: var(--input-bg);
+            padding: 1.2rem 2.2rem;
+            border-bottom: 1px solid var(--input-border);
+            border-top-left-radius: 0.75rem;
+            border-top-right-radius: 0.75rem;
+            margin: -2.2rem -2.2rem 1.8rem -2.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+        .section-card .card-header-custom h4 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 0;
+            text-shadow: var(--text-shadow-subtle);
+        }
+        .section-card .card-header-custom h4 i {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+        }
+        .section-card .card-body-custom {
+            padding-top: 0;
+        }
+        .section-card p.report-description {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 1em;
+        }
+        .section-card hr {
+            border-color: var(--input-border);
+            margin: 1.5rem 0;
+        }
+
+        /* Formulario de filtros */
+        .filter-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+            align-items: start; /* Cambia a alinear por la parte superior */
+        }
+
+        .form-group-custom {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-label-custom {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            font-size: 1em;
+        }
+        
+        .button-group-report {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+        .button-group-report .btn {
+            padding: 0.95rem 1.8rem;
+            font-size: 1.05rem;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .button-group-report .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+        .btn-export-csv {
+            background-color: var(--success-color);
+            color: var(--text-primary);
+            border: none;
+        }
+        .btn-export-csv:hover {
+            background-color: color-mix(in srgb, var(--success-color) 80%, black);
+        }
+        .btn-export-xlsx {
+            background-color: var(--info-color);
+            color: var(--text-primary);
+            border: none;
+        }
+        .btn-export-xlsx:hover {
+            background-color: color-mix(in srgb, var(--info-color) 80%, black);
+        }
+        .btn-export-pdf {
+            background-color: var(--danger-color);
+            color: var(--text-primary);
+            border: none;
+        }
+        .btn-export-pdf:hover {
+            background-color: color-mix(in srgb, var(--danger-color) 80%, black);
+        }
+        .btn-clear-filters {
+            background-color: var(--input-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--input-border);
+        }
+        .btn-clear-filters:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            border: 4px solid var(--text-secondary);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilos para Select2 (sobrescribiendo los de Select2 y Select2 Bootstrap) */
+        /* Aseguramos que la clase 'custom-input' se aplica a Select2 también */
+        .select2-container .select2-selection--multiple,
+        .select2-container .select2-selection--single {
+            background-color: var(--input-bg) !important; 
+            border: 1px solid var(--input-border) !important; 
+            border-radius: 0.7rem !important;
+            min-height: 52px !important;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .select2-container .select2-selection--single .select2-selection__rendered,
+        .select2-container .select2-selection--multiple .select2-selection__rendered {
+            color: var(--text-primary) !important;
+            padding: 0.9rem 1.4rem !important;
+            line-height: 1.5 !important;
+        }
+        .select2-container .select2-selection--single .select2-selection__arrow,
+        .select2-container .select2-selection--multiple .select2-selection__arrow {
+            height: 52px !important;
+            right: 1.4rem !important;
+            position: absolute;
+            top: 0;
+        }
+        .select2-container .select2-selection__arrow b {
+            border-color: var(--text-secondary) transparent transparent transparent !important;
+        }
+        .select2-container--default.select2-container--open .select2-selection__arrow b {
+            border-color: transparent transparent var(--text-secondary) transparent !important;
+        }
+        .select2-container .select2-results__option--highlighted.select2-results__option--selectable {
+            background-color: var(--accent) !important;
+            color: var(--text-primary) !important;
+        }
+        .select2-container .select2-results__option {
+            background-color: var(--card-base-bg) !important;
+            color: var(--text-primary) !important;
+            padding: 0.8rem 1.4rem !important;
+            transition: background-color 0.2s ease;
+        }
+        .select2-container .select2-results__option[aria-selected=true] {
+            background-color: var(--bg-secondary) !important;
+        }
+        .select2-dropdown {
+            background-color: var(--card-base-bg) !important;
+            border: 1px solid var(--input-border) !important;
+            border-radius: 0.7rem !important;
+            box-shadow: var(--shadow-light);
+            overflow: hidden;
+        }
+        .select2-search input {
+            background-color: var(--input-bg) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--input-border) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .select2-container .select2-selection--single .select2-selection__clear {
+            color: var(--text-secondary) !important;
+            font-size: 1.2em;
+            right: 2.5rem !important;
+            padding-right: 0 !important;
+        }
+        /* Para selección múltiple */
+        .select2-container .select2-selection--multiple .select2-selection__choice {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--input-border) !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem 1rem !important;
+            margin-top: 0.5rem !important;
+            margin-left: 0.5rem !important;
+            font-size: 0.9em;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__choice__remove {
+            color: var(--text-secondary) !important;
+            margin-right: 0.3rem !important;
+            float: none !important;
+            font-size: 1.1em;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__choice__remove:hover {
+            color: var(--danger-color) !important;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__rendered {
+            padding-top: 0.4rem !important;
+            padding-bottom: 0.4rem !important;
+        }
+        /* Ajustar el padding en selección múltiple si no hay elementos seleccionados */
+        .select2-container .select2-selection--multiple .select2-selection__rendered li {
+            margin-top: 0 !important;
+        }
+        .select2-container .select2-selection--multiple .select2-selection__rendered {
+            padding-left: 0.9rem !important;
+            padding-right: 1.4rem !important;
+        }
+        .select2-container--default.select2-container--focus .select2-selection--multiple,
+        .select2-container--default.select2-container--focus .select2-selection--single {
+            border-color: var(--accent) !important;
+            box-shadow: 0 0 0 0.5rem hsla(185, 100%, 50%, 0.6) !important;
+        }
+        /* Manejar el placeholder del Select2 */
+        .select2-container .select2-selection--multiple .select2-selection__placeholder,
+        .select2-container .select2-selection--single .select2-selection__placeholder {
+            color: var(--input-placeholder) !important;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
+            .page-container { padding: 2rem 1rem; }
+            h1 { font-size: 3rem; }
+            p.page-description { font-size: 1.1em; margin-bottom: 2rem; }
+            .section-card { padding: 1.8rem; margin-bottom: 2rem; }
+            .section-card .card-header-custom { padding: 1.2rem 1.8rem; margin: -1.8rem -1.8rem 1.5rem -1.8rem; }
+            .section-card .card-header-custom h4 { font-size: 1.5rem; }
+            .section-card p.report-description { font-size: 0.95em; }
+            .filter-form-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+            .custom-input { height: 48px; font-size: 1em; padding: 0.8rem 1.2rem; }
+            .button-group-report { gap: 0.8rem; }
+            .button-group-report .btn { padding: 0.8rem 1.5rem; font-size: 0.95rem; }
+            .select2-container .select2-selection--single,
+            .select2-container .select2-selection--multiple {
+                min-height: 48px !important;
+                height: 48px !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__rendered,
+            .select2-container .select2-selection--multiple .select2-selection__rendered {
+                padding: 0.8rem 1.2rem !important;
+            }
+             .select2-container .select2-selection--single .select2-selection__arrow,
+            .select2-container .select2-selection--multiple .select2-selection__arrow {
+                height: 48px !important;
+                right: 1.2rem !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; margin-bottom: 1rem; }
+            p.page-description { font-size: 1em; margin-bottom: 1.5rem; }
+            .section-card { padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 1.5rem; }
+            .section-card .card-header-custom { padding: 1rem 1.5rem; margin: -1.5rem -1.5rem 1.2rem -1.5rem; }
+            .section-card .card-header-custom h4 { font-size: 1.35rem; }
+            .section-card .card-header-custom h4 i { font-size: 1.2em; }
+            .filter-form-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .button-group-report { flex-direction: column; gap: 0.75rem; }
+            .button-group-report .btn { width: 100%; padding: 0.7rem 1.2rem; font-size: 0.9em; }
+            .custom-input { height: 44px; font-size: 0.95rem; padding: 0.7rem 1rem; }
+            .select2-container .select2-selection--single,
+            .select2-container .select2-selection--multiple {
+                min-height: 44px !important;
+                height: 44px !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__rendered,
+            .select2-container .select2-selection--multiple .select2-selection__rendered {
+                padding: 0.7rem 1rem !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__arrow,
+            .select2-container .select2-selection--multiple .select2-selection__arrow {
+                height: 44px !important;
+                right: 1rem !important;
+            }
+        }
+
+        @media (max-width: 576px) {
+            h1 { font-size: 2rem; margin-bottom: 1rem; }
+            .section-card { border-radius: 0.5rem; padding: 1.2rem; margin-bottom: 1rem; }
+            .section-card .card-header-custom { margin: -1.2rem -1.2rem 1rem -1.2rem; padding: 0.8rem 1rem; }
+            .section-card .card-header-custom h4 { font-size: 1.15rem; }
+            .section-card p.report-description { font-size: 0.9em; margin-bottom: 1rem; }
+            .custom-input { height: 40px; font-size: 0.9em; padding: 0.6rem 0.8rem; }
+            .select2-container .select2-selection--single,
+            .select2-container .select2-selection--multiple {
+                min-height: 40px !important;
+                height: 40px !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__rendered,
+            .select2-container .select2-selection--multiple .select2-selection__rendered {
+                padding: 0.6rem 0.8rem !important;
+            }
+            .select2-container .select2-selection--single .select2-selection__arrow,
+            .select2-container .select2-selection--multiple .select2-selection__arrow {
+                height: 40px !important;
+                right: 0.8rem !important;
+            }
+            .button-group-report { gap: 0.5rem; }
+            .button-group-report .btn { padding: 0.6rem 1rem; font-size: 0.85em; }
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Generación de Reportes</h1>
-    <p class="text-secondary mb-5">Seleccione un tipo de reporte y los filtros deseados para generar y descargar los datos.</p>
+<div class="page-container">
+    {# ELIMINADO EL BOTÓN DE CAMBIO DE TEMA DUPLICADO (YA ESTÁ EN BASE.HTML) #}
+
+    <h1 class="animate-pop-in">Generación de Reportes</h1>
+    <p class="page-description animate-pop-in">
+        Seleccione el tipo de reporte y los filtros deseados para generar y descargar los datos.
+        Asegúrese de tener los permisos necesarios.
+    </p>
+
+    <!-- Mensaje de feedback (éxito/error) -->
+    <div id="feedback-message-box" class="message-box-feedback hidden animate-pop-in"></div>
 
     <!-- Tarjeta para el Reporte de Órdenes de Trabajo -->
-    <div class="card">
-        <div class="card-header">
-            <h4><i class="fas fa-file-csv me-2"></i> Reporte de Órdenes de Trabajo</h4>
+    <div class="section-card card-style animate-pop-in">
+        <div class="card-header-custom">
+            <h4><i class="fas fa-file-csv mr-2"></i> Reporte de Órdenes de Trabajo</h4>
         </div>
-        <div class="card-body">
-            <p class="text-secondary">Este reporte exportará a un archivo CSV todas las Órdenes de Trabajo finalizadas dentro del rango de fechas que seleccione.</p>
+        <div class="card-body-custom">
+            <p class="report-description">
+                Este reporte exportará un archivo con todas las Órdenes de Trabajo finalizadas dentro del rango de fechas especificado.
+            </p>
             <hr>
-            <form method="post" class="mt-4">
+            {# CORREGIDO: URL sin namespace 'reportes:' y nombres de campos 'start_date', 'end_date' #}
+            <form id="ot-report-form" method="post" action="{% url 'reportes_dashboard' %}"> 
                 {% csrf_token %}
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-5">
-                        <label for="id_start_date" class="form-label">Fecha de Inicio del Cierre</label>
-                        <input type="date" name="start_date" id="id_start_date" class="form-control" required>
+                <div class="filter-form-grid">
+                    <div class="form-group-custom">
+                        <label for="id_start_date_ot" class="form-label-custom">Fecha de Inicio (Cierre):</label>
+                        <input type="date" name="start_date" id="id_start_date_ot" class="custom-input" required>
                     </div>
-                    <div class="col-md-5">
-                        <label for="id_end_date" class="form-label">Fecha de Fin del Cierre</label>
-                        <input type="date" name="end_date" id="id_end_date" class="form-control" required>
+                    <div class="form-group-custom">
+                        <label for="id_end_date_ot" class="form-label-custom">Fecha de Fin (Cierre):</label>
+                        <input type="date" name="end_date" id="id_end_date_ot" class="custom-input" required>
                     </div>
-                    <div class="col-md-2 d-grid">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-download me-2"></i>Exportar CSV
+                    {# CAMPOS DE FILTRO ADICIONALES (Vehículo, Estado, Tipo) #}
+                    {# Se han DESCOMENTADO y se les ha dado la clase 'select2' para su inicialización. #}
+                    {# NOTA: Tu views.py ACTUALMENTE NO LOS FILTRA. Si los necesitas, adapta views.py. #}
+                    <div class="form-group-custom">
+                        <label for="id_vehiculo_ot" class="form-label-custom">Vehículo(s):</label>
+                        <select name="vehiculo_ot" id="id_vehiculo_ot" class="custom-input select2" multiple="multiple" data-placeholder="Seleccionar Vehículo(s)">
+                            {# 'vehiculos' viene del contexto de views.py #}
+                            {% for v in vehiculos %}
+                                <option value="{{ v.pk }}">{{ v.numero_interno }} ({{ v.patente|default:'S/P' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group-custom">
+                        <label for="id_estado_ot" class="form-label-custom">Estado(s) de OT:</label>
+                        <select name="estado_ot" id="id_estado_ot" class="custom-input select2" multiple="multiple" data-placeholder="Seleccionar Estado(s)">
+                            {# 'estados_ot' viene del contexto de views.py #}
+                            {% for val, name in estados_ot %}
+                                <option value="{{ val }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group-custom">
+                        <label for="id_tipo_ot" class="form-label-custom">Tipo(s) de OT:</label>
+                        <select name="tipo_ot" id="id_tipo_ot" class="custom-input select2" multiple="multiple" data-placeholder="Seleccionar Tipo(s)">
+                            {# 'tipos_ot' viene del contexto de views.py #}
+                            {% for val, name in tipos_ot %}
+                                <option value="{{ val }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group-custom">
+                        <button type="button" id="clear-ot-filters" class="btn-secondary btn-clear-filters w-full"> {# Eliminado mt-auto #}
+                            <i class="fas fa-undo-alt mr-2"></i>Limpiar Filtros
                         </button>
                     </div>
+                </div>
+                <div class="button-group-report">
+                    <button type="submit" name="export_format" value="csv" class="btn btn-export-csv" data-loading-text="Exportando CSV...">
+                        <span class="loading-spinner"></span><i class="fas fa-download mr-2"></i>Exportar CSV
+                    </button>
+                    <button type="submit" name="export_format" value="xlsx" class="btn btn-export-xlsx" data-loading-text="Exportando XLSX...">
+                        <span class="loading-spinner"></span><i class="fas fa-file-excel mr-2"></i>Exportar XLSX
+                    </button>
+                    <button type="submit" name="export_format" value="pdf" class="btn btn-export-pdf" data-loading-text="Generando PDF...">
+                        <span class="loading-spinner"></span><i class="fas fa-file-pdf mr-2"></i>Generar PDF
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Próximamente: Aquí podrías añadir más tarjetas para otros reportes -->
-    <!--
-    <div class="card mt-4">
-        <div class="card-header">
-            <h4><i class="fas fa-gas-pump me-2"></i> Reporte de Consumo de Combustible</h4>
+    <!-- Próximamente: Tarjeta para Reporte de Consumo de Combustible -->
+    <div class="section-card card-style animate-pop-in">
+        <div class="card-header-custom">
+            <h4><i class="fas fa-gas-pump mr-2"></i> Reporte de Consumo de Combustible</h4>
         </div>
-        <div class="card-body">
-            <p class="text-secondary">Funcionalidad en desarrollo.</p>
+        <div class="card-body-custom">
+            <p class="report-description">
+                Funcionalidad en desarrollo. Aquí podrás generar reportes detallados sobre el consumo de combustible de tu flota,
+                con opciones para filtrar por vehículo, conductor, ruta y período de tiempo.
+            </p>
+            <hr>
+            <div class="button-group-report">
+                <button type="button" class="btn btn-secondary disabled"><i class="fas fa-hourglass-half mr-2"></i>Próximamente</button>
+            </div>
         </div>
     </div>
-    -->
+
+    <!-- Próximamente: Tarjeta para Reporte de Inventario de Repuestos -->
+    <div class="section-card card-style animate-pop-in">
+        <div class="card-header-custom">
+            <h4><i class="fas fa-boxes-stacked mr-2"></i> Reporte de Inventario de Repuestos</h4>
+        </div>
+        <div class="card-body-custom">
+            <p class="report-description">
+                Funcionalidad en desarrollo. Este reporte te permitirá visualizar y exportar el estado actual y los movimientos de tu inventario de repuestos.
+            </p>
+            <hr>
+            <div class="button-group-report">
+                <button type="button" class="btn btn-secondary disabled"><i class="fas fa-hourglass-half mr-2"></i>Próximamente</button>
+            </div>
+        </div>
+    </div>
 
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+    {{ block.super }} {# ¡IMPORTANTE! Para incluir los scripts de base.html #}
+    {# ELIMINADAS LAS CARGAS DE JQUERY Y SELECT2 JS DUPLICADAS #}
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Animación pop-in para las secciones
+        const animateElements = document.querySelectorAll('.animate-pop-in');
+        animateElements.forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+
+        animateElements.forEach(element => {
+            observer.observe(element);
+        });
+
+        // -----------------------------------------------------
+        // Lógica específica de Generación de Reportes
+        // -----------------------------------------------------
+
+        // Inicializar Select2 en los selectores de formulario
+        // Ahora inicializa Select2 para los IDs específicos y la clase 'select2'
+        $('#id_vehiculo_ot, #id_estado_ot, #id_tipo_ot').select2({
+            theme: "default", // Usamos 'default' porque el tema 'bootstrap-5' ya no está en base.html
+            width: '100%',
+            placeholder: $(this).data('placeholder') || "Seleccionar...",
+            allowClear: true,
+            closeOnSelect: false
+        });
+
+        // Funcionalidad de Limpiar Filtros
+        $('#clear-ot-filters').on('click', function() {
+            $('#ot-report-form')[0].reset();
+            // Limpia los Select2 también
+            $('#id_vehiculo_ot, #id_estado_ot, #id_tipo_ot').val(null).trigger('change');
+        });
+
+        // Manejo del envío del formulario para feedback y spinner
+        const feedbackMessageBox = $('#feedback-message-box');
+        const otReportForm = $('#ot-report-form');
+
+        otReportForm.on('submit', function(e) {
+            e.preventDefault(); // Previene el envío normal para mostrar el spinner
+
+            const submitBtn = $(e.originalEvent.submitter);
+            const spinner = submitBtn.find('.loading-spinner');
+            const icon = submitBtn.find('i');
+
+            // Guardar texto original para restaurar
+            if (!submitBtn.data('original-text')) {
+                submitBtn.data('original-text', icon.prop('outerHTML') + submitBtn.text());
+            }
+
+            spinner.show();
+            icon.hide();
+            submitBtn.prop('disabled', true).text(submitBtn.data('loading-text'));
+
+            // Simulación de carga (1 segundo) antes de enviar el formulario realmente
+            setTimeout(() => {
+                // Restaurar el botón inmediatamente antes de enviar el formulario para que no interfiera con la descarga
+                spinner.hide();
+                icon.show();
+                submitBtn.prop('disabled', false).html(submitBtn.data('original-text')); 
+
+                // Mostrar mensaje de éxito
+                showMessage('¡Generando reporte, por favor espere la descarga!', 'success');
+                
+                // Envío real del formulario para descarga (no AJAX)
+                // Esto hará que el navegador inicie la descarga del archivo que envía el backend.
+                otReportForm[0].submit(); 
+            }, 1000); 
+        });
+
+        // Función para mostrar mensajes de feedback
+        function showMessage(text, type) {
+            feedbackMessageBox.removeClass('hidden error success').addClass('show');
+            feedbackMessageBox.text(text);
+            if (type === 'success') {
+                feedbackMessageBox.addClass('success');
+            } else if (type === 'error') {
+                feedbackMessageBox.addClass('error');
+            }
+
+            setTimeout(() => {
+                feedbackMessageBox.removeClass('show').addClass('hidden');
+            }, 5000);
+        }
+    });
+    </script>
 {% endblock %}

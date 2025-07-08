@@ -1,207 +1,392 @@
 {% extends "flota/base.html" %}
-{% load static %} {# <-- ¡IMPORTANTE! Añade esta línea al principio #}
+{% load static %} {# <-- ¡IMPORTANTE! Asegúrate de que esta línea esté al principio #}
 
-{% block title %}Dashboard de Indicadores{% endblock %}
+{% block title %}Dashboard de Indicadores - Pulser{% endblock %}
 
 {% block extra_head %}
-    <!-- Font Awesome para íconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js para gráficos (se cargará al final del body para mejor rendimiento) -->
+    
     <style>
-        /* Variables CSS con la paleta de colores de la imagen, más vivas y profesionales */
+        /* Custom CSS Variables for Dark and Light Mode - COPIADO DIRECTAMENTE DE INDEX.HTML (PULSER) */
         :root {
-            --dark-bg: #1A202C; /* Fondo principal oscuro y profundo */
-            --card-bg: #2D3748; /* Fondo de tarjetas, ligeramente más claro */
-            --input-bg: #4A5568; /* Fondo para campos de entrada y elementos interactivos */
-            --accent-color: #4299E1; /* Azul vibrante y claro para acentos y botones primarios */
-            --accent-color-dark: #3182CE; /* Azul más oscuro para hover/active */
-            --text-primary: #E2E8F0; /* Blanco suave para texto principal */
-            --text-secondary: #A0AEC0; /* Gris azulado para texto secundario y etiquetas */
-            --border-color: #4A5568; /* Borde sutil entre elementos */
-            --header-gradient-start: #2B6CB0; /* Inicio del degradado para encabezados */
-            --header-gradient-end: #1A365D; /* Fin del degradado para encabezados */
-            --shadow-light: 0 6px 15px rgba(0, 0, 0, 0.3); /* Sombra ligera y suave */
-            --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.45); /* Sombra más pronunciada */
-            --success-color: #38A169; /* Verde para éxito, más vibrante */
-            --warning-color: #DD6B20; /* Naranja para advertencia, más vibrante */
-            --danger-color: #E53E3E; /* Rojo para peligro, más vibrante */
-            --alert-danger-bg: rgba(229, 62, 62, 0.15); /* Fondo suave para alertas de peligro */
-            --info-color: #4299E1; /* Color para alertas de información */
-            --line-chart-color-1: #4299E1; /* Azul para línea 1 */
-            --line-chart-color-2: #38A169; /* Verde para línea 2 */
-            --line-chart-color-3: #DD6B20; /* Naranja para línea 3 */
-            --line-chart-color-4: #A0AEC0; /* Gris para línea 4 (ej. target) */
+            /* Light Mode (default for new palette: Grey, Light Blue, White) */
+            --bg-primary: hsl(210, 15%, 98%); /* Almost white */
+            --bg-secondary: hsl(210, 15%, 95%); /* Slightly darker white */
+            --text-primary: hsl(210, 20%, 20%); /* Dark charcoal grey */
+            --text-secondary: hsl(210, 10%, 45%); /* Medium grey */
+            --accent: hsl(195, 90%, 55%); /* More Celeste Blue */
+            --accent-hover: hsl(195, 90%, 45%); /* Deeper Celeste Blue */
+            --card-base-bg: #FFFFFF; /* White */
+            --input-bg: #FFFFFF;
+            --input-border: hsl(210, 10%, 80%);
+            --input-placeholder: hsl(210, 10%, 65%);
+            --text-shadow-strong: none; /* Removed for light mode */
+            --text-shadow-subtle: none; /* Removed for light mode */
+
+            /* Dark Mode (updated for new palette) */
+            --dark-bg-primary: hsl(210, 10%, 15%); /* Dark Grey */
+            --dark-bg-secondary: hsl(210, 10%, 20%); /* Slightly lighter dark grey */
+            --dark-text-primary: hsl(210, 15%, 95%); /* Off-white */
+            --dark-text-secondary: hsl(210, 10%, 70%); /* Light grey */
+            --dark-accent: hsl(195, 90%, 65%); /* Vibrant Celeste Blue */
+            --dark-accent-hover: hsl(195, 90%, 55%); /* Deeper Vibrant Celeste Blue */
+            --dark-card-base-bg: hsl(210, 10%, 25%); /* Darker grey for cards */
+            --dark-input-bg: hsl(210, 10%, 28%);
+            --dark-input-border: hsl(210, 10%, 40%);
+            --dark-input-placeholder: hsl(210, 10%, 55%);
+            --dark-text-shadow-strong: 0 0 15px var(--dark-accent);
+            --dark-text-shadow-subtle: 0 0 8px hsla(195, 90%, 65%, 0.4);
+
+            /* Colores específicos para mensajes de estado y gráficos (adaptados a la paleta de Pulser) */
+            --success-color: hsl(140, 70%, 45%); /* Verde vibrante compatible con Pulser */
+            --warning-color: hsl(40, 95%, 55%); /* Naranja vibrante compatible con Pulser */
+            --danger-color: hsl(0, 70%, 60%); /* Rojo compatible con Pulser */
+            --info-color: var(--accent); /* Azul de acento para información */
+
+            /* Colores para las líneas y segmentos de gráficos (adaptados a la paleta de Pulser) */
+            --chart-color-1: var(--accent);
+            --chart-color-2: var(--success-color);
+            --chart-color-3: var(--warning-color);
+            --chart-color-4: var(--text-secondary); /* Para líneas de meta */
+            --chart-color-5: hsl(260, 70%, 60%); /* Nuevo color adicional para variedad */
+            --chart-color-6: hsl(10, 80%, 65%); /* Nuevo color adicional para variedad */
+
+            /* Filtro para iconos de calendario en inputs de fecha */
+            --calendar-icon-filter: invert(0); /* Default para light mode (negro) */
         }
 
+        html.dark {
+            --bg-primary: var(--dark-bg-primary);
+            --bg-secondary: var(--dark-bg-secondary);
+            --text-primary: var(--dark-text-primary);
+            --text-secondary: var(--dark-text-secondary);
+            --accent: var(--dark-accent);
+            --accent-hover: var(--dark-accent-hover);
+            --card-base-bg: var(--dark-card-base-bg);
+            --input-bg: var(--dark-input-bg);
+            --input-border: var(--dark-input-border);
+            --input-placeholder: var(--dark-input-placeholder);
+            --text-shadow-strong: var(--dark-text-shadow-strong);
+            --text-shadow-subtle: var(--dark-text-shadow-subtle);
+            --calendar-icon-filter: invert(1); /* Invertir para dark mode (blanco) */
+        }
+
+        /* Base styles for body - ADAPTADO DE PULSER INDEX.HTML */
         body {
-            background-color: var(--dark-bg) !important;
-            color: var(--text-primary) !important;
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
             line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             padding: 2rem 1rem; /* Espaciado general del cuerpo */
         }
 
-        .container {
+        /* Custom Tailwind Utilities - COPIADO DIRECTAMENTE DE INDEX.HTML */
+        .card-style {
+            background-color: var(--card-base-bg);
+            border-radius: 0.75rem; /* rounded-xl */
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+            transition: all 0.3s ease;
+        }
+
+        html.light .card-style {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--text-primary); /* Changed to text-primary for better contrast with light accent */
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+            display: inline-flex; /* Para iconos */
+            align-items: center; /* Para iconos */
+            justify-content: center; /* Para iconos */
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.2), 0 6px 10px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--accent);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem; /* rounded-lg */
+            font-weight: 600; /* font-semibold */
+            border: 2px solid var(--accent);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+            display: inline-flex; /* Para iconos */
+            align-items: center; /* Para iconos */
+            justify-content: center; /* Para iconos */
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.2), 0 6px 10px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Input styles - COPIADO DIRECTAMENTE DE INDEX.HTML */
+        .custom-input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            width: 100%; /* Asegura que los inputs ocupen todo el ancho disponible */
+            box-sizing: border-box; /* Incluye padding y border en el ancho */
+        }
+
+        .custom-input::placeholder {
+            color: var(--input-placeholder);
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px hsla(200, 95%, 55%, 0.5); /* glow effect on focus */
+        }
+
+        /* Keyframes for animations - COPIADO DIRECTAMENTE DE INDEX.HTML */
+        @keyframes pulse-glow {
+            0% {
+                transform: scale(0.95);
+                opacity: 0.7;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0.95);
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes pop-in {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        
+        /* Message box for form submission - COPIADO DIRECTAMENTE DE INDEX.HTML */
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .message-box.show {
+            opacity: 1;
+        }
+
+        /* --- ESTILOS ESPECÍFICOS PARA EL DASHBOARD DE INDICADORES (ADAPTADOS A PULSER) --- */
+        .dashboard-container {
             max-width: 1400px; /* Ancho máximo para el contenido */
             margin: 0 auto;
             padding-left: 1rem;
             padding-right: 1rem;
+            flex-grow: 1;
+            position: relative; /* Para posicionar el theme toggle */
         }
 
         h1 {
-            font-size: 3rem;
-            font-weight: 700;
+            font-size: 3.5rem;
+            font-weight: 800;
             color: var(--text-primary);
-            margin-bottom: 3rem;
+            margin-bottom: 3.5rem;
             text-align: center;
-            text-shadow: 0 3px 8px rgba(0,0,0,0.4);
+            text-shadow: var(--text-shadow-strong); /* Usar la sombra de Pulser */
         }
 
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            box-shadow: var(--shadow-light);
-            padding: 1.8rem;
-            margin-bottom: 2rem; /* Espacio entre tarjetas */
+        .section-card {
+            /* card-style ya aplica la mayoría de estos estilos */
+            margin-bottom: 2.5rem; /* Espacio entre secciones de tarjetas */
         }
 
-        .card h2 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: var(--accent-color);
+        .section-card h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent); /* Color de acento de Pulser para los títulos de sección */
             margin-bottom: 1.5rem;
             text-align: center;
+            text-shadow: var(--text-shadow-subtle); /* Sombra sutil de Pulser */
         }
 
         /* Estilos para el formulario de filtros */
-        .form-grid {
+        .filter-form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
-            align-items: flex-end;
+            align-items: flex-end; /* Alinea los elementos en la parte inferior para que los botones y campos queden bien */
             margin-bottom: 1.5rem;
         }
 
-        .form-grid p {
-            margin: 0;
+        /* Ajustes para los `p` que Django genera con `form.as_p` */
+        .filter-form-grid > div { /* Contenedor para cada campo (si se usa `as_div` o se envuelve cada `p`) */
+            margin-bottom: 0; /* Eliminar el margen inferior por defecto de <p> */
+        }
+        .filter-form-grid p {
+            margin: 0; /* Eliminar el margen que `as_p` pueda añadir a los p internos */
         }
 
-        .form-grid label {
+        .filter-form-grid label {
             display: block;
-            font-weight: 500;
-            color: var(--text-secondary);
+            font-weight: 600; /* Más negrita */
+            color: var(--text-primary); /* Texto primario para las etiquetas */
             margin-bottom: 0.6rem;
-            font-size: 0.95em;
+            font-size: 1em; /* Tamaño de fuente estándar */
         }
 
         .form-control {
-            width: 100%;
-            padding: 0.8rem 1.3rem;
-            border-radius: 0.6rem;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-primary);
-            font-size: 1rem;
-            height: 48px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+            /* custom-input ya hace esto: width, padding, border-radius, background, color, font-size */
+            /* Adaptar altura */
+            height: 52px; /* Altura más cómoda */
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); /* Sombra interna para profundidad */
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-
-        .form-control:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.3rem rgba(66, 153, 225, 0.4);
-            outline: none;
-        }
-
+        /* Ajustar el color del icono del calendario para inputs de tipo date */
         input[type="date"].form-control::-webkit-calendar-picker-indicator {
-            filter: invert(1);
+            filter: var(--calendar-icon-filter); /* Usar la variable CSS para el filtro */
         }
 
-        .btn-submit {
-            background-color: var(--accent-color);
-            color: white;
-            padding: 0.95rem 2.2rem;
-            border: none;
-            border-radius: 0.6rem;
-            font-weight: 600;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            display: block;
+        .btn-filter-submit {
+            /* Usamos btn-primary de Pulser */
+            /* Mantenemos algunas propiedades específicas si es necesario */
+            padding: 1rem 2.5rem; /* Más grande y prominente */
+            font-size: 1.2rem; /* Más grande */
             width: fit-content;
             margin-left: auto;
             margin-right: auto;
+            display: flex; /* Para centrar icono y texto */
+            align-items: center; /* Para centrar icono y texto */
+            gap: 0.75rem; /* Espacio entre icono y texto */
+            background-color: var(--accent); /* Color de acento de Pulser */
+            color: var(--text-primary); /* Color de texto primario de Pulser */
+            border-radius: 0.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .btn-submit:hover {
-            background-color: var(--accent-color-dark);
+        .btn-filter-submit:hover {
+            background-color: var(--accent-hover);
             transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
         }
 
         /* Contenedores de gráficos */
-        .charts-container, .charts-container-small, .charts-container-line {
+        .charts-grid {
             display: grid;
             gap: 2rem;
             margin-top: 2rem;
         }
-        .charts-container {
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-        }
-        .charts-container-small {
+        .charts-grid.small { /* Para donuts */
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         }
-        .charts-container-line { /* Nuevo contenedor para gráficos de línea */
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); /* Más anchos para líneas */
+        .charts-grid.medium { /* Para barras */
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
         }
-        .card canvas {
-            height: 300px !important;
+        .charts-grid.large { /* Para líneas */
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        }
+        .section-card canvas {
+            height: 300px !important; /* Altura fija para gráficos */
             width: 100% !important;
+        }
+
+        /* Botón de cambio de tema */
+        .page-theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50; /* Por encima de la mayoría del contenido */
+            font-size: 1.8rem; /* Tamaño de icono grande */
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+        .page-theme-toggle:hover {
+            color: var(--accent);
+            transform: scale(1.1);
         }
 
         /* Responsive adjustments */
         @media (max-width: 992px) {
             h1 {
-                font-size: 2.4rem;
-                margin-bottom: 2.5rem;
+                font-size: 2.8rem;
+                margin-bottom: 3rem;
             }
-            .card {
+            .section-card {
                 padding: 1.5rem;
             }
-            .card h2 {
-                font-size: 1.6rem;
+            .section-card h2 {
+                font-size: 1.8rem;
                 margin-bottom: 1.2rem;
             }
-            .form-grid {
+            .filter-form-grid {
                 grid-template-columns: 1fr;
                 gap: 1rem;
             }
-            .form-grid p {
-                width: 100%;
+            .form-control {
+                height: 48px;
             }
-            .btn-submit {
+            .btn-filter-submit {
                 width: 100%;
                 margin-left: 0;
                 margin-right: 0;
-                padding: 0.8rem 1.8rem;
-                font-size: 1rem;
+                padding: 0.9rem 2rem;
+                font-size: 1.1rem;
             }
-            .charts-container, .charts-container-small, .charts-container-line {
+            .charts-grid {
                 gap: 1.5rem;
             }
-            .charts-container {
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            .charts-grid.small,
+            .charts-grid.medium,
+            .charts-grid.large {
+                grid-template-columns: 1fr; /* Una columna en pantallas pequeñas */
             }
-            .charts-container-small {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            }
-            .charts-container-line {
-                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            }
-            .card canvas {
+            .section-card canvas {
                 height: 280px !important;
             }
         }
@@ -211,19 +396,19 @@
                 padding: 1.5rem 0.5rem;
             }
             h1 {
-                font-size: 2rem;
+                font-size: 2.2rem;
                 margin-bottom: 2rem;
             }
-            .card {
+            .section-card {
                 padding: 1.2rem;
                 border-radius: 0.5rem;
             }
-            .card h2 {
-                font-size: 1.4rem;
+            .section-card h2 {
+                font-size: 1.6rem;
                 margin-bottom: 1rem;
             }
-            .form-grid label {
-                font-size: 0.85em;
+            .filter-form-grid label {
+                font-size: 0.9em;
                 margin-bottom: 0.4rem;
             }
             .form-control {
@@ -231,21 +416,22 @@
                 font-size: 0.95rem;
                 height: 44px;
             }
-            .btn-submit {
+            .btn-filter-submit {
                 padding: 0.7rem 1.5rem;
                 font-size: 0.95rem;
             }
-            .charts-container, .charts-container-small, .charts-container-line {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-            .card canvas {
+            .section-card canvas {
                 height: 250px !important;
+            }
+            .page-theme-toggle {
+                top: 15px;
+                right: 15px;
+                font-size: 1.5rem;
             }
         }
 
         @media (max-width: 576px) {
-            .card {
+            .section-card {
                 border-radius: 0;
             }
         }
@@ -253,109 +439,238 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>Dashboard de Indicadores de Flota</h1>
+<div class="dashboard-container">
+    <!-- Botón de Cambio de Tema -->
+    <button id="page-theme-toggle" class="page-theme-toggle">
+        <i class="fas fa-sun hidden dark:inline-block"></i>
+        <i class="fas fa-moon inline-block dark:hidden"></i>
+    </button>
+
+    <h1 class="animate-pop-in">Dashboard de Indicadores de Flota</h1>
 
     <!-- Filtro de Fechas -->
-    <div class="card">
-        <h2><i class="fas fa-filter me-2"></i> Filtrar Datos</h2>
+    <div class="section-card card-style animate-pop-in">
+        <h2><i class="fas fa-filter mr-2"></i> Filtrar Datos</h2>
         <form method="get">
-            <div class="form-grid">
+            <div class="filter-form-grid">
+                {# Envuelve cada `p` generado por Django en un div para mejor control del grid #}
                 <div>
-                    <label for="start_date">Fecha de Inicio:</label>
-                    <input type="date" id="start_date" name="start_date" value="{{ start_date }}" class="form-control">
+                    <label for="id_start_date">Fecha de Inicio:</label>
+                    <input type="date" id="id_start_date" name="start_date" value="{{ form.start_date.value|default:'' }}" class="form-control custom-input">
                 </div>
                 <div>
-                    <label for="end_date">Fecha de Fin:</label>
-                    <input type="date" id="end_date" name="end_date" value="{{ end_date }}" class="form-control">
+                    <label for="id_end_date">Fecha de Fin:</label>
+                    <input type="date" id="id_end_date" name="end_date" value="{{ form.end_date.value|default:'' }}" class="form-control custom-input">
                 </div>
+                {# Si tu form.as_p genera select u otros campos, puedes copiarlos y darles la clase custom-input #}
+                {# Por ejemplo: #}
+                {# <div> #}
+                {#     <label for="id_vehiculo">Vehículo:</label> #}
+                {#     <select id="id_vehiculo" name="vehiculo" class="form-control custom-input"> #}
+                {#         {% for value, text in form.vehiculo.field.choices %} #}
+                {#             <option value="{{ value }}" {% if value == form.vehiculo.value|stringformat:"s" %}selected{% endif %}>{{ text }}</option> #}
+                {#         {% endfor %} #}
+                {#     </select> #}
+                {# </div> #}
             </div>
-            <button type="submit" class="btn-submit"><i class="fas fa-search me-2"></i>Filtrar</button>
+            <button type="submit" class="btn-filter-submit btn-primary mt-6"><i class="fas fa-search mr-2"></i>Filtrar</button>
         </form>
     </div>
 
     <!-- Contenedores para los Nuevos Gráficos de Donut -->
-    <div class="charts-container-small">
-        <div class="card">
+    <div class="charts-grid small">
+        <div class="section-card card-style animate-pop-in">
             <h2>Tareas Preventivas / Correctivas</h2>
             <canvas id="tipoOtChart"></canvas>
         </div>
-        <div class="card">
+        <div class="section-card card-style animate-pop-in">
             <h2>Avance Tareas Preventivas</h2>
             <canvas id="avancePreventivasChart"></canvas>
         </div>
-        <div class="card">
+        <div class="section-card card-style animate-pop-in">
             <h2>Avance Tareas Correctivas</h2>
             <canvas id="avanceCorrectivasChart"></canvas>
         </div>
     </div>
 
     <!-- Contenedores para los Gráficos KPI Mensuales (Barras) -->
-    <div class="charts-container">
-        <div class="card">
+    <div class="charts-grid medium">
+        <div class="section-card card-style animate-pop-in">
             <h2>Disponibilidad Mensual (%)</h2>
             <canvas id="disponibilidadChart"></canvas>
         </div>
-        <div class="card">
+        <div class="section-card card-style animate-pop-in">
             <h2>Confiabilidad Mensual (%)</h2>
             <canvas id="confiabilidadChart"></canvas>
         </div>
-        <div class="card">
+        <div class="section-card card-style animate-pop-in">
             <h2>Utilización Mensual (%)</h2>
             <canvas id="utilizacionChart"></canvas>
         </div>
     </div>
 
     <!-- NUEVOS Contenedores para los Gráficos Comparativos de Línea -->
-    <div class="charts-container-line">
-        <div class="card">
+    <div class="charts-grid large">
+        <div class="section-card card-style animate-pop-in">
             <h2>Disponibilidad vs. Confiabilidad</h2>
             <canvas id="disponibilidadConfiabilidadLineChart"></canvas>
         </div>
-        <div class="card">
+        <div class="section-card card-style animate-pop-in">
             <h2>Utilización vs. Meta (%)</h2>
             <canvas id="utilizacionMetaLineChart"></canvas>
         </div>
     </div>
+</div>
 
-    <!-- Incluimos la librería Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Incluimos la librería Chart.js al final del body -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Script JSON para los datos -->
-    <script id="chart-data" type="application/json">
-    {
-        "labelsMes": {{ labels_mes|safe }},
-        "disponibilidadData": {{ disponibilidad_data|safe }},
-        "confiabilidadData": {{ confiabilidad_data|safe }},
-        "utilizacionData": {{ utilizacion_data|safe }},
-        "totalPreventivas": {{ total_preventivas }},
-        "totalCorrectivas": {{ total_correctivas }},
-        "preventivasOk": {{ preventivas_finalizadas }},
-        "preventivasPendientes": {{ preventivas_pendientes }},
-        "correctivasOk": {{ correctivas_finalizadas }},
-        "correctivasPendientes": {{ correctivas_pendientes }}
-    }
-    </script>
+<!-- Script JSON para los datos (Mantenido) -->
+<script id="chart-data" type="application/json">
+{
+    "labelsMes": {{ labels_mes|safe }},
+    "disponibilidadData": {{ disponibilidad_data|safe }},
+    "confiabilidadData": {{ confiabilidad_data|safe }},
+    "utilizacionData": {{ utilizacion_data|safe }},
+    "totalPreventivas": {{ total_preventivas }},
+    "totalCorrectivas": {{ total_correctivas }},
+    "preventivasOk": {{ preventivas_finalizadas }},
+    "preventivasPendientes": {{ preventivas_pendientes }},
+    "correctivasOk": {{ correctivas_finalizadas }},
+    "correctivasPendientes": {{ correctivas_pendientes }}
+}
+</script>
 
-    <script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const pageThemeToggle = document.getElementById('page-theme-toggle');
+        const htmlElement = document.documentElement;
+
+        // Comprueba la preferencia de tema guardada o la preferencia del sistema
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const savedTheme = localStorage.getItem('theme');
+
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            htmlElement.classList.add('dark');
+        } else {
+            htmlElement.classList.remove('dark');
+        }
+
+        const toggleTheme = () => {
+            if (htmlElement.classList.contains('dark')) {
+                htmlElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        };
+
+        if (pageThemeToggle) {
+             pageThemeToggle.addEventListener('click', toggleTheme);
+        }
+
+        // Animación pop-in para las secciones
+        const animateElements = document.querySelectorAll('.animate-pop-in');
+        animateElements.forEach((el, index) => {
+            el.style.animationDelay = `${index * 0.1}s`;
+            el.style.opacity = '0'; // Comienza invisible
+        });
+
+        // Usa Intersection Observer para disparar la animación pop-in al cargar/desplazarse
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    observer.unobserve(entry.target); // Deja de observar una vez animado
+                }
+            });
+        }, {
+            threshold: 0.1 // Dispara cuando el 10% del elemento es visible
+        });
+
+        animateElements.forEach(element => {
+            observer.observe(element);
+        });
+
+
+        // -----------------------------------------------------
+        // Lógica de Gráficos Chart.js
+        // -----------------------------------------------------
+
         const chartData = JSON.parse(document.getElementById('chart-data').textContent);
 
-        // Colores para los gráficos, basados en la paleta definida
-        const primaryChartColor = 'rgba(66, 153, 225, 0.8)'; // var(--accent-color) con opacidad
-        const primaryChartBorderColor = 'rgba(66, 153, 225, 1)'; // var(--accent-color)
+        // Función para convertir HSL a RGB (necesaria para Chart.js en algunos contextos)
+        // Se asegura de que los colores de las variables CSS se puedan usar como RGBA
+        function hslToRgb(h, s, l) {
+            h /= 360; // Normalize hue to [0, 1)
+            s /= 100; // Normalize saturation to [0, 1)
+            l /= 100; // Normalize lightness to [0, 1)
 
-        const doughnutColors = [
-            '#4299E1', // Azul (accent-color)
-            '#38A169', // Verde (success-color)
-            '#DD6B20', // Naranja (warning-color)
-            '#E53E3E', // Rojo (danger-color)
-            '#A0AEC0', // Gris (text-secondary)
-            '#63B3ED', // Azul claro
-            '#68D391', // Verde claro
-            '#F6AD55'  // Naranja claro
+            let r, g, b;
+
+            if (s === 0) {
+                r = g = b = l; // achromatic
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1 / 6) return p + (q - p) * 6 * t;
+                    if (t < 1 / 2) return q;
+                    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1 / 3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1 / 3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        // Función para obtener un color RGBA de una variable HSL de CSS
+        function getRgbaFromHslVar(hslVarName, alpha) {
+            const hslString = getComputedStyle(document.documentElement).getPropertyValue(hslVarName).trim();
+            const matches = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+            if (matches) {
+                const h = parseInt(matches[1]);
+                const s = parseInt(matches[2]);
+                const l = parseInt(matches[3]);
+                const [r, g, b] = hslToRgb(h, s, l);
+                return `rgba(${r},${g},${b},${alpha})`;
+            }
+            return null; // Fallback
+        }
+
+        // Define la paleta de colores para los gráficos de BARRAS y LÍNEAS (siguen las variables de Pulser)
+        const pulserChartColors = [
+            getRgbaFromHslVar('--chart-color-1', 1),
+            getRgbaFromHslVar('--chart-color-2', 1),
+            getRgbaFromHslVar('--chart-color-3', 1),
+            getRgbaFromHslVar('--chart-color-4', 1),
+            getRgbaFromHslVar('--chart-color-5', 1),
+            getRgbaFromHslVar('--chart-color-6', 1)
         ];
+        
+        // Define la paleta de colores para los gráficos de DONA (FIJOS, para igualar la imagen en azul/verde con borde negro)
+        const fixedDoughnutColors = [
+            '#4299E1', // Azul (de tu código original, se ve igual en la imagen)
+            '#38A169'  // Verde (de tu código original, se ve igual en la imagen)
+        ];
+        // Borde para los gráficos de dona, siempre negro como en la imagen
+        const fixedDoughnutBorderColor = '#000000';
 
-        // Función para crear un gráfico de barras
+        // Define el color de fondo de las tarjetas para los bordes de los gráficos, etc.
+        const pulserCardBg = getComputedStyle(document.documentElement).getPropertyValue('--card-base-bg').trim();
+        // Define el color de texto secundario para etiquetas de ejes y leyendas
+        const pulserTextSecondary = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+        // Define el color de texto primario para el color de fuente del legend en algunos casos
+        const pulserTextPrimary = getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim();
+
+
+        // Función para crear un gráfico de barras (adaptado a Pulser)
         function createBarChart(canvasId, chartLabel, labels, data) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             new Chart(ctx, {
@@ -365,8 +680,8 @@
                     datasets: [{
                         label: chartLabel,
                         data: data,
-                        backgroundColor: primaryChartColor,
-                        borderColor: primaryChartBorderColor,
+                        backgroundColor: getRgbaFromHslVar('--accent', 0.7), // Color de acento de Pulser con opacidad
+                        borderColor: getRgbaFromHslVar('--accent', 1), // Color de acento de Pulser
                         borderWidth: 1
                     }]
                 },
@@ -376,25 +691,25 @@
                             beginAtZero: true,
                             max: 100,
                             grid: {
-                                color: 'rgba(160, 174, 192, 0.2)' // Color de la cuadrícula
+                                color: getRgbaFromHslVar('--text-secondary', 0.2) // Cuadrícula más sutil
                             },
                             ticks: {
-                                color: 'var(--text-secondary)' // Color de las etiquetas del eje Y
+                                color: pulserTextSecondary // Color de las etiquetas del eje Y
                             }
                         },
                         x: {
                             grid: {
-                                color: 'rgba(160, 174, 192, 0.2)' // Color de la cuadrícula
+                                color: getRgbaFromHslVar('--text-secondary', 0.2) // Cuadrícula más sutil
                             },
                             ticks: {
-                                color: 'var(--text-secondary)' // Color de las etiquetas del eje X
+                                color: pulserTextSecondary // Color de las etiquetas del eje X
                             }
                         }
                     },
                     plugins: {
                         legend: {
                             labels: {
-                                color: 'var(--text-primary)' // Color del texto de la leyenda
+                                color: pulserTextSecondary // Color del texto de la leyenda
                             }
                         }
                     },
@@ -404,7 +719,7 @@
             });
         }
         
-        // Función para crear un gráfico de donut
+        // Función para crear un gráfico de donut (AHORA ADAPTADO A LA IMAGEN CON COLORES FIJOS AZUL/VERDE Y BORDE NEGRO)
         function createDoughnutChart(canvasId, labels, data) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             new Chart(ctx, {
@@ -413,8 +728,8 @@
                     labels: labels,
                     datasets: [{
                         data: data,
-                        backgroundColor: doughnutColors, // Usar la paleta de colores definida
-                        borderColor: 'var(--card-bg)', // Color del borde entre secciones del donut
+                        backgroundColor: fixedDoughnutColors, // ¡Usamos los colores fijos para el donut!
+                        borderColor: fixedDoughnutBorderColor, // ¡Bordes siempre negros como en la imagen!
                         borderWidth: 2
                     }]
                 },
@@ -425,7 +740,7 @@
                         legend: {
                             position: 'bottom', // Leyenda en la parte inferior
                             labels: {
-                                color: 'var(--text-primary)' // Color del texto de la leyenda
+                                color: pulserTextSecondary // El color de la leyenda sí se adapta al tema
                             }
                         }
                     }
@@ -433,7 +748,7 @@
             });
         }
 
-        // Función para crear un gráfico de línea (NUEVA)
+        // Función para crear un gráfico de línea (adaptado a Pulser)
         function createLineChart(canvasId, chartTitle, labels, datasets) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             new Chart(ctx, {
@@ -448,7 +763,7 @@
                         fill: false, // No rellenar el área debajo de la línea por defecto
                         tension: 0.3, // Suavizar las líneas
                         pointBackgroundColor: dataset.color,
-                        pointBorderColor: 'var(--card-bg)',
+                        pointBorderColor: pulserCardBg,
                         pointBorderWidth: 2,
                         pointRadius: 5,
                         pointHoverRadius: 7,
@@ -461,31 +776,31 @@
                             beginAtZero: true,
                             max: 100,
                             grid: {
-                                color: 'rgba(160, 174, 192, 0.2)'
+                                color: getRgbaFromHslVar('--text-secondary', 0.2)
                             },
                             ticks: {
-                                color: 'var(--text-secondary)'
+                                color: pulserTextSecondary
                             }
                         },
                         x: {
                             grid: {
-                                color: 'rgba(160, 174, 192, 0.2)'
+                                color: getRgbaFromHslVar('--text-secondary', 0.2)
                             },
                             ticks: {
-                                color: 'var(--text-secondary)'
+                                color: pulserTextSecondary
                             }
                         }
                     },
                     plugins: {
                         legend: {
                             labels: {
-                                color: 'var(--text-primary)'
+                                color: pulserTextSecondary
                             }
                         },
                         title: {
                             display: false, // El título se maneja en el H2 del card
                             text: chartTitle,
-                            color: 'var(--text-primary)'
+                            color: pulserTextSecondary
                         }
                     },
                     maintainAspectRatio: false,
@@ -494,20 +809,19 @@
             });
         }
 
-
         // Creación de los gráficos de barras
         createBarChart('disponibilidadChart', 'Disponibilidad %', chartData.labelsMes, chartData.disponibilidadData);
         createBarChart('confiabilidadChart', 'Confiabilidad %', chartData.labelsMes, chartData.confiabilidadData);
         createBarChart('utilizacionChart', 'Utilización %', chartData.labelsMes, chartData.utilizacionData);
         
-        // Creación de los nuevos gráficos de donut
+        // Creación de los gráficos de donut (AHORA USAN LOS COLORES FIJOS)
         if (chartData.totalPreventivas > 0 || chartData.totalCorrectivas > 0) {
             createDoughnutChart('tipoOtChart', ['Preventivas', 'Correctivas'], [chartData.totalPreventivas, chartData.totalCorrectivas]);
         } else {
             // Mostrar mensaje si no hay datos
             const canvas = document.getElementById('tipoOtChart');
             const parent = canvas.parentElement;
-            parent.innerHTML = '<p class="text-secondary text-center" style="padding: 2rem;">No hay datos de Órdenes de Trabajo para el período seleccionado.</p>';
+            parent.innerHTML = `<p class="text-text-secondary text-center" style="padding: 2rem;">No hay datos de Órdenes de Trabajo para el período seleccionado.</p>`;
             parent.style.display = 'flex';
             parent.style.alignItems = 'center';
             parent.style.justifyContent = 'center';
@@ -519,7 +833,7 @@
         } else {
             const canvas = document.getElementById('avancePreventivasChart');
             const parent = canvas.parentElement;
-            parent.innerHTML = '<p class="text-secondary text-center" style="padding: 2rem;">No hay datos de Avance de Preventivas para el período seleccionado.</p>';
+            parent.innerHTML = `<p class="text-text-secondary text-center" style="padding: 2rem;">No hay datos de Avance de Preventivas para el período seleccionado.</p>`;
             parent.style.display = 'flex';
             parent.style.alignItems = 'center';
             parent.style.justifyContent = 'center';
@@ -531,24 +845,25 @@
         } else {
             const canvas = document.getElementById('avanceCorrectivasChart');
             const parent = canvas.parentElement;
-            parent.innerHTML = '<p class="text-secondary text-center" style="padding: 2rem;">No hay datos de Avance de Correctivas para el período seleccionado.</p>';
+            parent.innerHTML = `<p class="text-text-secondary text-center" style="padding: 2rem;">No hay datos de Avance de Correctivas para el período seleccionado.</p>`;
             parent.style.display = 'flex';
             parent.style.alignItems = 'center';
             parent.style.justifyContent = 'center';
             parent.style.minHeight = '300px';
         }
 
-        // Creación de los nuevos gráficos de línea comparativos
+        // Creación de los gráficos de línea comparativos
         createLineChart('disponibilidadConfiabilidadLineChart', 'Disponibilidad vs. Confiabilidad', chartData.labelsMes, [
-            { label: 'Disponibilidad (%)', data: chartData.disponibilidadData, color: 'var(--line-chart-color-1)' },
-            { label: 'Confiabilidad (%)', data: chartData.confiabilidadData, color: 'var(--line-chart-color-2)' }
+            { label: 'Disponibilidad (%)', data: chartData.disponibilidadData, color: pulserChartColors[0] }, // Usar colores de Pulser
+            { label: 'Confiabilidad (%)', data: chartData.confiabilidadData, color: pulserChartColors[1] }
         ]);
 
         // Para Utilización vs. Meta, creamos una data de meta fija para el ejemplo
         const utilizacionTargetData = Array(chartData.labelsMes.length).fill(85); // Ejemplo: 85% de meta
         createLineChart('utilizacionMetaLineChart', 'Utilización vs. Meta', chartData.labelsMes, [
-            { label: 'Utilización (%)', data: chartData.utilizacionData, color: 'var(--line-chart-color-3)' },
-            { label: 'Meta (%)', data: utilizacionTargetData, color: 'var(--line-chart-color-4)', options: { borderDash: [5, 5] } } // Línea punteada para la meta
+            { label: 'Utilización (%)', data: chartData.utilizacionData, color: pulserChartColors[2] }, // Usar colores de Pulser
+            { label: 'Meta (%)', data: utilizacionTargetData, color: pulserChartColors[3], options: { borderDash: [5, 5], fill: false, pointRadius: 0 } } // Línea punteada para la meta, sin relleno y sin puntos
         ]);
-    </script>
+    });
+</script>
 {% endblock %}

@@ -1,159 +1,307 @@
 {% extends "flota/base.html" %}
+{% load static %}
 
 {% block title %}Órdenes de Trabajo{% endblock %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     <style>
-        :root { --dark-bg: #1C2431; --card-bg: #27303F; --input-bg: #343E4F; --accent-color: #4A90E2; --accent-color-dark: #3A7BCF; --text-primary: #E2E8F0; --text-secondary: #A0B0C4; --border-color: #3D4A5E; --header-gradient-start: #2A60B0; --header-gradient-end: #1E40AF; --shadow-light: 0 4px 12px rgba(0, 0, 0, 0.25); --shadow-medium: 0 8px 20px rgba(0, 0, 0, 0.35); --success-color: #10B981; --warning-color: #F59E0B; --danger-color: #EF4444; --alert-danger-bg: rgba(239, 68, 68, 0.2); }
-        body { background-color: var(--dark-bg) !important; color: var(--text-primary) !important; font-family: 'Inter', sans-serif; line-height: 1.6; padding-top: 2rem; padding-bottom: 2rem; }
-        .container { max-width: 1200px; margin: 0 auto; padding-left: 1rem; padding-right: 1rem; }
-        h1 { font-size: 2.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 2.5rem; text-align: center; }
-        .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 0.75rem; box-shadow: var(--shadow-light); margin-bottom: 2.5rem; }
-        .card-header { background-color: var(--input-bg); border-bottom: 1px solid var(--border-color); color: var(--text-primary); font-weight: 600; font-size: 1.4rem; padding: 1.25rem 2rem; border-top-left-radius: 0.75rem; border-top-right-radius: 0.75rem; display: flex; align-items: center; gap: 1rem; }
-        .card-header h4 { margin-bottom: 0; color: var(--text-primary); }
-        .card-header i { color: var(--accent-color); font-size: 1.6rem; }
-        .card-body { padding: 2rem; }
-        .table { color: var(--text-primary); margin-bottom: 0; }
-        .table thead th { border-bottom: 2px solid var(--border-color); color: var(--text-secondary); font-weight: 600; padding: 1rem 0.75rem; }
-        .table th, .table td { border-top: 1px solid var(--border-color); padding: 0.85rem 0.75rem; vertical-align: middle; }
-        .table-hover tbody tr:hover { background-color: color-mix(in srgb, var(--card-bg) 80%, black); }
-        .form-label { font-weight: 500; color: var(--text-secondary); margin-bottom: 0.6rem; font-size: 0.95em; }
-        .form-control, .form-select { background-color: var(--input-bg); color: var(--text-primary); border-color: var(--border-color); padding: 0.75rem 1.2rem; border-radius: 0.5rem; font-size: 1rem; }
-        .form-control:focus, .form-select:focus { background-color: var(--input-bg); color: var(--text-primary); border-color: var(--accent-color); box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.3); }
-        .ot-status { padding: .4rem 1rem; border-radius: 9999px; font-weight: 700; color: white; font-size: 0.85em; box-shadow: 0 2px 6px rgba(0,0,0,0.2); display: inline-block; min-width: 100px; text-align: center; }
-        .status-PENDIENTE { background-color: var(--warning-color); }
-        .status-EN_PROCESO { background-color: var(--accent-color); }
-        .status-PAUSADA { background-color: #D69E2E; }
-        .status-CERRADA_MECANICO { background-color: var(--text-secondary); }
-        .status-FINALIZADA { background-color: var(--success-color); }
-        .alert-danger { background-color: var(--alert-danger-bg); border-color: var(--danger-color); color: var(--danger-color); padding: 1.25rem 1.75rem; border-radius: 0.75rem; margin-bottom: 1.5rem; }
+        /* Estilos base de los badges de estado (sin cambios, son específicos de esta página) */
+        .ot-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: white !important; /* Asegura que el texto sea blanco por defecto */
+            border-radius: 9999px; /* Asegura la forma ovalada */
+            text-align: center;
+            min-width: 110px;
+        }
+
+        /* Colores de fondo de los estados (para Dark Mode por defecto o como fallback) */
+        .status-PENDIENTE { background-color: #f59e0b; } /* Amarillo-naranja */
+        .status-EN_PROCESO { background-color: #3b82f6; } /* Azul */
+        .status-PAUSADA { background-color: #f97316; } /* Naranja */
+        .status-CERRADA_MECANICO { background-color: #6b7280; } /* Gris */
+        .status-FINALIZADA { background-color: #16a34a; } /* Verde */
+
+        /* Sobreescrituras para Light Mode: Fondos más claros, texto oscuro para mejor contraste */
+        html.light .ot-status {
+            color: var(--text-primary) !important; /* Texto oscuro para el modo claro */
+        }
+        html.light .status-PENDIENTE { background-color: #fde68a !important; } /* Amarillo más claro */
+        html.light .status-EN_PROCESO { background-color: #bfdbfe !important; } /* Azul más claro */
+        html.light .status-PAUSADA { background-color: #fed7aa !important; } /* Naranja más claro */
+        html.light .status-CERRADA_MECANICO { background-color: #e5e7eb !important; } /* Gris más claro */
+        html.light .status-FINALIZADA { background-color: #dcfce7 !important; } /* Verde más claro */
     </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    {% if es_mecanico %}
-        <h1 class="mb-4">Mis Órdenes de Trabajo Asignadas</h1>
-    {% else %}
-        <h1 class="mb-4">Órdenes de Trabajo</h1>
-    {% endif %}
-    
-    {% if es_personal_operativo %}
-    <div id="crear-ot-seccion" class="card mb-5">
-        <div class="card-header">
-            <h4><i class="fas fa-plus-circle me-2"></i> Crear Nueva Orden de Trabajo</h4>
-        </div>
-        <div class="card-body">
-            <form method="post" id="form-crear-ot" novalidate>
-                {% csrf_token %}
-                {% if form.errors %}
-                    <div class="alert alert-danger">
-                        <strong>Por favor, corrija los siguientes errores:</strong>
-                        <ul class="mb-0 mt-2">
-                            {% for field in form %}{% if field.errors %}{% for error in field.errors %}<li><strong>{{ field.label }}:</strong> {{ error }}</li>{% endfor %}{% endif %}{% endfor %}
-                            {{ form.non_field_errors }}
-                        </ul>
-                    </div>
-                {% endif %}
+<div class="space-y-8">
 
-                <div class="row">
-                    <div class="col-md-6 mb-3"><label for="{{ form.vehiculo.id_for_label }}" class="form-label">{{ form.vehiculo.label }}</label>{{ form.vehiculo }}</div>
-                    <div class="col-md-6 mb-3"><label for="{{ form.kilometraje_apertura.id_for_label }}" class="form-label">{{ form.kilometraje_apertura.label }}</label>{{ form.kilometraje_apertura }}</div>
-                    <div class="col-md-4 mb-3"><label for="{{ form.tipo.id_for_label }}" class="form-label">{{ form.tipo.label }}</label>{{ form.tipo }}</div>
-                    <div class="col-md-4 mb-3"><label for="{{ form.formato.id_for_label }}" class="form-label">{{ form.formato.label }}</label>{{ form.formato }}</div>
-                    <div class="col-md-4 mb-3"><label for="{{ form.prioridad.id_for_label }}" class="form-label">{{ form.prioridad.label }}</label>{{ form.prioridad }}</div>
-                    <div class="col-md-4 mb-3"><label for="{{ form.fecha_programada.id_for_label }}" class="form-label">{{ form.fecha_programada.label }}</label>{{ form.fecha_programada }}</div>
+    <h1 class="text-3xl font-bold text-text-primary border-b border-input-border pb-3 mb-6">
+        {% if es_mecanico %}Mis Órdenes de Trabajo Asignadas{% else %}Órdenes de Trabajo{% endif %}
+    </h1>
+
+    {% if es_personal_operativo %}
+    <div class="card-style">
+        <h2 class="text-xl font-semibold text-text-primary flex items-center gap-3 mb-6">
+            <i class="fas fa-plus-circle text-accent"></i>
+            Crear Nueva Orden de Trabajo
+        </h2>
+        
+        <form method="post" id="form-crear-ot" class="space-y-6" novalidate>
+            {% csrf_token %}
+            {% if form.errors %}<div class="alert-error">{{ form.errors }}</div>{% endif %}
+
+            <!-- Sección de campos principales -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                    <label for="{{ form.vehiculo.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.vehiculo.label }}</label>
+                    {{ form.vehiculo }}
                 </div>
-                <div class="form-group mb-3" id="campo-pauta_mantenimiento" style="display: none;"><label for="{{ form.pauta_mantenimiento.id_for_label }}" class="form-label">{{ form.pauta_mantenimiento.label }}</label>{{ form.pauta_mantenimiento }}</div>
-                <div class="form-group mb-3" id="campo-tipo_falla" style="display: none;"><label for="{{ form.tipo_falla.id_for_label }}" class="form-label">{{ form.tipo_falla.label }}</label>{{ form.tipo_falla }}</div>
-                <div class="form-group mb-3" id="campo-sintomas_reportados" style="display: none;"><label for="{{ form.sintomas_reportados.id_for_label }}" class="form-label">{{ form.sintomas_reportados.label }}</label>{{ form.sintomas_reportados }}</div>
-                <div class="form-group mb-3"><label for="{{ form.observacion_inicial.id_for_label }}" class="form-label">{{ form.observacion_inicial.label }}</label>{{ form.observacion_inicial }}</div>
-                <button type="submit" class="btn btn-success mt-3"><i class="fas fa-save me-2"></i>Crear OT</button>
-            </form>
-        </div>
+                <div>
+                    <label for="{{ form.kilometraje_apertura.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.kilometraje_apertura.label }}</label>
+                    {{ form.kilometraje_apertura }}
+                </div>
+                <div>
+                    <label for="{{ form.tipo.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.tipo.label }}</label>
+                    {{ form.tipo }}
+                </div>
+                <div>
+                    <label for="{{ form.formato.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.formato.label }}</label>
+                    {{ form.formato }}
+                </div>
+                <div>
+                    <label for="{{ form.prioridad.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.prioridad.label }}</label>
+                    {{ form.prioridad }}
+                </div>
+                <div>
+                    <label for="{{ form.fecha_programada.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.fecha_programada.label }}</label>
+                    {{ form.fecha_programada }}
+                </div>
+            </div>
+
+            <!-- Campos condicionales controlados por JavaScript -->
+            <div id="campo-pauta_mantenimiento" style="display: none;">
+                <label for="{{ form.pauta_mantenimiento.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.pauta_mantenimiento.label }}</label>
+                {{ form.pauta_mantenimiento }}
+            </div>
+            <div id="campo-tipo_falla" style="display: none;">
+                <label for="{{ form.tipo_falla.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.tipo_falla.label }}</label>
+                {{ form.tipo_falla }}
+            </div>
+            <div id="campo-sintomas_reportados" style="display: none;">
+                <label for="{{ form.sintomas_reportados.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.sintomas_reportados.label }}</label>
+                {{ form.sintomas_reportados }}
+            </div>
+
+            <!-- Campo de observación y botón de envío -->
+            <div>
+                <label for="{{ form.observacion_inicial.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ form.observacion_inicial.label }}</label>
+                {{ form.observacion_inicial }}
+            </div>
+            
+            <div>
+                <button type="submit" class="btn-primary"><i class="fas fa-save mr-2"></i>Crear OT</button>
+            </div>
+        </form>
     </div>
     {% endif %}
-    
-    <div class="card">
-        <div class="card-header">
-            <h4><i class="fas fa-filter me-2"></i> Filtros y Listado de OTs</h4>
-        </div>
-        <div class="card-body">
-            <form method="get" class="mb-4 p-3 rounded" style="background-color: var(--dark-bg);">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3"><div class="form-group"><label for="{{ filtro_form.vehiculo.id_for_label }}">{{ filtro_form.vehiculo.label }}</label>{{ filtro_form.vehiculo }}</div></div>
-                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.tipo.id_for_label }}">{{ filtro_form.tipo.label }}</label>{{ filtro_form.tipo }}</div></div>
-                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.estado.id_for_label }}">{{ filtro_form.estado.label }}</label>{{ filtro_form.estado }}</div></div>
-                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.fecha_desde.id_for_label }}">{{ filtro_form.fecha_desde.label }}</label>{{ filtro_form.fecha_desde }}</div></div>
-                    <div class="col-md"><div class="form-group"><label for="{{ filtro_form.fecha_hasta.id_for_label }}">{{ filtro_form.fecha_hasta.label }}</label>{{ filtro_form.fecha_hasta }}</div></div>
-                    <div class="col-md-auto d-grid"><button type="submit" class="btn btn-primary">Filtrar</button></div>
+
+    {# Formulario de búsqueda/filtrado #}
+    <div class="card-style mb-4">
+        <h2 class="text-xl font-semibold text-text-primary flex items-center gap-3 mb-6">
+            <i class="fas fa-filter text-accent"></i>
+            Filtros y Listado de OTs
+        </h2>
+        
+        <form id="ot-filter-form" method="get" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="col-span-1 md:col-span-2 lg:col-span-1">
+                    <label for="{{ filtro_form.vehiculo.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.vehiculo.label }}</label>
+                    {{ filtro_form.vehiculo }}
                 </div>
-            </form>
-            <hr style="border-color: var(--border-color);">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead><tr><th>Folio</th><th>Vehículo</th><th>Tipo</th><th>Estado</th><th>Fecha Creación</th><th>Acciones</th></tr></thead>
-                    <tbody>
-                        {% for ot in ordenes %}
-                        <tr>
-                            <td>{{ ot.folio }}</td>
-                            <td>{{ ot.vehiculo.numero_interno }} - {{ ot.vehiculo.patente }}</td>
-                            <td>{{ ot.get_tipo_display }}</td>
-                            <td><span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span></td>
-                            <td>{{ ot.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                            <td><a href="{% url 'ot_detail' pk=ot.pk %}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a></td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="6" class="text-center">No se encontraron órdenes de trabajo.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div>
+                    <label for="{{ filtro_form.tipo.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.tipo.label }}</label>
+                    {{ filtro_form.tipo }}
+                </div>
+                <div>
+                    <label for="{{ filtro_form.estado.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.estado.label }}</label>
+                    {{ filtro_form.estado }}
+                </div>
+                <div>
+                    <label for="{{ filtro_form.fecha_desde.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.fecha_desde.label }}</label>
+                    {{ filtro_form.fecha_desde }}
+                </div>
+                <div>
+                    <label for="{{ filtro_form.fecha_hasta.id_for_label }}" class="block text-sm font-medium text-text-secondary mb-1">{{ filtro_form.fecha_hasta.label }}</label>
+                    {{ filtro_form.fecha_hasta }}
+                </div>
             </div>
-            <nav aria-label="Paginación" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if ordenes.has_previous %}<li class="page-item"><a class="page-link" href="?page=1&{{ request.GET.urlencode | cut:'page=' }}">« Primera</a></li><li class="page-item"><a class="page-link" href="?page={{ ordenes.previous_page_number }}&{{ request.GET.urlencode | cut:'page=' }}">Anterior</a></li>{% endif %}
-                    <li class="page-item active" aria-current="page"><span class="page-link">Página {{ ordenes.number }} de {{ ordenes.paginator.num_pages }}</span></li>
-                    {% if ordenes.has_next %}<li class="page-item"><a class="page-link" href="?page={{ ordenes.next_page_number }}&{{ request.GET.urlencode | cut:'page=' }}">Siguiente</a></li><li class="page-item"><a class="page-link" href="?page={{ ordenes.paginator.num_pages }}&{{ request.GET.urlencode | cut:'page=' }}">Última »</a></li>{% endif %}
-                </ul>
-            </nav>
-        </div>
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+                <button type="submit" class="btn-primary"><i class="fas fa-filter mr-2"></i>Aplicar Filtros</button>
+                <a href="{% url 'ot_list' %}" class="inline-flex items-center justify-content px-4 py-2 border border-input-border text-sm font-medium rounded-md shadow-sm text-text-secondary bg-bg-secondary hover:bg-input-border transition-transform duration-200 hover:scale-105"><i class="fas fa-eraser mr-2"></i>Limpiar</a>
+                
+                {# BOTÓN DE EXPORTAR CSV PARA OTs #}
+                <button type="button" id="export-ots-csv-btn" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 transition-transform duration-200 hover:scale-105">
+                    <i class="fas fa-file-csv mr-2"></i>Exportar CSV
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de Órdenes de Trabajo -->
+    <div class="overflow-x-auto card-style">
+        <table class="w-full text-sm text-left text-text-secondary">
+            <thead class="text-xs text-text-secondary uppercase bg-bg-secondary">
+                <tr>
+                    <th class="px-6 py-3">Folio</th>
+                    <th class="px-6 py-3">Vehículo</th>
+                    <th class="px-6 py-3">Tipo</th>
+                    <th class="px-6 py-3">Estado</th>
+                    <th class="px-6 py-3">Fecha Creación</th>
+                    <th class="px-6 py-3">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ot in ordenes %}
+                <tr class="bg-card-base-bg border-b border-input-border hover:bg-bg-secondary">
+                    <td class="px-6 py-4 font-medium text-text-primary whitespace-nowrap">{{ ot.folio }}</td>
+                    <td class="px-6 py-4">{{ ot.vehiculo.numero_interno }} - {{ ot.vehiculo.patente }}</td>
+                    <td class="px-6 py-4">{{ ot.get_tipo_display }}</td>
+                    <td class="px-6 py-4">
+                        <span class="ot-status status-{{ ot.estado }} rounded-full"> {# ¡rounded-full para óvalos! #}
+                            {{ ot.get_estado_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">{{ ot.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td class="px-6 py-4"><a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-primary !py-1 !px-3 !text-xs"><i class="fas fa-eye mr-1"></i>Ver</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-8 text-text-secondary">No se encontraron órdenes de trabajo.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {# Paginación #}
+        <nav class="flex items-center justify-between pt-4">
+            <div class="flex-1 flex justify-between sm:hidden">
+                {% if ordenes.has_previous %}
+                    <a href="?page={{ ordenes.previous_page_number }}{{ request.GET.urlencode | cut:'page=' | safe }}" class="btn-primary">Anterior</a>
+                {% endif %}
+                {% if ordenes.has_next %}
+                    <a href="?page={{ ordenes.next_page_number }}{{ request.GET.urlencode | cut:'page=' | safe }}" class="btn-primary">Siguiente</a>
+                {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-sm text-text-secondary">
+                        Mostrando
+                        <span class="font-medium">{{ ordenes.start_index }}</span>
+                        a
+                        <span class="font-medium">{{ ordenes.end_index }}</span>
+                        de
+                        <span class="font-medium">{{ ordenes.paginator.count }}</span>
+                        resultados
+                    </p>
+                </div>
+                <div>
+                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        {% if ordenes.has_previous %}
+                            <a href="?page={{ ordenes.previous_page_number }}{{ request.GET.urlencode | cut:'page=' | safe }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-input-border bg-card-base-bg text-sm font-medium text-text-secondary hover:bg-bg-secondary">
+                                <span class="sr-only">Anterior</span>
+                                <i class="fas fa-chevron-left h-5 w-5"></i>
+                            </a>
+                        {% endif %}
+
+                        {% for i in ordenes.paginator.page_range %}
+                            <a href="?page={{ i }}{{ request.GET.urlencode | cut:'page=' | safe }}" class="{% if ordenes.number == i %}z-10 bg-accent border-accent text-white{% else %}bg-card-base-bg border-input-border text-text-primary hover:bg-bg-secondary{% endif %} relative inline-flex items-center px-4 py-2 border text-sm font-medium">
+                                {{ i }}
+                            </a>
+                        {% endfor %}
+
+                        {% if ordenes.has_next %}
+                            <a href="?page={{ ordenes.next_page_number }}{{ request.GET.urlencode | cut:'page=' | safe }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-input-border bg-card-base-bg text-sm font-medium text-text-secondary hover:bg-bg-secondary">
+                                <span class="sr-only">Siguiente</span>
+                                <i class="fas fa-chevron-right h-5 w-5"></i>
+                            </a>
+                        {% endif %}
+                    </nav>
+                </div>
+            </div>
+        </nav>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    {{ block.super }}
     <script>
         $(document).ready(function() {
-            $('.select2').select2({
-                theme: "bootstrap-5",
+            // Inicializar Select2 en los campos del formulario de creación
+            $('#id_vehiculo, #id_prioridad, #id_pauta_mantenimiento, #id_tipo_falla').select2({
+                theme: "default",
+                width: '100%',
+                placeholder: "Seleccionar...",
+                allowClear: true
             });
-            const tipoSelect = $('#id_tipo');
+
+            // Inicializar Select2 en los campos del formulario de filtros
+            // Asegúrate de que los IDs aquí coincidan con los IDs que Django genera para tus campos de filtro.
+            // Según tu OTFiltroForm, los IDs serán id_vehiculo, id_tipo, id_estado, etc.
+            $('#id_vehiculo, #id_tipo, #id_estado').select2({ /* Usamos los IDs reales de OTFiltroForm */
+                theme: "default",
+                width: '100%',
+                placeholder: "Seleccionar...",
+                allowClear: true
+            });
+
+
+            // Lógica para el botón de exportar OTs
+            const exportOtsBtn = document.getElementById('export-ots-csv-btn');
+            if (exportOtsBtn) {
+                exportOtsBtn.addEventListener('click', function() {
+                    const form = document.getElementById('ot-filter-form');
+                    const params = new URLSearchParams(new FormData(form)).toString();
+                    window.location.href = "{% url 'export_ots_csv' %}?" + params;
+                });
+            }
+
+            // Lógica para mostrar/ocultar campos condicionales en el formulario de creación de OT
+            const tipoSelect = $('#id_tipo'); // Este es del formulario de creación
             const pautaField = $('#campo-pauta_mantenimiento');
             const tipoFallaField = $('#campo-tipo_falla');
             const sintomasField = $('#campo-sintomas_reportados');
+
             function toggleFields() {
                 const tipo = tipoSelect.val();
                 pautaField.hide();
                 tipoFallaField.hide();
                 sintomasField.hide();
+
                 if (tipo === 'PREVENTIVA') {
                     pautaField.show();
+                    // Reinicializar Select2 si se muestra y es Select2
+                    if ($('#id_pauta_mantenimiento').hasClass('select2')) {
+                        $('#id_pauta_mantenimiento').select2('destroy').select2({ theme: "default", width: '100%', placeholder: "Seleccionar...", allowClear: true });
+                    }
                 } else if (tipo === 'CORRECTIVA') {
                     tipoFallaField.show();
+                    if ($('#id_tipo_falla').hasClass('select2')) {
+                        $('#id_tipo_falla').select2('destroy').select2({ theme: "default", width: '100%', placeholder: "Seleccionar...", allowClear: true });
+                    }
                 } else if (tipo === 'EVALUATIVA') {
                     tipoFallaField.show();
                     sintomasField.show();
+                    if ($('#id_tipo_falla').hasClass('select2')) {
+                        $('#id_tipo_falla').select2('destroy').select2({ theme: "default", width: '100%', placeholder: "Seleccionar...", allowClear: true });
+                    }
                 }
             }
+
             tipoSelect.on('change', toggleFields);
-            toggleFields();
+            toggleFields(); // Ejecutar al cargar la página
         });
     </script>
 {% endblock extra_scripts %}

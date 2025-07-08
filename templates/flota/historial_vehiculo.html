@@ -1,331 +1,72 @@
 {% extends "flota/base.html" %}
-{% load static %} {# <-- ¡IMPORTANTE! Añade esta línea al principio #}
+
+{% comment %} ELIMINADO: Todo el bloque extra_head. Ya no es necesario. {% endcomment %}
 
 {% block title %}Historial de {{ vehiculo.numero_interno }}{% endblock %}
 
-{% block extra_head %}
-    <!-- Font Awesome para íconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Google Fonts - Inter para una apariencia moderna y limpia -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* Variables CSS con la paleta de colores de la imagen, más vivas y profesionales */
-        :root {
-            --dark-bg: #1A202C; /* Fondo principal oscuro y profundo */
-            --card-bg: #2D3748; /* Fondo de tarjetas, ligeramente más claro */
-            --input-bg: #4A5568; /* Fondo para campos de entrada y elementos interactivos */
-            --accent-color: #4299E1; /* Azul vibrante y claro para acentos y botones primarios */
-            --accent-color-dark: #3182CE; /* Azul más oscuro para hover/active */
-            --text-primary: #E2E8F0; /* Blanco suave para texto principal */
-            --text-secondary: #A0AEC0; /* Gris azulado para texto secundario y etiquetas */
-            --border-color: #4A5568; /* Borde sutil entre elementos */
-            --header-gradient-start: #2B6CB0; /* Inicio del degradado para encabezados */
-            --header-gradient-end: #1A365D; /* Fin del degradado para encabezados */
-            --shadow-light: 0 6px 15px rgba(0, 0, 0, 0.3); /* Sombra ligera y suave */
-            --shadow-medium: 0 10px 25px rgba(0, 0, 0, 0.45); /* Sombra más pronunciada */
-            --success-color: #38A169; /* Verde para éxito, más vibrante */
-            --warning-color: #DD6B20; /* Naranja para advertencia, más vibrante */
-            --danger-color: #E53E3E; /* Rojo para peligro, más vibrante */
-            --alert-danger-bg: rgba(229, 62, 62, 0.15); /* Fondo suave para alertas de peligro */
-            --info-color: #4299E1; /* Color para alertas de información */
-        }
-
-        body {
-            background-color: var(--dark-bg) !important;
-            color: var(--text-primary) !important;
-            font-family: 'Inter', sans-serif;
-            line-height: 1.6;
-            padding: 2rem 1rem; /* Espaciado general del cuerpo */
-        }
-
-        .container {
-            max-width: 1200px; /* Ancho máximo para el contenido */
-            margin: 0 auto;
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-
-        h1 {
-            font-size: 2.8rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            text-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        }
-
-        p.h3.text-muted {
-            color: var(--text-secondary) !important; /* Sobrescribir Bootstrap text-muted */
-            font-size: 1.4rem;
-            font-weight: 500;
-            margin-top: 0.5rem;
-        }
-
-        .d-flex.justify-content-between.align-items-center.mb-4 {
-            margin-bottom: 2.5rem !important; /* Más espacio debajo del encabezado */
-        }
-
-        /* Estilos de botones */
-        .btn {
-            padding: 0.8rem 1.8rem;
-            border-radius: 0.6rem;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-        }
-
-        .btn-secondary {
-            background-color: var(--text-secondary);
-            color: var(--dark-bg); /* Texto oscuro para contraste */
-        }
-        .btn-secondary:hover {
-            background-color: color-mix(in srgb, var(--text-secondary) 80%, black);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 18px rgba(160, 174, 192, 0.4);
-        }
-
-        .btn-info { /* Usado para el botón "Ver Detalle" */
-            background-color: var(--accent-color);
-            color: white;
-            padding: 0.6rem 1.2rem; /* Ajustar padding para botón pequeño */
-            font-size: 0.9em; /* Ajustar tamaño de fuente */
-        }
-        .btn-info:hover {
-            background-color: var(--accent-color-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(66, 153, 225, 0.3);
-        }
-
-        /* Estilos de la tarjeta contenedora */
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            box-shadow: var(--shadow-light);
-            padding: 0; /* El padding se maneja dentro del card-body o table-responsive */
-        }
-
-        .card-body {
-            padding: 2rem; /* Padding interno del cuerpo de la tarjeta */
-        }
-
-        /* Estilos de la tabla */
-        .table-responsive {
-            overflow-x: auto; /* Permite el desplazamiento horizontal */
-            border-radius: 0.75rem; /* Bordes redondeados para el contenedor */
-            box-shadow: var(--shadow-light); /* Sombra para el contenedor */
-        }
-
-        .table {
-            background-color: var(--card-bg);
-            border: none; /* Eliminar borde principal de la tabla si el contenedor ya lo tiene */
-            color: var(--text-primary);
-            width: 100%;
-            min-width: 900px; /* Ancho mínimo para evitar compresión excesiva */
-            border-collapse: separate; /* Necesario para border-radius en thead/tbody */
-            border-spacing: 0;
-        }
-
-        .table thead {
-            background-color: var(--input-bg); /* Fondo del encabezado de la tabla */
-        }
-        .table thead th {
-            color: var(--text-secondary);
-            font-weight: 600;
-            padding: 1.1rem 0.9rem;
-            border-bottom: 2px solid var(--border-color);
-            border-top: none;
-            font-size: 0.95em;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .table tbody tr {
-            background-color: var(--card-bg);
-            transition: background-color 0.2s ease;
-        }
-        .table th, .table td {
-            border-top: 1px solid var(--border-color);
-            padding: 1rem 0.9rem;
-            vertical-align: middle;
-            font-size: 0.95em;
-            white-space: nowrap; /* Evita que el contenido de la celda se rompa */
-        }
-        .table-hover tbody tr:hover {
-            background-color: color-mix(in srgb, var(--card-bg) 85%, black);
-        }
-
-        /* Estilos de las píldoras de estado */
-        .ot-status {
-            display: inline-block;
-            padding: 0.5rem 1.1rem;
-            border-radius: 9999px;
-            font-size: 0.85em;
-            font-weight: 700;
-            color: white;
-            min-width: 100px;
-            text-align: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-        }
-        .status-PENDIENTE { background-color: var(--warning-color); }
-        .status-EN_PROCESO { background-color: var(--accent-color); }
-        .status-PAUSADA { background-color: #D69E2E; } /* Mantener color específico si es deseado, o mapear a warning */
-        .status-CERRADA_MECANICO { background-color: var(--text-secondary); }
-        .status-FINALIZADA { background-color: var(--success-color); }
-
-        /* Mensaje de tabla vacía */
-        .table tbody tr td[colspan="8"] {
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            h1 {
-                font-size: 2.4rem;
-                margin-bottom: 1rem;
-            }
-            p.h3.text-muted {
-                font-size: 1.2rem;
-            }
-            .btn {
-                padding: 0.7rem 1.5rem;
-                font-size: 0.95rem;
-            }
-            .card-body {
-                padding: 1.5rem;
-            }
-            .table thead th, .table td {
-                padding: 0.8rem 0.7rem;
-                font-size: 0.9em;
-            }
-            .ot-status {
-                padding: 0.4rem 1rem;
-                font-size: 0.8em;
-                min-width: 90px;
-            }
-            .btn-info {
-                padding: 0.5rem 1rem;
-                font-size: 0.85em;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .d-flex {
-                flex-direction: column;
-                align-items: flex-start !important;
-            }
-            .d-flex .btn {
-                margin-top: 1.5rem;
-                width: 100%;
-            }
-            h1 {
-                font-size: 2rem;
-            }
-            p.h3.text-muted {
-                font-size: 1.1rem;
-            }
-            .card {
-                border-radius: 0.5rem;
-            }
-            .card-body {
-                padding: 1.2rem;
-            }
-            .table {
-                min-width: 700px; /* Ajustar min-width para pantallas más pequeñas */
-            }
-            .table thead th, .table td {
-                padding: 0.6rem 0.5rem;
-                font-size: 0.85em;
-            }
-            .ot-status {
-                font-size: 0.75em;
-                padding: 0.3rem 0.8rem;
-                min-width: 70px;
-            }
-            .btn-info {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.8em;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .card {
-                border-radius: 0; /* Sin bordes redondeados en pantallas muy pequeñas */
-            }
-            .table {
-                min-width: 600px; /* Ajustar min-width aún más */
-            }
-            .table thead th, .table td {
-                font-size: 0.75em;
-            }
-            .ot-status {
-                font-size: 0.65em;
-                min-width: 60px;
-            }
-        }
-    </style>
-{% endblock %}
-
 {% block content %}
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="space-y-6">
+
+    <!-- RECONSTRUIDO: Encabezado de la página -->
+    <div class="flex flex-wrap justify-between items-center gap-4">
         <div>
-            <h1 class="mb-1">Historial de Mantenimiento</h1>
-            <p class="h3 text-muted">Vehículo: {{ vehiculo.numero_interno }} ({{ vehiculo.patente }})</p>
+            <h1 class="text-3xl font-bold text-text-primary">Historial de Mantenimiento</h1>
+            <p class="text-lg text-text-secondary mt-1">Vehículo: {{ vehiculo.numero_interno }} ({{ vehiculo.patente }})</p>
         </div>
-        <a href="{{ request.META.HTTP_REFERER|default:request.get_full_path }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Volver
+        <a href="{{ request.META.HTTP_REFERER|default:'ot_list' }}" class="btn-primary !bg-gray-500 hover:!bg-gray-600">
+            <i class="fas fa-arrow-left mr-2"></i>Volver
         </a>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Folio</th>
-                            <th>Tipo</th>
-                            <th>Prioridad</th>
-                            <th>Estado</th>
-                            <th>Fecha Creación</th>
-                            <th>Fecha Cierre</th>
-                            <th>Costo Total</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ot in ordenes %}
-                        <tr>
-                            <td>{{ ot.folio }}</td>
-                            <td>{{ ot.get_tipo_display }}</td>
-                            <td>{{ ot.get_prioridad_display }}</td>
-                            <td><span class="ot-status status-{{ ot.estado }}">{{ ot.get_estado_display }}</span></td>
-                            <td>{{ ot.fecha_creacion|date:"d/m/Y" }}</td>
-                            <td>{{ ot.fecha_cierre|date:"d/m/Y"|default:"--" }}</td>
-                            <td>${{ ot.costo_total|floatformat:2 }}</td>
-                            <td>
-                                <a href="{% url 'ot_detail' pk=ot.pk %}" class="btn btn-sm btn-info" title="Ver Detalle">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center py-4">Este vehículo no tiene órdenes de trabajo registradas.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <!-- RECONSTRUIDO: Tarjeta contenedora de la tabla -->
+    <div class="card-style overflow-x-auto">
+        <table class="w-full text-sm text-left text-text-secondary">
+            <thead class="text-xs text-text-secondary uppercase bg-bg-secondary">
+                <tr>
+                    <th class="px-6 py-3">Folio</th>
+                    <th class="px-6 py-3">Tipo</th>
+                    <th class="px-6 py-3">Prioridad</th>
+                    <th class="px-6 py-3">Estado</th>
+                    <th class="px-6 py-3">Fecha Creación</th>
+                    <th class="px-6 py-3">Fecha Cierre</th>
+                    <th class="px-6 py-3">Costo Total</th>
+                    <th class="px-6 py-3 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ot in ordenes %}
+                <tr class="bg-card-base-bg border-b border-input-border hover:bg-bg-secondary">
+                    <td class="px-6 py-4 font-medium text-text-primary whitespace-nowrap">{{ ot.folio }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ ot.get_tipo_display }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ ot.get_prioridad_display }}</td>
+                    <td class="px-6 py-4">
+                        <!-- REUTILIZADO: Badges de estado consistentes -->
+                        <span class="inline-block px-3 py-1 text-xs font-bold text-white rounded-full text-center min-w-[110px]
+                            {% if ot.estado == 'PENDIENTE' %}bg-yellow-500
+                            {% elif ot.estado == 'EN_PROCESO' %}bg-blue-500
+                            {% elif ot.estado == 'PAUSADA' %}bg-orange-500
+                            {% elif ot.estado == 'CERRADA_MECANICO' %}bg-gray-500
+                            {% elif ot.estado == 'FINALIZADA' %}bg-green-600
+                            {% else %}bg-gray-400{% endif %}">
+                            {{ ot.get_estado_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ ot.fecha_creacion|date:"d/m/Y" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ ot.fecha_cierre|date:"d/m/Y"|default:"--" }}</td>
+                    <td class="px-6 py-4 font-mono">${{ ot.costo_total|floatformat:2 }}</td>
+                    <td class="px-6 py-4 text-center">
+                        <a href="{% url 'ot_detail' pk=ot.pk %}" class="btn-primary !text-xs !py-1 !px-3" title="Ver Detalle">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-8 text-text-secondary italic">Este vehículo no tiene órdenes de trabajo registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

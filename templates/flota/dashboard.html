@@ -1,137 +1,203 @@
 {% extends "flota/base.html" %}
 
 {% block title %}Pizarra de Mantenimiento{% endblock %}
-
-{% block extra_head %}
-    {{ block.super }}
-    <style>
-        .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,.6)}.modal-content{background-color:#2d3748;margin:15% auto;padding:20px;border:1px solid #888;width:80%;max-width:500px;border-radius:8px;position:relative}.modal-content .close-button{color:#aaa;float:right;font-size:28px;font-weight:700;cursor:pointer}.modal-content .close-button:focus,.modal-content .close-button:hover{color:#fff}.modal-content label{display:block;margin-top:15px}.modal-content input{width:100%;padding:10px;background-color:#1a202c;border:1px solid #4a5568;color:#fff;border-radius:4px;box-sizing:border-box}.modal-content .btn-submit{margin-top:20px}.status-pill{display:inline-block;padding:5px 10px;border-radius:12px;font-size:.85em;font-weight:700;color:#fff;min-width:80px;text-align:center}tr.estado-NORMAL .status-pill{background-color:#38a169}tr.estado-PROXIMO .status-pill{background-color:#dd6b20}tr.estado-VENCIDO .status-pill{background-color:#c53030}.actions-cell{position:relative;text-align:center}.action-menu-btn{background:none;border:none;color:#a0aec0;font-size:1.5em;cursor:pointer;padding:0 10px;border-radius:4px}.action-menu-btn:hover{background-color:#4a5568;color:#fff}.action-menu{display:none;position:absolute;right:20px;top:40px;background-color:#4a5568;min-width:180px;box-shadow:0 8px 16px 0 rgba(0,0,0,.2);z-index:10;border-radius:4px;overflow:hidden}.action-menu a{color:#e2e8f0;padding:12px 16px;text-decoration:none;display:block;text-align:left}.action-menu a:hover{background-color:#2d3748}.dashboard-top-section{width:100%;margin-bottom:20px}.filter-section-professional{background-color:#2d3748;border:1px solid #4a5568;border-radius:8px;padding:15px 20px;box-shadow:0 4px 8px rgba(0,0,0,.2)}.filter-form-professional{display:flex;flex-wrap:wrap;gap:15px 25px;align-items:flex-end;justify-content:flex-start}.filter-group{display:flex;flex-direction:column;min-width:180px;flex-grow:1}.filter-group label{color:#a0aec0;margin-bottom:5px;font-size:.85em;font-weight:600}.filter-group input[type=date],.filter-group select{width:100%;padding:8px 12px;border-radius:6px;border:1px solid #4a5568;background-color:#4a5568;color:#e2e8f0;-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%204%205%22%3E%3Cpath%20fill%3D%22%23e2e8f0%22%20d%3D%22M2%200L0%202h4zm0%205L0%203h4z%22%2F%3E%3C%2Fsvg%3E');background-repeat:no-repeat;background-position:right .7em top 50%;background-size:.6em auto;font-size:.95em;height:40px}.filter-group input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1)}.filter-buttons-professional{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}.btn-professional{padding:8px 16px;font-size:.9em;border-radius:6px;height:40px;display:flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none}.kpi-section-professional{background-color:#2d3748;border:1px solid #4a5568;border-radius:8px;padding:15px;box-shadow:0 4px 8px rgba(0,0,0,.2);margin-top:20px}.kpi-grid-professional{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:15px}.kpi-card-professional{border:1px solid #4a5568;border-radius:6px;padding:15px 20px;display:flex;flex-direction:column;align-items:flex-start}.kpi-label{color:#a0aec0;font-size:.9em;margin-bottom:5px}.kpi-value{color:#e2e8f0;font-size:1.6em;font-weight:700}
-
-        /* === INICIO DE LA CORRECCIÓN DE ESTILO === */
-        /* Estilo para el botón secundario (Limpiar) */
-        .btn-secondary {
-            background-color: #4A5568; /* Un gris oscuro, consistente con tu tema */
-            border: 1px solid #4A5568; /* Mismo color de borde para un look sólido */
-            color: #E2E8F0;
-        }
-        .btn-secondary:hover {
-            background-color: #5A6270; /* Un poco más claro al pasar el mouse */
-            border-color: #5A6270;
-        }
-        /* === FIN DE LA CORRECCIÓN DE ESTILO === */
-        
-        @media (max-width:992px){.filter-form-professional{flex-direction:column;align-items:stretch}.filter-buttons-professional{flex-direction:column;align-items:stretch;width:100%}}
-    </style>
-{% endblock extra_head %}
+{% block full_width_content %}true{% endblock %}
 
 {% block content %}
-    <h1>Pizarra de Mantenimiento Preventivo</h1>
+<div class="space-y-8">
 
-    <div class="dashboard-top-section">
-        <div class="card filter-section-professional">
-            <div class="card-body">
-                <form method="get" action="{% url 'dashboard' %}" class="filter-form-professional">
-                    <div class="filter-group">
-                        <label for="{{ filtro_form.modelo.id_for_label }}">{{ filtro_form.modelo.label }}</label>
+    <h1 class="text-3xl font-bold text-text-primary">Pizarra de Mantenimiento Preventivo</h1>
+
+    <!-- RECONSTRUIDO: Layout superior con Flexbox para mejor distribución -->
+    <div class="flex flex-col lg:flex-row gap-6">
+        
+        <!-- Filtros con un ancho base, pero flexible -->
+        <div class="flex-1 card-style">
+            <h2 class="text-xl font-semibold text-text-primary mb-4">Filtros</h2>
+            <form method="get" action="{% url 'dashboard' %}" class="space-y-4">
+                <div class="flex flex-wrap items-end gap-4">
+                    <div class="flex-grow min-w-[150px]">
+                        <label for="{{ filtro_form.modelo.id_for_label }}" class="block text-sm font-medium text-text-secondary">{{ filtro_form.modelo.label }}</label>
                         {{ filtro_form.modelo }}
                     </div>
-                    <div class="filter-group">
-                        <label for="{{ filtro_form.tipo_mantenimiento.id_for_label }}">{{ filtro_form.tipo_mantenimiento.label }}</label>
+                    <div class="flex-grow min-w-[150px]">
+                        <label for="{{ filtro_form.tipo_mantenimiento.id_for_label }}" class="block text-sm font-medium text-text-secondary">{{ filtro_form.tipo_mantenimiento.label }}</label>
                         {{ filtro_form.tipo_mantenimiento }}
                     </div>
-
-                    <div class="filter-buttons-professional">
-                        <button type="submit" class="btn btn-primary btn-professional">Aplicar Filtros</button>
-                        <button type="submit" name="proximos_5000_km" value="true" class="btn btn-warning btn-professional">Próx. 5000 KM</button>
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-professional">Limpiar</a>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 pt-2">
+                    <button type="submit" class="btn-primary"><i class="fas fa-filter mr-2"></i>Aplicar Filtros</button>
+                    <button type="submit" name="proximos_5000_km" value="true" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-500 hover:bg-yellow-600 transition-transform duration-200 hover:scale-105"><i class="fas fa-road mr-2"></i>Próx. 5000 KM</button>
+                    <a href="{% url 'dashboard' %}" class="inline-flex items-center justify-center px-4 py-2 border border-input-border text-sm font-medium rounded-md shadow-sm text-text-secondary bg-bg-secondary hover:bg-input-border transition-transform duration-200 hover:scale-105"><i class="fas fa-eraser mr-2"></i>Limpiar</a>
+                    <button type="button" id="export-vehiculos-csv-btn" class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 transition-transform duration-200 hover:scale-105">
+                        <i class="fas fa-file-csv mr-2"></i>Exportar CSV
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <div class="card kpi-section-professional">
-             <div class="card-body kpi-grid-professional">
-                <div class="kpi-card-professional">
-                    <span class="kpi-label">Cant. Filtrado / % de Flota</span>
-                    <span class="kpi-value">{{ kpi_total_filtrado }} ({{ kpi_porcentaje_flota|floatformat:1 }}%)</span>
+        <!-- KPIs con un ancho fijo para que no se estiren demasiado -->
+        <div class="lg:w-96 card-style">
+            <h2 class="text-xl font-semibold text-text-primary mb-4">Indicadores Clave</h2>
+            <div class="space-y-4">
+                <div class="p-4 bg-bg-secondary rounded-lg">
+                    <span class="block text-sm font-medium text-text-secondary">Cant. Filtrado / % de Flota</span>
+                    <span class="block text-2xl font-bold text-text-primary mt-1">{{ kpi_total_filtrado }} ({{ kpi_porcentaje_flota|floatformat:1 }}%)</span>
                 </div>
-                <div class="kpi-card-professional">
-                    <span class="kpi-label">Costo Total Neto</span>
-                    <span class="kpi-value" id="kpi-costo-total">${{ kpi_costo_total|default_if_none:"0" }}</span>
+                <div class="p-4 bg-bg-secondary rounded-lg">
+                    <span class="block text-sm font-medium text-text-secondary">Costo Total Neto</span>
+                    <span class="block text-2xl font-bold text-text-primary mt-1" id="kpi-costo-total">${{ kpi_costo_total|default_if_none:"0" }}</span>
                 </div>
-                <div class="kpi-card-professional">
-                    <span class="kpi-label">Costo Promedio por KM</span>
-                    <span class="kpi-value" id="kpi-costo-km">${{ kpi_costo_km|default_if_none:"0" }}</span>
+                <div class="p-4 bg-bg-secondary rounded-lg">
+                    <span class="block text-sm font-medium text-text-secondary">Costo Promedio por KM</span>
+                    <span class="block text-2xl font-bold text-text-primary mt-1" id="kpi-costo-km">${{ kpi_costo_km|default_if_none:"0" }}</span>
                 </div>
             </div>
         </div>
     </div>
     
-    <table class="table-hover" id="pizarraMantenimientoTable">
-        <thead>
-            <tr>
-                <th>N° Int.</th><th>PPU</th><th>Marca/Modelo</th><th>Razón Social</th><th>Intervalo</th>
-                <th>KM Últ. Mant.</th><th>Fecha Últ. Mant.</th><th>Estatus</th><th>KM Faltantes</th>
-                <th>KM Actual</th><th>KM Próx. Mant.</th><th>Tipo Próx. Mant.</th><th>Fecha Próx.</th>
-                <th style="text-align: center;">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in data_flota %}
-            <tr class="estado-{{ item.estado }}">
-                <td><strong>{{ item.vehiculo.numero_interno }}</strong></td>
-                <td>{{ item.vehiculo.patente|default:"N/A" }}</td>
-                <td>{{ item.vehiculo.modelo.marca|default:"" }}/{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td>
-                <td>{{ item.vehiculo.razon_social|default:"N/A" }}</td>
-                <td>{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td>
-                <td>{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td>
-                <td>{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td>
-                <td><span class="status-pill status-{{ item.estado }}">{{ item.estado }}</span></td>
-                <td>{{ item.kms_faltantes|floatformat:"0"|default:"--" }}</td>
-                <td>{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
-                <td>{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
-                <td>{{ item.proxima_pauta_obj.nombre|default:"--" }}</td>
-                <td>{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
-                <td class="actions-cell">
-                    <button class="action-menu-btn" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">⋮</button>
-                    <div id="menu-{{ item.vehiculo.pk }}" class="action-menu">
-                        <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')">Actualizar KM</a>
-                        <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}">Ver Historial</a>
-                        <a href="{% url 'analisis_km_vehiculo' pk=item.vehiculo.pk %}">Análisis de KM</a>
-                        <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}">Crear OT</a>
-                    </div>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="14" style="text-align: center; padding: 20px;">No se encontraron vehículos.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Tabla de Mantenimiento -->
+    <div class="card-style overflow-x-auto">
+        <table class="w-full text-xs text-left text-text-secondary" id="pizarraMantenimientoTable">
+            <thead class="text-xs text-text-secondary uppercase bg-bg-secondary">
+                <tr>
+                    <th class="px-2 py-3">N° Int.</th>
+                    <th class="px-2 py-3">PPU</th>
+                    <th class="px-2 py-3">Marca/Modelo</th>
+                    <th class="px-2 py-3">Razón Social</th>
+                    <th class="px-2 py-3">Intervalo</th>
+                    <th class="px-2 py-3">KM Últ. Mant.</th>
+                    <th class="px-2 py-3">Fecha Últ. Mant.</th>
+                    <th class="px-2 py-3">Estatus</th>
+                    <th class="px-2 py-3">KM Faltantes</th>
+                    <th class="px-2 py-3">KM Actual</th>
+                    <th class="px-2 py-3">KM Próx. Mant.</th>
+                    <th class="px-2 py-3">Tipo Próx. Mant.</th>
+                    <th class="px-2 py-3">Fecha Próx.</th>
+                    <th class="px-2 py-3 text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data_flota %}
+                <tr class="bg-card-base-bg border-b border-input-border hover:bg-bg-secondary">
+                    <td class="px-2 py-3 font-bold text-text-primary whitespace-nowrap">{{ item.vehiculo.numero_interno }}</td>
+                    <td class="px-2 py-3 whitespace-nowrap">{{ item.vehiculo.patente|default:"N/A" }}</td>
+                    <td class="px-2 py-3 whitespace-nowrap">{{ item.vehiculo.modelo.marca|default:"" }}/{{ item.vehiculo.modelo.nombre|default:"N/A" }}</td>
+                    <td class="px-2 py-3 whitespace-nowrap">{{ item.vehiculo.razon_social|default:"N/A" }}</td>
+                    <td class="px-2 py-3">{{ item.intervalo_km|floatformat:"0"|default:"--" }}</td>
+                    <td class="px-2 py-3">{{ item.km_ultimo_mant|floatformat:"0"|default:"--" }}</td>
+                    <td class="px-2 py-3 whitespace-nowrap">{{ item.fecha_ultimo_mant|date:"d/m/Y"|default:"--" }}</td>
+                    <td class="px-2 py-3">
+                        <span class="inline-block px-2 py-1 text-xs font-bold text-white rounded-full text-center min-w-[70px]
+                            {% if item.estado == 'NORMAL' %}bg-green-600{% elif item.estado == 'PROXIMO' %}bg-yellow-500{% elif item.estado == 'VENCIDO' %}bg-red-600{% else %}bg-gray-400{% endif %}">
+                            {{ item.estado }}
+                        </span>
+                    </td>
+                    <td class="px-2 py-3 font-medium 
+                        {% if item.estado == 'PROXIMO' %}text-yellow-500{% elif item.estado == 'VENCIDO' %}text-red-500{% else %}text-text-primary{% endif %}">
+                        {{ item.kms_faltantes|floatformat:"0"|default:"--" }}
+                    </td>
+                    <td class="px-2 py-3">{{ item.vehiculo.kilometraje_actual|floatformat:"0" }}</td>
+                    <td class="px-2 py-3">{{ item.proximo_km|floatformat:"0"|default:"--" }}</td>
+                    <td class="px-2 py-3 whitespace-nowrap">{{ item.proxima_pauta_obj.nombre|default:"--" }}</td>
+                    <td class="px-2 py-3 whitespace-nowrap">{{ item.fecha_prox_mant|date:"d M, Y"|default:"N/A" }}</td>
+                    <td class="px-2 py-3 relative text-center">
+                        <button class="text-text-secondary hover:text-accent font-bold text-lg px-2" onclick="toggleMenu(event, 'menu-{{ item.vehiculo.pk }}')">⋮</button>
+                        <div id="menu-{{ item.vehiculo.pk }}" class="action-menu hidden absolute right-0 bottom-full mb-2 w-48 bg-card-base-bg rounded-md shadow-lg z-50 border border-input-border text-left">
+                            <a href="#" onclick="openModal('{{ item.vehiculo.pk }}', '{{ item.vehiculo.numero_interno }}', '{{ item.vehiculo.kilometraje_actual }}')" class="block px-4 py-2 text-xs text-text-secondary hover:bg-bg-secondary hover:text-accent">Actualizar KM</a>
+                            <a href="{% url 'historial_vehiculo' pk=item.vehiculo.pk %}" class="block px-4 py-2 text-xs text-text-secondary hover:bg-bg-secondary hover:text-accent">Ver Historial</a>
+                            <a href="{% url 'analisis_km_vehiculo' pk=item.vehiculo.pk %}" class="block px-4 py-2 text-xs text-text-secondary hover:bg-bg-secondary hover:text-accent">Análisis de KM</a>
+                            <a href="{% url 'ot_list' %}?vehiculo_id={{ item.vehiculo.pk }}" class="block px-4 py-2 text-xs text-text-secondary hover:bg-bg-secondary hover:text-accent">Crear OT</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="14" class="text-center py-8 text-text-secondary">No se encontraron vehículos.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <div id="kmModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" onclick="closeModal()">×</span>
-            <h2>Actualizar Kilometraje</h2>
-            <p>Vehículo N°: <strong id="modalVehiculoNumero"></strong></p>
-            <form id="kmForm" method="post">
+    <!-- RECONSTRUIDO: Modal con clases de Tailwind -->
+    <div id="kmModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-card-base-bg rounded-lg shadow-xl w-full max-w-md relative p-6">
+            <button class="absolute top-3 right-3 text-text-secondary hover:text-text-primary text-2xl" onclick="closeModal()">×</button>
+            <h2 class="text-xl font-bold text-text-primary mb-4">Actualizar Kilometraje</h2>
+            <p class="text-text-secondary mb-4">Vehículo N°: <strong id="modalVehiculoNumero" class="text-text-primary"></strong></p>
+            <form id="kmForm" method="post" class="space-y-4">
                 {% csrf_token %}
-                <label for="modalKmInput">Nuevo Kilometraje:</label>
-                <input type="number" name="kilometraje_actual" id="modalKmInput" required>
-                <button type="submit" class="btn-submit">Guardar</button>
+                <div>
+                    <label for="modalKmInput" class="block text-sm font-medium text-text-secondary">Nuevo Kilometraje:</label>
+                    <input type="number" name="kilometraje_actual" id="modalKmInput" required class="mt-1 w-full">
+                </div>
+                <button type="submit" class="btn-primary w-full justify-center">Guardar</button>
             </form>
         </div>
     </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
     {{ block.super }}
+    <!-- El script se mantiene, pero ahora manipula clases 'hidden' -->
     <script>
-        function toggleMenu(event,menuId){event.stopPropagation();const menu=document.getElementById(menuId);const isVisible=menu.style.display==='block';closeAllMenus();if(!isVisible){menu.style.display='block'}}
-        function closeAllMenus(){document.querySelectorAll('.action-menu').forEach(menu=>{menu.style.display='none'})}
-        document.addEventListener('click',closeAllMenus);const modal=document.getElementById('kmModal');const kmForm=document.getElementById('kmForm');const modalVehiculoNumero=document.getElementById('modalVehiculoNumero');const modalKmInput=document.getElementById('modalKmInput');const updateUrlTemplate="{% url 'actualizar_km' pk=99999 %}".replace('/99999/','/');function openModal(vehiculoPk,vehiculoNumero,kmActual){modalVehiculoNumero.textContent=vehiculoNumero;modalKmInput.value=kmActual;kmForm.action=updateUrlTemplate+vehiculoPk+'/';modal.style.display='block'}
-        function closeModal(){modal.style.display='none'}
-        window.onclick=function(event){if(event.target==modal){closeModal()}}
+        function toggleMenu(event, menuId) {
+            event.stopPropagation();
+            const allMenus = document.querySelectorAll('.action-menu');
+            const targetMenu = document.getElementById(menuId);
+            
+            // Cerrar otros menús abiertos
+            allMenus.forEach(menu => {
+                if (menu.id !== menuId) {
+                    menu.classList.add('hidden');
+                }
+            });
+
+            // Abrir/cerrar el menú objetivo
+            targetMenu.classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.action-menu').forEach(menu => menu.classList.add('hidden'));
+        });
+
+        const modal = document.getElementById('kmModal');
+        const kmForm = document.getElementById('kmForm');
+        const modalVehiculoNumero = document.getElementById('modalVehiculoNumero');
+        const modalKmInput = document.getElementById('modalKmInput');
+        const updateUrlTemplate = "{% url 'actualizar_km' pk=99999 %}".replace('/99999/', '/');
+
+        function openModal(vehiculoPk, vehiculoNumero, kmActual) {
+            closeAllMenus();
+            modalVehiculoNumero.textContent = vehiculoNumero;
+            modalKmInput.value = kmActual;
+            kmForm.action = updateUrlTemplate + vehiculoPk + '/';
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
+
+    {{ block.super }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Lógica para el botón de exportar vehículos
+            const exportVehiculosBtn = document.getElementById('export-vehiculos-csv-btn');
+            if (exportVehiculosBtn) {
+                exportVehiculosBtn.addEventListener('click', function() {
+                    const form = document.getElementById('dashboard-filter-form');
+                    const params = new URLSearchParams(new FormData(form)).toString();
+                    window.location.href = "{% url 'export_vehiculos_csv' %}?" + params;
+                });
+            }
+        });
     </script>
 {% endblock extra_scripts %}

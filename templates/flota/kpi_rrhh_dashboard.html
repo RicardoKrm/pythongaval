@@ -1,89 +1,472 @@
 {% extends "flota/base.html" %}
-{% load humanize %}
+{% load static %} {# <-- ¡IMPORTANTE! Asegúrate de que esta línea esté al principio #}
+{% load humanize %} {# Ya estaba, lo mantengo #}
 
-{% block title %}KPIs de Recursos Humanos{% endblock %}
+{% block title %}KPIs de Recursos Humanos - Pulser{% endblock %}
+
+{% block extra_head %}
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js (se cargará al final del body para mejor rendimiento) -->
+    
+    <style>
+        /* CSS Variables for Light and Dark Mode - SPECIFIC TO THIS VIBRANT DARK THEME */
+        :root {
+            /* Light Mode (Calculado para ser un contraste de la paleta oscura, si el toggle se usa en esta página) */
+            --bg-primary: hsl(0, 0%, 98%); /* Almost white */
+            --bg-secondary: hsl(0, 0%, 95%); /* Slightly darker white */
+            --text-primary: hsl(210, 20%, 20%); /* Dark charcoal grey */
+            --text-secondary: hsl(210, 10%, 45%); /* Medium grey */
+            --accent: hsl(185, 100%, 50%); /* Vibrant Cyan (original #00E5FF, convertido a HSL para consistency) */
+            --accent-hover: hsl(185, 100%, 40%); /* Deeper Cyan */
+            --card-base-bg: #FFFFFF; /* White */
+            --input-bg: #FFFFFF;
+            --input-border: hsl(210, 10%, 80%);
+            --input-placeholder: hsl(210, 10%, 65%);
+            --text-shadow-strong: none; /* Removed for light mode */
+            --text-shadow-subtle: none; /* Removed for light mode */
+            --calendar-icon-filter: invert(0); /* Default for light mode (black) */
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.15);
+            --success-color: hsl(140, 70%, 45%); /* Verde vibrante compatible con Pulser */
+            --warning-color: hsl(40, 95%, 55%); /* Naranja vibrante compatible con Pulser */
+            --danger-color: hsl(0, 70%, 60%); /* Rojo compatible con Pulser */
+            --info-color: var(--accent);
+
+            /* Colores específicos para los gráficos de Chart.js y texto de KPIs */
+            --kpi-productividad-color: hsl(215, 80%, 55%); /* Azul medio, compatible con la paleta */
+            --kpi-cumplimiento-color: hsl(135, 75%, 45%); /* Verde vibrante, compatible con la paleta */
+        }
+
+        html.dark {
+            /* Dark Mode (basado en la paleta vibrante oscura proporcionada por el usuario) */
+            --bg-primary: hsl(220, 30%, 5%); /* #0A0F18 */
+            --bg-secondary: hsl(220, 25%, 8%); /* Slightly lighter dark for sections */
+            --text-primary: hsl(0, 0%, 100%); /* #FFFFFF */
+            --text-secondary: hsl(210, 10%, 70%); /* #B0BEC5 */
+            --accent: hsl(185, 100%, 50%); /* #00E5FF (Vibrant Cyan) */
+            --accent-hover: hsl(185, 100%, 40%); /* #00B8CC */
+            --card-base-bg: hsl(210, 20%, 13%); /* #1A222F */
+            --input-bg: hsl(210, 20%, 18%); /* #2B3545 */
+            --input-border: hsl(210, 10%, 25%); /* #4A5568, ligeramente ajustado para contraste */
+            --input-placeholder: hsl(210, 10%, 45%);
+            --text-shadow-strong: 0 0 15px var(--accent);
+            --text-shadow-subtle: 0 0 8px hsla(185, 100%, 50%, 0.4);
+            --calendar-icon-filter: invert(1); /* Invertir para dark mode (blanco) */
+            --shadow-light: 0 10px 25px rgba(0, 0, 0, 0.5); /* Sombra ligera más pronunciada */
+            --shadow-medium: 0 20px 50px rgba(0, 0, 0, 0.8); /* Sombra más pronunciada para cards */
+            --success-color: hsl(140, 70%, 55%); /* #69F0AE (ligeramente ajustado para consistencia HSL) */
+            --warning-color: hsl(40, 95%, 65%); /* #FFD740 (ligeramente ajustado para consistencia HSL) */
+            --danger-color: hsl(350, 100%, 60%); /* #FF1744 (ligeramente ajustado para consistencia HSL) */
+            --info-color: var(--accent);
+
+            /* Colores específicos para los gráficos de Chart.js y texto de KPIs (adaptados para modo oscuro) */
+            --kpi-productividad-color: hsl(215, 80%, 65%); /* Azul más claro para oscuro */
+            --kpi-cumplimiento-color: hsl(135, 75%, 55%); /* Verde más claro para oscuro */
+        }
+
+        /* Base styles for body */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2.5rem 1.5rem; /* Espaciado general del cuerpo */
+        }
+
+        /* Custom Tailwind Utilities - ADAPTADO para usar las variables de esta página */
+        .card-style {
+            background-color: var(--card-base-bg);
+            border-radius: 1rem; /* Más redondeado */
+            padding: 2.2rem;
+            box-shadow: var(--shadow-medium); /* Sombra más prominente para esta página */
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Transición para hover */
+        }
+
+        .card-style:hover {
+            transform: translateY(-5px); /* Efecto de elevación sutil */
+            box-shadow: var(--shadow-medium); /* Sombra más intensa al hover */
+        }
+
+        /* En light mode, las sombras son más sutiles */
+        html.light .card-style {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+        html.light .card-style:hover {
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.1), 0 6px 10px -3px rgba(0, 0, 0, 0.05);
+        }
+
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--text-primary);
+            padding: 1rem 2.5rem; /* Más grande y prominente */
+            border-radius: 0.7rem;
+            font-weight: 700;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-light); /* Usar shadow-light para botones */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.8rem;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-medium); /* Sombra más profunda en hover */
+        }
+
+        .btn-secondary { /* Mantener para consistencia, aunque no se use */
+            background-color: transparent;
+            color: var(--accent);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: 2px solid var(--accent);
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 20px -5px rgba(0, 0, 0, 0.2), 0 6px 10px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--text-primary);
+            padding: 0.9rem 1.4rem;
+            border-radius: 0.7rem;
+            transition: all 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 1.05rem;
+            height: 52px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); /* Sombra interna para inputs */
+        }
+
+        .custom-input::placeholder {
+            color: var(--input-placeholder);
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.5rem hsla(185, 100%, 50%, 0.6); /* Sombra de foco más grande y viva */
+        }
+
+        /* Keyframes for animations - COPIADO DIRECTAMENTE DE INDEX.HTML */
+        @keyframes pulse-glow {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.7; }
+        }
+        @keyframes pop-in {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fade-in {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        /* Message box for form submission - COPIADO DIRECTAMENTE DE INDEX.HTML */
+        .message-box {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: var(--accent); color: var(--bg-primary);
+            padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000; opacity: 0; transition: opacity 0.5s ease-in-out;
+        }
+        .message-box.show { opacity: 1; }
+
+        /* --- ESTILOS ESPECÍFICOS PARA EL DASHBOARD DE RR.HH. --- */
+        .page-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            flex-grow: 1;
+            position: relative; /* Para posicionar el theme toggle */
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 3.5rem;
+            text-align: center;
+            text-shadow: var(--text-shadow-strong);
+            letter-spacing: 0.05em;
+        }
+
+        .section-card {
+            margin-bottom: 2.5rem;
+        }
+        .section-card .card-header { /* Para imitar el card-header de Bootstrap */
+            background-color: var(--input-bg); /* Un color ligeramente más oscuro */
+            padding: 1.2rem 2.2rem;
+            border-bottom: 1px solid var(--input-border);
+            border-top-left-radius: 0.75rem; /* rounded-xl */
+            border-top-right-radius: 0.75rem; /* rounded-xl */
+            margin: -2.2rem -2.2rem 1.8rem -2.2rem; /* Negativo para que se ajuste al padding del card-style */
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Centrar contenido del header */
+            gap: 0.8rem;
+        }
+        .section-card .card-header h4 {
+            font-size: 1.75rem; /* Un poco más pequeño que el h2 principal del card, pero prominente */
+            font-weight: 700;
+            color: var(--accent);
+            margin: 0; /* Eliminar margen para el h4 dentro del header */
+            text-shadow: var(--text-shadow-subtle);
+        }
+        .section-card .card-header h4 i {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        /* Estilos para el formulario de filtros */
+        .filter-form-grid { /* Usamos grid */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.8rem;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            font-size: 1em;
+        }
+
+        /* Estilo para los inputs de fecha (custom-input ya los maneja) */
+        input[type="date"].custom-input::-webkit-calendar-picker-indicator {
+            filter: var(--calendar-icon-filter);
+        }
+
+        .btn-filter-submit { /* Directamente usa btn-primary */
+            width: 100%; /* Ocupa todo el ancho en el grid column */
+            margin-top: 0; /* No necesita margen superior extra en el grid */
+        }
+        
+        /* Contenedores de las tarjetas de KPIs principales */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2.5rem; /* Espacio entre las tarjetas */
+            margin-bottom: 2.5rem;
+        }
+        .kpi-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Para empujar el small al final */
+            height: 100%; /* Asegura que la tarjeta ocupe el 100% de la altura de la columna */
+        }
+        .kpi-card .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1; /* Permite que el body ocupe el espacio disponible */
+        }
+        .kpi-card .display-4 { /* Para el porcentaje grande */
+            font-size: 4rem; /* Más grande */
+            font-weight: 900; /* Extra bold */
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+            text-shadow: var(--text-shadow-subtle);
+        }
+        /* Colores dinámicos para el texto de los KPIs basados en su valor */
+        .kpi-card .text-success-kpi { color: var(--success-color); }
+        .kpi-card .text-warning-kpi { color: var(--warning-color); }
+        .kpi-card .text-danger-kpi { color: var(--danger-color); }
+
+        .kpi-card .text-muted-custom { /* Para el texto pequeño de explicación */
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        /* Contenedores de gráficos */
+        .chart-card-body {
+            height: 400px; /* Altura fija para el canvas */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .chart-card-body canvas {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        /* Botón de cambio de tema */
+        .page-theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+            font-size: 1.8rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+        .page-theme-toggle:hover {
+            color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .page-container { max-width: 960px; }
+            h1 { font-size: 3rem; }
+            .card-style { padding: 1.8rem; }
+            .section-card .card-header { padding: 1rem 1.8rem; margin: -1.8rem -1.8rem 1.5rem -1.8rem; }
+            .section-card .card-header h4 { font-size: 1.5rem; }
+            .kpi-row { gap: 2rem; margin-bottom: 2rem; }
+            .kpi-card .display-4 { font-size: 3.5rem; }
+            .chart-card-body { height: 350px; }
+        }
+
+        @media (max-width: 992px) {
+            h1 { font-size: 2.5rem; margin-bottom: 2rem; }
+            .card-style { padding: 1.5rem; margin-bottom: 2rem; }
+            .section-card .card-header { padding: 0.8rem 1.5rem; margin: -1.5rem -1.5rem 1.2rem -1.5rem; }
+            .section-card .card-header h4 { font-size: 1.3rem; }
+            .kpi-row { grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+            .kpi-card .display-4 { font-size: 3rem; }
+            .filter-form-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .btn-filter-submit { width: 100%; padding: 0.8rem 2rem; font-size: 1rem; }
+            .chart-card-body { height: 300px; }
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1.5rem 0.8rem; }
+            h1 { font-size: 2rem; margin-bottom: 1.5rem; }
+            .card-style { padding: 1.2rem; border-radius: 0.75rem; margin-bottom: 1.5rem; }
+            .section-card .card-header { padding: 0.7rem 1.2rem; margin: -1.2rem -1.2rem 1rem -1.2rem; }
+            .section-card .card-header h4 { font-size: 1.2rem; }
+            .section-card .card-header h4 i { font-size: 1.1rem; }
+            .custom-input { padding: 0.7rem 1.2rem; height: 44px; font-size: 0.95rem; }
+            .btn-primary { padding: 0.7rem 1.5rem; font-size: 0.95rem; }
+            .kpi-card .display-4 { font-size: 2.5rem; }
+            .kpi-card .text-muted-custom { font-size: 0.8em; }
+            .chart-card-body { height: 250px; }
+        }
+
+        @media (max-width: 576px) {
+            .card-style { border-radius: 0.5rem; }
+            h1 { font-size: 1.8rem; margin-bottom: 1.5rem; }
+            .kpi-card .display-4 { font-size: 2rem; }
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Dashboard de KPIs de RR.HH.</h1>
+<div class="page-container">
+    <!-- Botón de Cambio de Tema -->
+    <button id="page-theme-toggle" class="page-theme-toggle">
+        <i class="fas fa-sun hidden dark:inline-block"></i>
+        <i class="fas fa-moon inline-block dark:hidden"></i>
+    </button>
+
+    <h1 class="mb-4 animate-pop-in">Dashboard de KPIs de RR.HH.</h1>
 
     <!-- Sección de Filtros de Fecha -->
-    <div class="card mb-4">
+    <div class="section-card card-style animate-pop-in">
         <div class="card-header">
-            <h4><i class="fas fa-calendar-alt me-2"></i> Filtrar Período de las Tarjetas</h4>
+            <h4><i class="fas fa-calendar-alt mr-2"></i> Filtrar Período de las Tarjetas</h4>
         </div>
         <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-                <div class="col-md-5">
+            <form method="get" class="filter-form-grid">
+                <div class="form-group">
                     <label for="id_start_date" class="form-label">Fecha de Inicio</label>
-                    <input type="date" name="start_date" id="id_start_date" class="form-control" value="{{ start_date }}">
+                    <input type="date" name="start_date" id="id_start_date" class="custom-input" value="{{ start_date }}">
                 </div>
-                <div class="col-md-5">
+                <div class="form-group">
                     <label for="id_end_date" class="form-label">Fecha de Fin</label>
-                    <input type="date" name="end_date" id="id_end_date" class="form-control" value="{{ end_date }}">
+                    <input type="date" name="end_date" id="id_end_date" class="custom-input" value="{{ end_date }}">
                 </div>
-                <div class="col-md-2 d-grid">
-                    <button type="submit" class="btn btn-primary">Aplicar Filtro</button>
-                </div>
+                <button type="submit" class="btn-primary btn-filter-submit">Aplicar Filtro <i class="fas fa-filter ml-2"></i></button>
             </form>
         </div>
     </div>
 
     <!-- Fila para las tarjetas de KPIs principales -->
-    <div class="row">
+    <div class="kpi-row">
         <!-- Tarjeta KPI Productividad -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h4><i class="fas fa-tachometer-alt me-2"></i> Productividad del Equipo</h4>
-                </div>
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <p class="display-4 fw-bold {% if kpi_productividad >= 100 %}text-success{% elif kpi_productividad >= 85 %}text-warning{% else %}text-danger{% endif %}">
-                        {{ kpi_productividad|floatformat:1 }}%
-                    </p>
-                    <small class="text-muted">(Tiempo Estándar / Tiempo Real) x 100</small>
-                </div>
+        <div class="kpi-card section-card card-style animate-pop-in">
+            <div class="card-header">
+                <h4><i class="fas fa-tachometer-alt mr-2"></i> Productividad del Equipo</h4>
+            </div>
+            <div class="card-body">
+                <p class="display-4 {% if kpi_productividad >= 100 %}text-success-kpi{% elif kpi_productividad >= 85 %}text-warning-kpi{% else %}text-danger-kpi{% endif %}">
+                    {{ kpi_productividad|floatformat:1 }}%
+                </p>
+                <small class="text-muted-custom">(Tiempo Estándar / Tiempo Real) x 100</small>
             </div>
         </div>
         <!-- Tarjeta KPI Cumplimiento -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h4><i class="fas fa-calendar-check me-2"></i> Cumplimiento del Plan</h4>
-                </div>
-                <div class="card-body text-center d-flex flex-column justify-content-center">
-                    <p class="display-4 fw-bold {% if kpi_cumplimiento >= 95 %}text-success{% elif kpi_cumplimiento >= 80 %}text-warning{% else %}text-danger{% endif %}">
-                        {{ kpi_cumplimiento|floatformat:1 }}%
-                    </p>
-                    <small class="text-muted">(OTs a Tiempo / OTs Programadas) x 100</small>
-                </div>
+        <div class="kpi-card section-card card-style animate-pop-in">
+            <div class="card-header">
+                <h4><i class="fas fa-calendar-check mr-2"></i> Cumplimiento del Plan</h4>
+            </div>
+            <div class="card-body">
+                <p class="display-4 {% if kpi_cumplimiento >= 95 %}text-success-kpi{% elif kpi_cumplimiento >= 80 %}text-warning-kpi{% else %}text-danger-kpi{% endif %}">
+                    {{ kpi_cumplimiento|floatformat:1 }}%
+                </p>
+                <small class="text-muted-custom">(OTs a Tiempo / OTs Programadas) x 100</small>
             </div>
         </div>
     </div>
 
     <!-- Tarjeta para el Gráfico de Productividad -->
-    <div class="card mt-4">
+    <div class="section-card card-style animate-pop-in">
         <div class="card-header">
-            <h4><i class="fas fa-chart-line me-2"></i> Evolución Mensual de la Productividad (Último Año)</h4>
+            <h4><i class="fas fa-chart-line mr-2"></i> Evolución Mensual de la Productividad (Último Año)</h4>
         </div>
-        <div class="card-body" style="height: 400px;">
+        <div class="chart-card-body">
             <canvas id="graficoProductividad"></canvas>
         </div>
     </div>
 
     <!-- Tarjeta para el Gráfico de Cumplimiento -->
-    <div class="card mt-4">
+    <div class="section-card card-style animate-pop-in">
         <div class="card-header">
-            <h4><i class="fas fa-chart-pie me-2"></i> Evolución Mensual del Cumplimiento (Último Año)</h4>
+            <h4><i class="fas fa-chart-pie mr-2"></i> Evolución Mensual del Cumplimiento (Último Año)</h4>
         </div>
-        <div class="card-body" style="height: 400px;">
+        <div class="chart-card-body">
             <canvas id="graficoCumplimiento"></canvas>
         </div>
     </div>
 
 </div>
 
-<!-- Contenedores de datos JSON para los gráficos -->
+<!-- Contenedores de datos JSON para los gráficos (Mantenido) -->
 <script id="grafico-productividad-data" type="application/json">
     {
         "labels": {{ labels_grafico_productividad|safe }},
@@ -105,7 +488,70 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    
+    // Función para obtener el valor de una variable CSS (incluyendo HSL y RGB)
+    function getCssVariable(varName) {
+        return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    // Función para convertir HSL a RGB (necesaria para Chart.js en algunos contextos)
+    function hslToRgb(h, s, l) {
+        h /= 360; s /= 100; l /= 100;
+        let r, g, b;
+        if (s === 0) { r = g = b = l; } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1; if (t > 1) t -= 1;
+                if (t < 1 / 6) return p + (q - p) * 6 * t;
+                if (t < 1 / 2) return q;
+                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1 / 3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1 / 3);
+        }
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+
+    // Función para obtener un color RGBA de una variable HSL de CSS
+    function getRgbaFromHslVar(hslVarName, alpha) {
+        const hslString = getCssVariable(hslVarName);
+        const matches = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+        if (matches) {
+            const h = parseInt(matches[1]);
+            const s = parseInt(matches[2]);
+            const l = parseInt(matches[3]);
+            const [r, g, b] = hslToRgb(h, s, l);
+            return `rgba(${r},${g},${b},${alpha})`;
+        }
+        // Si no es HSL, intenta usar el valor directo (ej. si es 'rgb(x,y,z)' o '#abcdef')
+        if (hslString.startsWith('rgb')) {
+            const rgbaMatches = hslString.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (rgbaMatches) {
+                return `rgba(${rgbaMatches[1]},${rgbaMatches[2]},${rgbaMatches[3]},${alpha})`;
+            }
+        } else if (hslString.startsWith('#')) {
+            // Convierte hex a RGBA si es necesario
+            let hex = hslString.slice(1);
+            if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+            const bigint = parseInt(hex, 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return `rgba(${r},${g},${b},${alpha})`;
+        }
+        return hslString; // Fallback a la cadena original si no se puede parsear
+    }
+
+    // Colores para los ejes y leyendas de los gráficos
+    const axisTextColor = getCssVariable('--text-secondary');
+    const gridLineColor = getRgbaFromHslVar('--input-border', 0.5); // Usar input-border con opacidad para grillas
+    const legendTextColor = getCssVariable('--text-primary');
+    const tooltipBgColor = getCssVariable('--card-base-bg');
+    const tooltipBorderColor = getCssVariable('--accent');
+
+
     // === GRÁFICO 1: PRODUCTIVIDAD ===
     const dataElementProd = document.getElementById('grafico-productividad-data');
     const ctxProductividad = document.getElementById('graficoProductividad');
@@ -118,8 +564,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [{
                     label: '% de Productividad',
                     data: chartDataProd.data,
-                    backgroundColor: 'rgba(74, 144, 226, 0.6)',
-                    borderColor: 'rgba(74, 144, 226, 1)',
+                    backgroundColor: getRgbaFromHslVar('--kpi-productividad-color', 0.8), // Usar color de KPI
+                    borderColor: getRgbaFromHslVar('--kpi-productividad-color', 1), // Usar color de KPI
                     borderWidth: 1,
                     borderRadius: 5
                 }]
@@ -127,10 +573,44 @@ document.addEventListener('DOMContentLoaded', function () {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, ticks: { callback: value => value + '%' } } },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
+                },
+                scales: { 
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        grid: { color: gridLineColor },
+                        ticks: { 
+                            color: axisTextColor,
+                            callback: value => value + '%' 
+                        } 
+                    },
+                    x: {
+                        grid: { color: gridLineColor },
+                        ticks: { color: axisTextColor }
+                    }
+                },
                 plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: context => ' Productividad: ' + context.parsed.y.toFixed(1) + '%' } }
+                    legend: { 
+                        display: false // No mostrar leyenda de dataset individual
+                    },
+                    tooltip: { 
+                        callbacks: { 
+                            label: context => ' Productividad: ' + context.parsed.y.toFixed(1) + '%' 
+                        },
+                        backgroundColor: tooltipBgColor,
+                        borderColor: tooltipBorderColor,
+                        borderWidth: 1,
+                        titleColor: legendTextColor,
+                        bodyColor: legendTextColor,
+                        titleFont: { size: 14, family: 'Inter', weight: 'bold' },
+                        bodyFont: { size: 13, family: 'Inter' },
+                        cornerRadius: 8,
+                        displayColors: true,
+                        boxPadding: 5
+                    }
                 }
             }
         });
@@ -148,24 +628,115 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [{
                     label: '% de Cumplimiento',
                     data: chartDataCump.data,
-                    backgroundColor: 'rgba(22, 163, 74, 0.2)',
-                    borderColor: 'rgba(22, 163, 74, 1)',
-                    borderWidth: 2,
+                    backgroundColor: getRgbaFromHslVar('--kpi-cumplimiento-color', 0.3), // Usar color de KPI con opacidad
+                    borderColor: getRgbaFromHslVar('--kpi-cumplimiento-color', 1), // Usar color de KPI
+                    borderWidth: 3, // Línea un poco más gruesa
                     fill: true,
-                    tension: 0.4
+                    tension: 0.4,
+                    pointBackgroundColor: getRgbaFromHslVar('--kpi-cumplimiento-color', 1),
+                    pointBorderColor: getCssVariable('--card-base-bg'), // Borde del punto del color del fondo de la tarjeta
+                    pointBorderWidth: 2,
+                    pointRadius: 5, // Puntos visibles
+                    pointHoverRadius: 7 // Puntos más grandes al pasar el ratón
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => value + '%' } } },
+                animation: {
+                    duration: 1500,
+                    easing: 'easeInOutQuart'
+                },
+                scales: { 
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100, 
+                        grid: { color: gridLineColor },
+                        ticks: { 
+                            color: axisTextColor,
+                            callback: value => value + '%' 
+                        } 
+                    },
+                    x: {
+                        grid: { color: gridLineColor },
+                        ticks: { color: axisTextColor }
+                    }
+                },
                 plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: context => ' Cumplimiento: ' + context.parsed.y.toFixed(1) + '%' } }
+                    legend: { 
+                        display: false // No mostrar leyenda de dataset individual
+                    },
+                    tooltip: { 
+                        callbacks: { 
+                            label: context => ' Cumplimiento: ' + context.parsed.y.toFixed(1) + '%' 
+                        },
+                        backgroundColor: tooltipBgColor,
+                        borderColor: tooltipBorderColor,
+                        borderWidth: 1,
+                        titleColor: legendTextColor,
+                        bodyColor: legendTextColor,
+                        titleFont: { size: 14, family: 'Inter', weight: 'bold' },
+                        bodyFont: { size: 13, family: 'Inter' },
+                        cornerRadius: 8,
+                        displayColors: true,
+                        boxPadding: 5
+                    }
                 }
             }
         });
     }
+
+    // Lógica de cambio de tema (copiada de otras páginas)
+    const pageThemeToggle = document.getElementById('page-theme-toggle');
+    const htmlElement = document.documentElement;
+
+    // Comprueba la preferencia de tema guardada o la preferencia del sistema
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        htmlElement.classList.add('dark');
+    } else {
+        htmlElement.classList.remove('dark');
+    }
+
+    const toggleTheme = () => {
+        if (htmlElement.classList.contains('dark')) {
+            htmlElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        } else {
+            htmlElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        }
+    };
+
+    if (pageThemeToggle) {
+         pageThemeToggle.addEventListener('click', toggleTheme);
+    }
+
+    // Animación pop-in para las secciones
+    const animateElements = document.querySelectorAll('.animate-pop-in');
+    animateElements.forEach((el, index) => {
+        el.style.animationDelay = `${index * 0.1}s`;
+        el.style.opacity = '0'; // Comienza invisible
+    });
+
+    // Usa Intersection Observer para disparar la animación pop-in al cargar/desplazarse
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+                observer.unobserve(entry.target); // Deja de observar una vez animado
+            }
+        });
+    }, {
+        threshold: 0.1 // Dispara cuando el 10% del elemento es visible
+    });
+
+    animateElements.forEach(element => {
+        observer.observe(element);
+    });
 });
 </script>
 {% endblock %}

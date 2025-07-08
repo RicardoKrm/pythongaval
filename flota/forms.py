@@ -88,42 +88,40 @@ class BitacoraDiariaForm(forms.ModelForm):
             'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
 
+# flota/forms.py
+
+# ... (tus imports existentes) ...
+
 class CargaMasivaForm(forms.Form):
+    # Campos que se mantienen y sus etiquetas actualizadas
     archivo_vehiculos = forms.FileField(
-        label="Archivo Excel de Vehículos", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+        label="Archivo Excel de Flota (Vehículos)",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'custom-input'})
     )
     archivo_pautas = forms.FileField(
-        label="Archivo Excel de Pautas", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
-    )
-    archivo_historial = forms.FileField(
-        label="Archivo Excel de Historial de Mantenimientos", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
-    )
-    archivo_tipos_falla = forms.FileField(
-        label="Archivo Excel de Tipos de Falla (Pareto)", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
-    )
-    archivo_tareas = forms.FileField(
-        label="Archivo Excel de Tareas (Bitácoras)", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+        label="Archivo Excel de Pautas de Mantenimiento",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'custom-input'})
     )
     archivo_repuestos = forms.FileField(
-        label="Archivo Excel de Inventario de Repuestos", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+        label="Archivo Excel de Inventario de Repuestos",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'custom-input'})
     )
-    archivo_programa_mantenimiento = forms.FileField(
-        label="Archivo de Programa de Mantenimiento (Flota Completa)", 
-        required=False, 
-        widget=forms.ClearableFileInput(attrs={'class': 'form-control'})
+    # NUEVOS CAMPOS
+    archivo_historial_mantenimiento = forms.FileField(
+        label="Archivo Excel de Historial de OTs Finalizadas",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'custom-input'})
     )
+    archivo_bitacoras_diarias = forms.FileField(
+        label="Archivo Excel de Bitácoras Diarias",
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'custom-input'})
+    )
+
+    # El resto de los campos antiguos (tipos_falla, tareas) se eliminan.
     
 class CerrarOtMecanicoForm(forms.ModelForm):
     class Meta:
@@ -372,17 +370,17 @@ class CargaCombustibleForm(forms.ModelForm):
     temperatura_celsius = forms.IntegerField(
         label="Temperatura (°C)", 
         initial=15,
-        widget=forms.NumberInput(attrs={'class': 'form-control'})
+        widget=forms.NumberInput(attrs={'class': 'custom-input'}) # CAMBIO AQUÍ
     )
     condicion_climatica = forms.ChoiceField(
         choices=CondicionAmbiental.CLIMA_CHOICES, 
         label="Condición Climática",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'custom-input'}) # CAMBIO AQUÍ
     )
     nivel_trafico = forms.ChoiceField(
         choices=CondicionAmbiental.TRAFICO_CHOICES,
         label="Nivel de Tráfico",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'custom-input'}) # CAMBIO AQUÍ
     )
 
     class Meta:
@@ -397,29 +395,26 @@ class CargaCombustibleForm(forms.ModelForm):
             'costo_por_litro',
             'costo_total_carga',
             'es_tanque_lleno',
-            # Los campos de CondicionAmbiental se añaden arriba
         ]
         widgets = {
-            'vehiculo': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
-            'conductor': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
-            'ruta': forms.Select(attrs={'class': 'form-control select2', 'style': 'width: 100%;'}),
-            'fecha_carga': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'kilometraje_en_carga': forms.NumberInput(attrs={'class': 'form-control'}),
-            'litros_cargados': forms.NumberInput(attrs={'class': 'form-control'}),
-            'costo_por_litro': forms.NumberInput(attrs={'class': 'form-control'}),
-            'costo_total_carga': forms.NumberInput(attrs={'class': 'form-control'}),
-            'es_tanque_lleno': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'vehiculo': forms.Select(attrs={'class': 'custom-input select2', 'style': 'width: 100%;'}), # CAMBIO AQUÍ
+            'conductor': forms.Select(attrs={'class': 'custom-input select2', 'style': 'width: 100%;'}), # CAMBIO AQUÍ
+            'ruta': forms.Select(attrs={'class': 'custom-input select2', 'style': 'width: 100%;'}), # CAMBIO AQUÍ
+            'fecha_carga': forms.DateTimeInput(attrs={'class': 'custom-input', 'type': 'datetime-local'}), # CAMBIO AQUÍ
+            'kilometraje_en_carga': forms.NumberInput(attrs={'class': 'custom-input'}), # CAMBIO AQUÍ
+            'litros_cargados': forms.NumberInput(attrs={'class': 'custom-input'}), # CAMBIO AQUÍ
+            'costo_por_litro': forms.NumberInput(attrs={'class': 'custom-input'}), # CAMBIO AQUÍ
+            'costo_total_carga': forms.NumberInput(attrs={'class': 'custom-input'}), # CAMBIO AQUÍ
+            'es_tanque_lleno': forms.CheckboxInput(attrs={'class': 'form-check-input'}), # Este es diferente
         }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Hacemos que el conductor y la ruta no sean obligatorios
         self.fields['conductor'].required = False
         self.fields['ruta'].required = False
         self.fields['costo_por_litro'].required = False
         self.fields['costo_total_carga'].required = False
         
-        # Filtrar el queryset del campo 'conductor' para mostrar solo usuarios activos en grupos relevantes
         self.fields['conductor'].queryset = User.objects.filter(
             is_active=True, 
             groups__name__in=['Mecánico', 'Supervisor', 'Administrador']
@@ -427,23 +422,23 @@ class CargaCombustibleForm(forms.ModelForm):
 
 
 class UsuarioCreacionForm(forms.Form):
-    username = forms.CharField(label="Nombre de usuario", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    first_name = forms.CharField(label="Nombre", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(label="Apellido", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={'class': 'form-control'}))
-    password = forms.CharField(label="Contraseña", widget=forms.PasswordInput(attrs={'class': 'form-control'}))
-    grupo = forms.ModelChoiceField(
-        queryset=Group.objects.exclude(name='Administrador'), # Un admin no puede crear otros admins
-        label="Rol del Usuario",
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-
-class UsuarioEdicionForm(forms.Form):
-    first_name = forms.CharField(label="Nombre", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    last_name = forms.CharField(label="Apellido", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    username = forms.CharField(label="Nombre de usuario", max_length=150, widget=forms.TextInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    first_name = forms.CharField(label="Nombre", max_length=150, widget=forms.TextInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    last_name = forms.CharField(label="Apellido", max_length=150, widget=forms.TextInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    password = forms.CharField(label="Contraseña", widget=forms.PasswordInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
     grupo = forms.ModelChoiceField(
         queryset=Group.objects.exclude(name='Administrador'),
         label="Rol del Usuario",
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'custom-input select2'}) # CAMBIO AQUÍ (y select2)
+    )
+
+class UsuarioEdicionForm(forms.Form):
+    first_name = forms.CharField(label="Nombre", max_length=150, widget=forms.TextInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    last_name = forms.CharField(label="Apellido", max_length=150, widget=forms.TextInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    email = forms.EmailField(label="Correo electrónico", widget=forms.EmailInput(attrs={'class': 'custom-input'})) # CAMBIO AQUÍ
+    grupo = forms.ModelChoiceField(
+        queryset=Group.objects.exclude(name='Administrador'),
+        label="Rol del Usuario",
+        widget=forms.Select(attrs={'class': 'custom-input select2'}) # CAMBIO AQUÍ (y select2)
     )
