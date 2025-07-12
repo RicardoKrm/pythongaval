@@ -5,7 +5,7 @@ from .views import CustomLoginView, CustomLogoutView
 # --- ¡Añade esta importación! ---
 from .views import perfil_view 
 
-app_name = 'accounts' # Esto es interesante. El app_name es 'accounts' aunque la carpeta es 'cuentas'. ¡No hay problema, lo respetamos!
+app_name = 'cuentas'
 
 urlpatterns = [
     path('login/', CustomLoginView.as_view(), name='login'),
