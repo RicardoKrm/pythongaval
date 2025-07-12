@@ -164,28 +164,34 @@ def dashboard_flota(request):
     return render(request, 'flota/dashboard.html', context)
 
 @login_required
-def orden_trabajo_list(request):
+def orden_trabajo_create(request):
     connection.set_tenant(request.tenant)
+    if not es_personal_operativo(request.user):
+        raise PermissionDenied
     
-    # --- Lógica de Creación de OT (sin cambios, pero movida arriba para claridad) ---
     if request.method == 'POST':
-        # Solo personal operativo puede crear OTs
-        if not es_personal_operativo(request.user):
-            raise PermissionDenied # O mostrar un mensaje de error
-
         form = OrdenDeTrabajoForm(request.POST)
         if form.is_valid():
             ot = form.save(commit=False)
-            ot.creada_por = request.user # Opcional: registrar quién creó la OT
+            ot.creada_por = request.user
             ot.save()
             
             HistorialOT.objects.create(orden_de_trabajo=ot, usuario=request.user, tipo_evento='CREACION', descripcion=f"OT #{ot.folio} creada.")
             messages.success(request, f'Orden de Trabajo #{ot.folio} creada con éxito.')
-            return redirect('ot_list')
+            return redirect('flota:ot_list')
         else:
             messages.error(request, 'Por favor, corrija los errores en el formulario de creación.')
-    
-    # --- Lógica de Listado y Filtrado (AQUÍ ESTÁ EL CAMBIO PRINCIPAL) ---
+    else:
+        form = OrdenDeTrabajoForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'flota/orden_trabajo_form.html', context)
+
+@login_required
+def orden_trabajo_list(request):
+    connection.set_tenant(request.tenant)
     
     # 1. Determinar el queryset base según el rol del usuario
     if es_personal_operativo(request.user):

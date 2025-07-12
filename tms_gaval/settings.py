@@ -70,9 +70,7 @@ MIDDLEWARE = [
 
 # --- URLS Y TENANTS ---
 
-ROOT_URLCONF = 'tms_gaval.urls'
-PUBLIC_SCHEMA_URLCONF = 'tms_gaval.urls'
-TENANT_URLCONF = 'tms_gaval.tenant_urls'
+ROOT_URLCONF = 'tms_gaval.urls' # Ajusta 'tms_gaval' al nombre de tu carpeta de proyecto si es diferente
 
 TENANT_MODEL = "tenants.Empresa"
 TENANT_DOMAIN_MODEL = "tenants.Domain"

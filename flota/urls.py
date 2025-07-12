@@ -5,6 +5,7 @@ app_name = 'flota'
 
 urlpatterns = [
     path('', views.dashboard_flota, name='dashboard'),
+    path('ordenes/crear/', views.orden_trabajo_create, name='ot_create'), # Added this line
     path('api/ot-eventos/', views.ot_eventos_api, name='ot_eventos_api'),
     path('inventario/', views.repuesto_list, name='repuesto_list'),
     path('inventario/nuevo/', views.repuesto_create, name='repuesto_create'),
