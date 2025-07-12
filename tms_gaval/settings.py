@@ -1,5 +1,6 @@
 from pathlib import Path
 import locale
+from decouple import config
 
 # Configuración de localización para el idioma español
 try:
@@ -14,10 +15,10 @@ except locale.Error:
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ¡IMPORTANTE! Cambia esto en producción a un valor secreto y único.
-SECRET_KEY = 'django-insecure-tu-secret-key-aqui'
+SECRET_KEY = config('SECRET_KEY')
 
 # ¡IMPORTANTE! Cambia esto a False en producción.
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = ['*']
 
@@ -70,9 +71,7 @@ MIDDLEWARE = [
 
 # --- URLS Y TENANTS ---
 
-ROOT_URLCONF = 'tms_gaval.urls'
-PUBLIC_SCHEMA_URLCONF = 'tms_gaval.urls'
-TENANT_URLCONF = 'tms_gaval.tenant_urls'
+ROOT_URLCONF = 'tms_gaval.urls' # Ajusta 'tms_gaval' al nombre de tu carpeta de proyecto si es diferente
 
 TENANT_MODEL = "tenants.Empresa"
 TENANT_DOMAIN_MODEL = "tenants.Domain"
@@ -83,11 +82,11 @@ TENANT_DOMAIN_MODEL = "tenants.Domain"
 DATABASES = {
     'default': {
         'ENGINE': 'django_tenants.postgresql_backend',
-        'NAME': 'tms_gaval_db',
-        'USER': 'tms_user',
-        'PASSWORD': 'karma627',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 
