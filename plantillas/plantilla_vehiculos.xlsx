@@ -1,0 +1,4 @@
+,Numero Int,PPU,Marca,Modelo,Tipo Veh,Norma,Chasis,Motor,Razon Social,Km Actual,Aplicacion
+,101,BCRT-01,Mercedes-Benz,Actros 2651,Camión,EURO V,CHASIS123,MOTOR123,Transportes Gaval,150000,Carretera
+,102,BCRT-02,Mercedes-Benz,Actros 2651,Camión,EURO V,CHASIS124,MOTOR124,Transportes Gaval,160000,Carretera
+,103,BCRT-03,Mercedes-Benz,Actros 2651,Camión,EURO V,CHASIS125,MOTOR125,Transportes Gaval,170000,Carretera

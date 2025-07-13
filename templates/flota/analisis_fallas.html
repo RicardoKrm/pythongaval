@@ -496,6 +496,7 @@
                         <th>Criticidad</th>
                         <th>Causa</th>
                         <th>Descripción de la Falla</th>
+                        <th>Ocurrencias</th>
                         <th>TFS Total (min)</th>
                         <th>Impacto Relativo (%)</th>
                         <th>Impacto Acumulado (%)</th>
@@ -507,12 +508,13 @@
                         <td>{{ item.tipo_falla__criticidad }}</td>
                         <td>{{ item.tipo_falla__causa }}</td>
                         <td>{{ item.tipo_falla__descripcion }}</td>
+                        <td>{{ item.ocurrencias }}</td>
                         <td><strong>{{ item.tfs_total_falla }}</strong></td>
                         <td>{{ item.frecuencia_relativa }}%</td>
                         <td>{{ item.frecuencia_acumulada }}%</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center py-4">No hay datos de OTs correctivas con TFS registrado para analizar en el período seleccionado.</td></tr>
+                    <tr><td colspan="7" class="text-center py-4">No hay datos de OTs correctivas con TFS registrado para analizar en el período seleccionado.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

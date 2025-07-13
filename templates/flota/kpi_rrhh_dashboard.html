@@ -464,6 +464,34 @@
         </div>
     </div>
 
+    <!-- Tabla de KPIs por Técnico -->
+    <div class="section-card card-style animate-pop-in">
+        <div class="card-header">
+            <h4><i class="fas fa-users-cog mr-2"></i> Desempeño por Técnico</h4>
+        </div>
+        <div class="table-responsive" style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Técnico</th>
+                        <th>Productividad</th>
+                        <th>Cumplimiento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in kpis_por_tecnico %}
+                    <tr>
+                        <td>{{ item.tecnico.get_full_name|default:item.tecnico.username }}</td>
+                        <td>{{ item.productividad|floatformat:1 }}%</td>
+                        <td>{{ item.cumplimiento|floatformat:1 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center py-4">No hay datos de técnicos para mostrar.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <!-- Contenedores de datos JSON para los gráficos (Mantenido) -->

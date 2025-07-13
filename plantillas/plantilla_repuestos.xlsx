@@ -1,0 +1,4 @@
+Nombre,Numero Parte,Calidad,Stock Actual,Stock Minimo,Ubicacion,Proveedor Habitual,Precio Unitario
+Filtro de Aceite,OF-123,Original,50,10,Estante A,Proveedor A,25.50
+Filtro de Aire,AF-456,Alternativo OEM,30,5,Estante B,Proveedor B,15.75
+Pastillas de Freno,BP-789,Alternativo Genérico,20,5,Estante C,Proveedor C,45.00
