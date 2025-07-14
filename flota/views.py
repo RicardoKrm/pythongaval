@@ -874,6 +874,12 @@ def indicadores_dashboard(request):
             pass
     bitacoras = BitacoraDiaria.objects.filter(fecha__range=[start_date, end_date])
     ots_en_periodo = OrdenDeTrabajo.objects.filter(fecha_creacion__date__range=[start_date, end_date])
+
+    # CPK
+    costo_total = ots_en_periodo.aggregate(total=Sum('costo_total'))['total'] or 0
+    km_total = Vehiculo.objects.aggregate(total=Sum('kilometraje_actual'))['total'] or 0
+    cpk = costo_total / km_total if km_total > 0 else 0
+
     kpis_mensuales = bitacoras.annotate(month=TruncMonth('fecha')).values('month').annotate(total_horas_op=Sum('horas_operativas'), total_horas_mant_prog=Sum('horas_mantenimiento_prog'), total_horas_falla=Sum('horas_falla')).order_by('month')
     labels_mes, disponibilidad_data, confiabilidad_data, utilizacion_data = [], [], [], []
     for kpi in kpis_mensuales:
@@ -900,6 +906,7 @@ def indicadores_dashboard(request):
         'total_preventivas': total_preventivas, 'total_correctivas': total_correctivas,
         'preventivas_finalizadas': preventivas_finalizadas, 'preventivas_pendientes': preventivas_pendientes,
         'correctivas_finalizadas': correctivas_finalizadas, 'correctivas_pendientes': correctivas_pendientes,
+        'cpk': cpk,
     }
     return render(request, 'flota/indicadores_dashboard.html', context)
 
@@ -915,7 +922,21 @@ def analisis_fallas(request):
     except (ValueError, TypeError):
         end_date = datetime.now().date()
         start_date = end_date - timedelta(days=30)
-    fallas = OrdenDeTrabajo.objects.filter(tipo='CORRECTIVA', tipo_falla__isnull=False, tfs_minutos__gt=0, fecha_creacion__date__range=[start_date, end_date]).values('tipo_falla__descripcion', 'tipo_falla__causa', 'tipo_falla__criticidad').annotate(tfs_total_falla=Sum('tfs_minutos')).order_by('-tfs_total_falla')
+
+    fallas = OrdenDeTrabajo.objects.filter(
+        tipo='CORRECTIVA',
+        tipo_falla__isnull=False,
+        tfs_minutos__gt=0,
+        fecha_creacion__date__range=[start_date, end_date]
+    ).values(
+        'tipo_falla__descripcion',
+        'tipo_falla__causa',
+        'tipo_falla__criticidad'
+    ).annotate(
+        tfs_total_falla=Sum('tfs_minutos'),
+        ocurrencias=Count('id')
+    ).order_by('-tfs_total_falla')
+
     tfs_gran_total = sum(item['tfs_total_falla'] for item in fallas)
     frec_acumulada, data_pareto = 0, []
     for item in fallas:
@@ -924,10 +945,14 @@ def analisis_fallas(request):
         item['frecuencia_relativa'] = round(frec_relativa, 2)
         item['frecuencia_acumulada'] = round(frec_acumulada, 2)
         data_pareto.append(item)
+
     context = {
-        'data_pareto_tabla': data_pareto, 'labels': json.dumps([item['tipo_falla__descripcion'] for item in data_pareto]),
-        'frecuencia_data': json.dumps([item['frecuencia_relativa'] for item in data_pareto]), 'acumulada_data': json.dumps([item['frecuencia_acumulada'] for item in data_pareto]),
-        'start_date': start_date.strftime('%Y-%m-%d'), 'end_date': end_date.strftime('%Y-%m-%d'),
+        'data_pareto_tabla': data_pareto,
+        'labels': json.dumps([item['tipo_falla__descripcion'] for item in data_pareto]),
+        'frecuencia_data': json.dumps([item['frecuencia_relativa'] for item in data_pareto]),
+        'acumulada_data': json.dumps([item['frecuencia_acumulada'] for item in data_pareto]),
+        'start_date': start_date.strftime('%Y-%m-%d'),
+        'end_date': end_date.strftime('%Y-%m-%d'),
     }
     return render(request, 'flota/analisis_fallas.html', context)
 
@@ -935,32 +960,41 @@ def analisis_fallas(request):
 @login_required
 def analisis_avanzado(request):
     connection.set_tenant(request.tenant)
-    proveedores = Proveedor.objects.all()
-    tipos_vehiculo = ModeloVehiculo.objects.all()
-    formatos = OrdenDeTrabajo.FORMATO_CHOICES
-    ots = OrdenDeTrabajo.objects.filter(estado='FINALIZADA', costo_total__gt=0)
-    proveedor_id = request.GET.get('proveedor')
-    if proveedor_id: ots = ots.filter(proveedor_id=proveedor_id)
-    formato_filtro = request.GET.get('formato')
-    if formato_filtro: ots = ots.filter(formato=formato_filtro)
-    tipo_veh_id = request.GET.get('tipo_vehiculo')
-    if tipo_veh_id: ots = ots.filter(vehiculo__modelo_id=tipo_veh_id)
-    tco_data = ots.values('proveedor__nombre').annotate(costo_sum=Sum('costo_total'), km_recorrido_sum=Sum(F('kilometraje_cierre') - F('kilometraje_apertura'))).order_by('-costo_sum')
-    for item in tco_data:
-        km_recorridos = item['km_recorrido_sum'] or 0
-        item['costo_por_km'] = (item['costo_sum'] / km_recorridos) if km_recorridos > 0 else 0
-        item['km_prom_mes'] = random.randint(3000, 5000)
-    labels = [item['proveedor__nombre'] for item in tco_data]
-    costo_total_data = [float(item['costo_sum']) for item in tco_data]
-    costo_km_data = [float(item['costo_por_km']) for item in tco_data]
-    km_mes_data = [item['km_prom_mes'] for item in tco_data]
+
+    vehiculos = Vehiculo.objects.all()
+
+    # Filtros
+    vehiculo_id = request.GET.get('vehiculo')
+    if vehiculo_id:
+        vehiculos = vehiculos.filter(id=vehiculo_id)
+
+    tco_data = []
+    for vehiculo in vehiculos:
+        ots = OrdenDeTrabajo.objects.filter(vehiculo=vehiculo, estado='FINALIZADA')
+        cargas = CargaCombustible.objects.filter(vehiculo=vehiculo)
+
+        costo_mano_obra = ots.aggregate(total=Sum('tareas_realizadas__costo_base'))['total'] or 0
+        costo_repuestos = ots.aggregate(total=Sum('detalles_insumos_ot__repuesto_inventario__precio_unitario'))['total'] or 0
+        costo_combustible = cargas.aggregate(total=Sum('costo_total_carga'))['total'] or 0
+
+        costo_total = costo_mano_obra + costo_repuestos + costo_combustible
+        km_total = vehiculo.kilometraje_actual
+
+        cpk = costo_total / km_total if km_total > 0 else 0
+
+        tco_data.append({
+            'vehiculo': vehiculo,
+            'costo_mano_obra': costo_mano_obra,
+            'costo_repuestos': costo_repuestos,
+            'costo_combustible': costo_combustible,
+            'costo_total': costo_total,
+            'cpk': cpk,
+        })
+
     context = {
-        'proveedores': proveedores, 'tipos_vehiculo': tipos_vehiculo, 'formatos': formatos, 'tco_data': tco_data,
-        'labels': json.dumps(labels), 'costo_total_data': json.dumps(costo_total_data),
-        'costo_km_data': json.dumps(costo_km_data), 'km_mes_data': json.dumps(km_mes_data),
-        'selected_proveedor': int(proveedor_id) if proveedor_id else None,
-        'selected_formato': formato_filtro,
-        'selected_tipo_vehiculo': int(tipo_veh_id) if tipo_veh_id else None,
+        'vehiculos': Vehiculo.objects.all(),
+        'tco_data': tco_data,
+        'selected_vehiculo': int(vehiculo_id) if vehiculo_id else None,
     }
     return render(request, 'flota/analisis_avanzado.html', context)
 
@@ -1728,9 +1762,26 @@ def kpi_rrhh_dashboard(request):
     # 4. Calcular el KPI de Utilización
     kpi_utilizacion = (minutos_reales_trabajados / minutos_disponibles_totales) * 100 if minutos_disponibles_totales > 0 else 0
     # === FIN DE LA NUEVA LÓGICA ===
-    
-    # --- Datos para Gráficos (sin cambios por ahora) ---
-    # ... tu lógica de gráficos existente ...
+
+    # Análisis por técnico
+    tecnicos = User.objects.filter(groups__name='Mecánico', is_active=True)
+    kpis_por_tecnico = []
+    for tecnico in tecnicos:
+        ots_tecnico = ots_finalizadas_periodo.filter(responsable=tecnico)
+        minutos_estandar_tecnico = ots_tecnico.aggregate(total=Sum('tareas_realizadas__tiempo_estandar_minutos'))['total'] or 0
+        minutos_reales_tecnico = ots_tecnico.aggregate(total=Sum('tfs_minutos'))['total'] or 0
+        productividad_tecnico = (minutos_estandar_tecnico / minutos_reales_tecnico) * 100 if minutos_reales_tecnico > 0 else 0
+
+        ots_programadas_tecnico = ots_programadas_en_periodo.filter(responsable=tecnico)
+        total_programadas_tecnico = ots_programadas_tecnico.count()
+        finalizadas_a_tiempo_tecnico = ots_programadas_tecnico.filter(estado='FINALIZADA', fecha_cierre__date__lte=F('fecha_programada')).count()
+        cumplimiento_tecnico = (finalizadas_a_tiempo_tecnico / total_programadas_tecnico) * 100 if total_programadas_tecnico > 0 else 0
+
+        kpis_por_tecnico.append({
+            'tecnico': tecnico,
+            'productividad': productividad_tecnico,
+            'cumplimiento': cumplimiento_tecnico,
+        })
     
     context = {
         'start_date': start_date.strftime('%Y-%m-%d'),
@@ -1747,7 +1798,7 @@ def kpi_rrhh_dashboard(request):
         'minutos_reales_trabajados': minutos_reales_trabajados, # Ya lo teníamos, pero lo pasamos de nuevo para esta tarjeta
         'kpi_utilizacion': kpi_utilizacion,
 
-        # ... tus otros datos de contexto para tarjetas y gráficos ...
+        'kpis_por_tecnico': kpis_por_tecnico,
     }
 
     return render(request, 'flota/kpi_rrhh_dashboard.html', context)

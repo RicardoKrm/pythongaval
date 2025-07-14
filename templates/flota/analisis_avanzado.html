@@ -345,26 +345,12 @@
 
     <div class="section-card card-style animate-pop-in">
         <h2><i class="fas fa-filter mr-3"></i> Filtros de Datos</h2>
-        <form method="get" class="filter-form-grid"> {# Usamos filter-form-grid #}
+        <form method="get" class="filter-form-grid">
             <div class="form-group">
-                <label for="id_proveedor">Proveedor:</label> {# Asumimos IDs generados por Django #}
-                <select name="proveedor" id="id_proveedor" class="custom-input">
+                <label for="id_vehiculo">Vehículo:</label>
+                <select name="vehiculo" id="id_vehiculo" class="custom-input">
                     <option value="">Todos</option>
-                    {% for p in proveedores %}<option value="{{ p.pk }}" {% if p.pk|stringformat:"s" == request.GET.proveedor %}selected{% endif %}>{{ p.nombre }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="id_formato">Formato:</label> {# Asumimos IDs generados por Django #}
-                <select name="formato" id="id_formato" class="custom-input">
-                    <option value="">Todos</option>
-                    {% for val, name in formatos %}<option value="{{ val }}" {% if val|stringformat:"s" == request.GET.formato %}selected{% endif %}>{{ name }}</option>{% endfor %}
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="id_tipo_vehiculo">Tipo Vehículo:</label> {# Asumimos IDs generados por Django #}
-                <select name="tipo_vehiculo" id="id_tipo_vehiculo" class="custom-input">
-                    <option value="">Todos</option>
-                    {% for tv in tipos_vehiculo %}<option value="{{ tv.pk }}" {% if tv.pk|stringformat:"s" == request.GET.tipo_vehiculo %}selected{% endif %}>{{ tv }}</option>{% endfor %}
+                    {% for v in vehiculos %}<option value="{{ v.pk }}" {% if v.pk == selected_vehiculo %}selected{% endif %}>{{ v }}</option>{% endfor %}
                 </select>
             </div>
             <button type="submit" class="btn-primary btn-filter-submit"><i class="fas fa-search mr-2"></i> Aplicar Filtros</button>
@@ -377,13 +363,45 @@
             <canvas id="tcoChart"></canvas>
         </div>
     </div>
+
+    <div class="section-card card-style animate-pop-in">
+        <h2><i class="fas fa-table mr-3"></i> Detalle de TCO por Vehículo</h2>
+        <div class="table-responsive" style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vehículo</th>
+                        <th>Costo Mano de Obra</th>
+                        <th>Costo Repuestos</th>
+                        <th>Costo Combustible</th>
+                        <th>Costo Total</th>
+                        <th>CPK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in tco_data %}
+                    <tr>
+                        <td>{{ item.vehiculo }}</td>
+                        <td>{{ item.costo_mano_obra|floatformat:2 }}</td>
+                        <td>{{ item.costo_repuestos|floatformat:2 }}</td>
+                        <td>{{ item.costo_combustible|floatformat:2 }}</td>
+                        <td><strong>{{ item.costo_total|floatformat:2 }}</strong></td>
+                        <td>{{ item.cpk|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4">No hay datos para mostrar.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
     
     <script id="tco-data" type="application/json">
     {
-        "labels": {{ labels|safe }},
-        "costoTotalData": {{ costo_total_data|safe }},
-        "costoKmData": {{ costo_km_data|safe }},
-        "kmMesData": {{ km_mes_data|safe }}
+        "labels": [{% for item in tco_data %}"{{ item.vehiculo.numero_interno }}",{% endfor %}],
+        "costoManoObraData": [{% for item in tco_data %}{{ item.costo_mano_obra }},{% endfor %}],
+        "costoRepuestosData": [{% for item in tco_data %}{{ item.costo_repuestos }},{% endfor %}],
+        "costoCombustibleData": [{% for item in tco_data %}{{ item.costo_combustible }},{% endfor %}]
     }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -454,147 +472,39 @@
 
             const ctx = document.getElementById('tcoChart').getContext('2d');
             new Chart(ctx, {
+                type: 'bar',
                 data: {
                     labels: chartData.labels,
                     datasets: [
                         {
-                            type: 'bar',
-                            label: 'Costo Total ($)',
-                            data: chartData.costoTotalData,
-                            backgroundColor: `rgba(${getCssVariable('--chart-danger-color')}, 0.8)`, /* Usar variables CSS para color */
-                            borderColor: `rgb(${getCssVariable('--chart-danger-color')})`,
-                            borderWidth: 1,
-                            yAxisID: 'yCostoTotal',
-                            order: 2,
-                            borderRadius: 5, /* Bordes redondeados */
+                            label: 'Costo Mano de Obra',
+                            data: chartData.costoManoObraData,
+                            backgroundColor: `rgba(${getCssVariable('--chart-danger-color')}, 0.8)`,
                         },
                         {
-                            type: 'bar', /* Tipo bar para que se vean como barras junto con los otros */
-                            label: 'Costo por KM ($/KM)',
-                            data: chartData.costoKmData,
-                            backgroundColor: `rgba(${getCssVariable('--chart-accent-color')}, 0.8)`, /* Usar variables CSS para color */
-                            borderColor: `rgb(${getCssVariable('--chart-accent-color')})`,
-                            borderWidth: 1,
-                            yAxisID: 'yCostoTotal', /* Mostrar en el mismo eje para que se apilen/agrupen si es necesario */
-                            order: 1, /* Mostrar primero para que esté por debajo si se agrupan */
-                            borderRadius: 5, /* Bordes redondeados */
+                            label: 'Costo Repuestos',
+                            data: chartData.costoRepuestosData,
+                            backgroundColor: `rgba(${getCssVariable('--chart-accent-color')}, 0.8)`,
                         },
                         {
-                            type: 'line', /* Cambiado a línea para KM/Mes para un mejor contraste visual */
-                            label: 'Promedio KM/Mes',
-                            data: chartData.kmMesData,
-                            borderColor: `rgb(${getCssVariable('--chart-success-color')})`, /* Usar variables CSS para color */
-                            backgroundColor: `rgba(${getCssVariable('--chart-success-color')}, 0.3)`, /* Relleno con opacidad */
-                            borderWidth: 3,
-                            yAxisID: 'yKm', /* Un eje secundario para los KM/Mes */
-                            order: 0, /* Mostrar en la parte superior */
-                            tension: 0.3, /* Suavizar línea */
-                            pointRadius: 5,
-                            pointBackgroundColor: `rgb(${getCssVariable('--chart-success-color')})`,
-                            pointBorderColor: getCssVariable('--card-base-bg'),
-                            pointBorderWidth: 2,
-                            fill: true, /* Rellenar el área debajo de la línea */
+                            label: 'Costo Combustible',
+                            data: chartData.costoCombustibleData,
+                            backgroundColor: `rgba(${getCssVariable('--chart-success-color')}, 0.8)`,
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: {
-                        duration: 1500,
-                        easing: 'easeInOutQuart'
-                    },
-                    plugins: {
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: getCssVariable('--card-base-bg'),
-                            borderColor: getCssVariable('--accent'),
-                            borderWidth: 1,
-                            titleColor: getCssVariable('--text-primary'),
-                            bodyColor: getCssVariable('--text-primary'),
-                            titleFont: {
-                                size: 14,
-                                family: 'Inter',
-                                weight: 'bold'
-                            },
-                            bodyFont: {
-                                size: 13,
-                                family: 'Inter'
-                            },
-                            cornerRadius: 8,
-                            displayColors: true,
-                            boxPadding: 5
-                        },
-                        legend: {
-                            labels: {
-                                color: getCssVariable('--text-primary'),
-                                font: {
-                                    size: 14,
-                                    family: 'Inter'
-                                }
-                            }
-                        }
-                    },
                     scales: {
-                        yCostoTotal: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: {
-                                display: true,
-                                text: 'Costo Total ($) / Costo por KM ($/KM)', /* Título para los dos ejes de barra */
-                                color: getCssVariable('--text-secondary'),
-                                font: {
-                                    family: 'Inter',
-                                    size: 14
-                                }
-                            },
-                            grid: {
-                                color: getCssVariable('--input-border'),
-                                drawBorder: false,
-                            },
-                            ticks: {
-                                color: getCssVariable('--text-secondary'),
-                                callback: function(value) {
-                                    return value.toLocaleString(); // Formato de número
-                                }
-                            }
-                        },
-                        yKm: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right', /* Eje secundario a la derecha */
-                            title: {
-                                display: true,
-                                text: 'Promedio KM/Mes',
-                                color: getCssVariable('--text-secondary'),
-                                font: {
-                                    family: 'Inter',
-                                    size: 14
-                                }
-                            },
-                            grid: {
-                                drawOnChartArea: false, /* No dibujar cuadrícula para este eje en el área del gráfico */
-                                color: getCssVariable('--input-border'),
-                            },
-                            ticks: {
-                                color: getCssVariable('--text-secondary'),
-                                callback: function(value) {
-                                    return value.toLocaleString() + ' KM';
-                                }
-                            }
-                        },
                         x: {
-                            grid: {
-                                color: getCssVariable('--input-border'),
-                                drawBorder: false,
-                            },
-                            ticks: {
-                                color: getCssVariable('--text-secondary'),
-                                font: {
-                                    family: 'Inter'
-                                }
+                            stacked: true,
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Costo Total ($)'
                             }
                         }
                     }

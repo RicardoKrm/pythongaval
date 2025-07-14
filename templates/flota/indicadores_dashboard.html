@@ -477,8 +477,13 @@
         </form>
     </div>
 
-    <!-- Contenedores para los Nuevos Gráficos de Donut -->
+    <!-- Contenedores para los Nuevos Gráficos de Donut y CPK -->
     <div class="charts-grid small">
+        <div class="section-card card-style animate-pop-in">
+            <h2>Costo por Kilómetro (CPK)</h2>
+            <div class="text-4xl font-bold text-center text-accent">{{ cpk|floatformat:2 }}</div>
+            <div class="text-center text-text-secondary">CLP / KM</div>
+        </div>
         <div class="section-card card-style animate-pop-in">
             <h2>Tareas Preventivas / Correctivas</h2>
             <canvas id="tipoOtChart"></canvas>
